@@ -1,40 +1,63 @@
+import { ConfigRequired } from "@/components/config-required";
+import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
+import { IdeaGeneratorForm } from "@/components/idea-generator-form";
 import { PageHeader } from "@/components/page-header";
+import { StatusBadge } from "@/components/status-badge";
+import { getAuthenticatedPageContext } from "@/lib/auth";
+import { getRecentIdeas } from "@/lib/content/queries";
 
-const ideas = [
-  "Founder perspective on content operations",
-  "Repurpose customer calls into channel-ready drafts",
-  "Weekly backlog review ritual",
-  "Editorial quality checklist",
-];
+export default async function IdeasPage() {
+  const context = await getAuthenticatedPageContext("/app/ideas");
 
-export default function IdeasPage() {
+  if (!context.ok) {
+    return <ConfigRequired message={context.message} />;
+  }
+
+  const { data: ideas, error } = await getRecentIdeas(context.supabase);
+
   return (
     <>
       <PageHeader
-        eyebrow="Capture"
+        eyebrow="Generate"
         title="Ideas"
-        description="A placeholder backlog for raw ideas, source notes, and early content prompts."
+        description="Create a rough idea, URL, or brief and turn it into a complete social package with a branded image."
       />
-      <section className="p-6 lg:p-8">
-        <div className="grid gap-4 lg:grid-cols-2">
-          {ideas.map((idea, index) => (
-            <article
-              key={idea}
-              className="rounded border border-slate-200 bg-white p-5"
-            >
-              <p className="text-sm font-medium text-teal-700">
-                Idea {index + 1}
-              </p>
-              <h2 className="mt-2 text-lg font-semibold text-slate-950">
-                {idea}
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                Placeholder record. Later this will track source, owner,
-                priority, and conversion into a draft post.
-              </p>
-            </article>
-          ))}
-        </div>
+      <section className="grid gap-6 p-6 lg:p-8 xl:grid-cols-[1fr_390px]">
+        <IdeaGeneratorForm />
+
+        <aside className="rounded border border-zinc-800 bg-zinc-950 p-5">
+          <h2 className="text-lg font-semibold text-white">Recent ideas</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Saved and generated briefs stay here for context.
+          </p>
+          {error ? <div className="mt-4"><ErrorState message={error.message} /></div> : null}
+          {ideas?.length ? (
+            <div className="mt-5 space-y-3">
+              {ideas.map((idea) => (
+                <article
+                  key={idea.id}
+                  className="rounded border border-zinc-800 bg-[#0a0a0b] p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-medium text-white">{idea.title}</h3>
+                    <StatusBadge status={idea.status} />
+                  </div>
+                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-zinc-500">
+                    {idea.brief || "No brief saved."}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-5">
+              <EmptyState
+                title="No ideas yet"
+                description="Save an idea or generate a full package to populate the backlog."
+              />
+            </div>
+          )}
+        </aside>
       </section>
     </>
   );

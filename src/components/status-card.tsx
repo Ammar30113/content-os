@@ -2,14 +2,14 @@ type StatusCardProps = {
   label: string;
   value: string;
   detail: string;
-  tone?: "teal" | "amber" | "blue" | "slate";
+  tone?: "lime" | "violet" | "coral" | "slate";
 };
 
 const toneClassName = {
-  amber: "border-amber-200 bg-amber-50 text-amber-900",
-  blue: "border-sky-200 bg-sky-50 text-sky-900",
-  slate: "border-slate-200 bg-white text-slate-900",
-  teal: "border-teal-200 bg-teal-50 text-teal-900",
+  coral: "border-[#ff6b4a]/30 bg-[#ff6b4a]/10 text-[#ffb7a7]",
+  lime: "border-[#d4ff00]/30 bg-[#d4ff00]/10 text-[#ecff8a]",
+  slate: "border-zinc-800 bg-zinc-950 text-zinc-100",
+  violet: "border-violet-400/30 bg-violet-400/10 text-violet-200",
 };
 
 export function StatusCard({

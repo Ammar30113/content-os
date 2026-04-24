@@ -14,49 +14,48 @@ const workflowSteps = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-[#172033]">
+    <main className="min-h-screen bg-[#0a0a0b] text-white">
       <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-6 sm:px-8 lg:px-10">
-        <header className="flex items-center justify-between border-b border-slate-200 pb-5">
+        <header className="flex items-center justify-between border-b border-white/10 pb-5">
           <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded bg-[#111827] text-sm font-semibold text-white">
+            <div className="grid size-10 place-items-center rounded bg-[#d4ff00] text-sm font-semibold text-[#0a0a0b]">
               CO
             </div>
             <div>
               <p className="text-sm font-semibold">Content OS</p>
-              <p className="text-xs text-slate-500">Internal workspace</p>
+              <p className="text-xs text-zinc-500">@wordofaii workspace</p>
             </div>
           </div>
           <Link
-            href="/app/dashboard"
-            className="inline-flex h-10 items-center justify-center rounded border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+            href="/auth"
+            className="inline-flex h-10 items-center justify-center rounded border border-white/10 bg-white px-4 text-sm font-medium text-[#0a0a0b] shadow-sm transition hover:bg-zinc-200"
           >
-            Open workspace
+            Sign in
           </Link>
         </header>
 
         <div className="grid flex-1 items-center gap-10 py-12 lg:grid-cols-[0.95fr_1.05fr] lg:py-16">
           <div className="max-w-2xl">
-            <p className="mb-4 text-sm font-medium text-teal-700">
-              Private content operations
+            <p className="mb-4 text-sm font-medium text-[#d4ff00]">
+              Private AI content operating system
             </p>
-            <h1 className="text-4xl font-semibold leading-tight text-slate-950 sm:text-5xl">
+            <h1 className="text-4xl font-semibold leading-tight text-white sm:text-6xl">
               Content OS
             </h1>
-            <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
-              A focused command center for planning ideas, drafting posts, and
-              keeping the publishing calendar aligned before Supabase and AI
-              workflows are connected.
+            <p className="mt-5 max-w-xl text-lg leading-8 text-zinc-400">
+              A focused internal tool for turning ideas, briefs, and URLs into
+              complete Word of AI post packages with branded 1080x1080 images.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/app/dashboard"
-                className="inline-flex h-11 items-center justify-center rounded bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                href="/auth"
+                className="inline-flex h-11 items-center justify-center rounded bg-[#d4ff00] px-5 text-sm font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68]"
               >
-                Enter dashboard
+                Start creating
               </Link>
               <Link
                 href="/app/ideas"
-                className="inline-flex h-11 items-center justify-center rounded border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+                className="inline-flex h-11 items-center justify-center rounded border border-white/10 bg-white/[0.04] px-5 text-sm font-semibold text-white transition hover:bg-white/[0.08]"
               >
                 Review ideas
               </Link>
@@ -65,15 +64,15 @@ export default function Home() {
               {operatingSignals.map((signal) => (
                 <div
                   key={signal.label}
-                  className="rounded border border-slate-200 bg-white p-4 shadow-sm"
+                  className="rounded border border-white/10 bg-white/[0.04] p-4 shadow-sm"
                 >
-                  <p className="text-2xl font-semibold text-slate-950">
+                  <p className="text-2xl font-semibold text-white">
                     {signal.value}
                   </p>
-                  <p className="mt-1 text-sm font-medium text-slate-700">
+                  <p className="mt-1 text-sm font-medium text-zinc-300">
                     {signal.label}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-zinc-500">
                     {signal.detail}
                   </p>
                 </div>
@@ -81,7 +80,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded border border-slate-800 bg-slate-950 shadow-2xl">
+          <div className="overflow-hidden rounded border border-white/10 bg-zinc-950 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
               <div>
                 <p className="text-sm font-semibold text-white">
@@ -94,15 +93,15 @@ export default function Home() {
               </div>
             </div>
             <div className="grid gap-0 md:grid-cols-[180px_1fr]">
-              <aside className="border-b border-white/10 bg-slate-900 p-4 md:border-b-0 md:border-r">
+              <aside className="border-b border-white/10 bg-[#0a0a0b] p-4 md:border-b-0 md:border-r">
                 {["Dashboard", "Ideas", "Posts", "Calendar", "Settings"].map(
                   (item, index) => (
                     <div
                       key={item}
                       className={`mb-2 rounded px-3 py-2 text-sm ${
                         index === 0
-                          ? "bg-white text-slate-950"
-                          : "text-slate-400"
+                          ? "bg-[#d4ff00] text-[#0a0a0b]"
+                          : "text-zinc-400"
                       }`}
                     >
                       {item}
@@ -130,7 +129,7 @@ export default function Home() {
                       key={step}
                       className="flex gap-3 border-b border-white/10 px-4 py-4 last:border-b-0"
                     >
-                      <span className="grid size-7 shrink-0 place-items-center rounded bg-teal-300 text-xs font-semibold text-slate-950">
+                      <span className="grid size-7 shrink-0 place-items-center rounded bg-[#d4ff00] text-xs font-semibold text-[#0a0a0b]">
                         {index + 1}
                       </span>
                       <p className="text-sm leading-6 text-slate-200">

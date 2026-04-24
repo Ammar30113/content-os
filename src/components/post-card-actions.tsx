@@ -1,0 +1,116 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { CalendarPlus, Check, RefreshCw } from "lucide-react";
+
+import type { Json } from "@/types/database";
+
+type PostCardActionsProps = {
+  postId: string;
+  templateType: string | null;
+  templateFields: Json;
+};
+
+export function PostCardActions({
+  postId,
+  templateType,
+  templateFields,
+}: PostCardActionsProps) {
+  const [scheduledFor, setScheduledFor] = useState("");
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function runAction(action: string, request: () => Promise<Response>) {
+    setLoadingAction(action);
+    setError(null);
+
+    try {
+      const response = await request();
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || `${action} failed.`);
+      }
+
+      router.refresh();
+    } catch (actionError) {
+      setError(
+        actionError instanceof Error ? actionError.message : `${action} failed.`,
+      );
+    } finally {
+      setLoadingAction(null);
+    }
+  }
+
+  return (
+    <div className="space-y-3 border-t border-zinc-800 pt-4">
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={Boolean(loadingAction)}
+          onClick={() =>
+            runAction("Approve", () =>
+              fetch(`/api/posts/${postId}/approve`, { method: "POST" }),
+            )
+          }
+          className="inline-flex h-9 items-center gap-2 rounded border border-zinc-700 px-3 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
+        >
+          <Check size={15} />
+          {loadingAction === "Approve" ? "Approving..." : "Approve"}
+        </button>
+        <button
+          type="button"
+          disabled={Boolean(loadingAction) || !templateType}
+          onClick={() =>
+            runAction("Regenerate image", () =>
+              fetch("/api/render-template", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  post_id: postId,
+                  template_type: templateType,
+                  template_fields: templateFields,
+                }),
+              }),
+            )
+          }
+          className="inline-flex h-9 items-center gap-2 rounded border border-zinc-700 px-3 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
+        >
+          <RefreshCw size={15} />
+          {loadingAction === "Regenerate image" ? "Rendering..." : "Regenerate"}
+        </button>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input
+          type="datetime-local"
+          value={scheduledFor}
+          onChange={(event) => setScheduledFor(event.target.value)}
+          className="h-9 rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-xs text-white outline-none focus:border-[#d4ff00]"
+        />
+        <button
+          type="button"
+          disabled={Boolean(loadingAction) || !scheduledFor}
+          onClick={() =>
+            runAction("Schedule", () =>
+              fetch("/api/schedule-post", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  post_id: postId,
+                  scheduled_for: new Date(scheduledFor).toISOString(),
+                }),
+              }),
+            )
+          }
+          className="inline-flex h-9 items-center justify-center gap-2 rounded bg-[#d4ff00] px-3 text-xs font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68] disabled:opacity-50"
+        >
+          <CalendarPlus size={15} />
+          {loadingAction === "Schedule" ? "Scheduling..." : "Schedule"}
+        </button>
+      </div>
+      {error ? <p className="text-xs leading-5 text-red-300">{error}</p> : null}
+    </div>
+  );
+}

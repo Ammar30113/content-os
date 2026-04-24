@@ -1,86 +1,118 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
+
+import { ConfigRequired } from "@/components/config-required";
+import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
+import { StatusBadge } from "@/components/status-badge";
 import { StatusCard } from "@/components/status-card";
+import { getAuthenticatedPageContext } from "@/lib/auth";
+import { getDashboardMetrics } from "@/lib/content/queries";
 
-const queue = [
-  {
-    title: "Launch notes roundup",
-    owner: "Editorial",
-    state: "Drafting",
-  },
-  {
-    title: "Customer proof points",
-    owner: "Growth",
-    state: "Needs brief",
-  },
-  {
-    title: "April distribution plan",
-    owner: "Ops",
-    state: "Review",
-  },
-];
+export default async function DashboardPage() {
+  const context = await getAuthenticatedPageContext("/app/dashboard");
 
-export default function DashboardPage() {
+  if (!context.ok) {
+    return <ConfigRequired message={context.message} />;
+  }
+
+  const metrics = await getDashboardMetrics(context.supabase);
+
   return (
     <>
       <PageHeader
         eyebrow="Workspace"
         title="Dashboard"
-        description="A compact operating view for the content pipeline. Data is mocked until the persistence layer is connected."
+        description="Your Word of AI operating view: ideas, drafts, scheduled posts, and recent generated packages."
+        action={
+          <Link
+            href="/app/ideas"
+            className="inline-flex h-10 items-center gap-2 rounded bg-[#d4ff00] px-4 text-sm font-semibold text-[#0a0a0b]"
+          >
+            <Plus size={17} />
+            New idea
+          </Link>
+        }
       />
       <section className="space-y-6 p-6 lg:p-8">
-        <div className="grid gap-4 md:grid-cols-3">
+        {metrics.error ? <ErrorState message={metrics.error.message} /> : null}
+
+        <div className="grid gap-4 md:grid-cols-4">
           <StatusCard
-            label="Ideas"
-            value="42"
-            detail="9 ready to become briefs"
-            tone="teal"
+            label="Total ideas"
+            value={String(metrics.totalIdeas)}
+            detail="Captured raw inputs"
+            tone="lime"
           />
           <StatusCard
-            label="Active posts"
-            value="18"
-            detail="4 waiting for review"
-            tone="blue"
+            label="Draft posts"
+            value={String(metrics.draftPosts)}
+            detail="Need review/editing"
+            tone="violet"
           />
           <StatusCard
             label="Scheduled"
-            value="12"
-            detail="Across the next two weeks"
-            tone="amber"
+            value={String(metrics.scheduledPosts)}
+            detail="Queued for manual publish"
+            tone="coral"
+          />
+          <StatusCard
+            label="Published"
+            value={String(metrics.publishedPosts)}
+            detail="Marked shipped"
+            tone="slate"
           />
         </div>
 
-        <div className="rounded border border-slate-200 bg-white">
-          <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">
-                Priority queue
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Placeholder content for the first internal workflow.
-              </p>
+        <div className="rounded border border-zinc-800 bg-zinc-950">
+          <div className="border-b border-zinc-800 px-5 py-4">
+            <h2 className="text-lg font-semibold text-white">Recent posts</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Open a package to edit copy, regenerate the image, or schedule it.
+            </p>
+          </div>
+          {metrics.recentPosts.length ? (
+            <div className="divide-y divide-zinc-800">
+              {metrics.recentPosts.map((post) => (
+                <Link
+                  key={post.id}
+                  href={`/app/posts/${post.id}`}
+                  className="grid gap-3 px-5 py-4 transition hover:bg-white/[0.03] md:grid-cols-[1fr_120px_120px]"
+                >
+                  <div>
+                    <p className="font-medium text-white">
+                      {post.headline || post.hook || "Untitled generated post"}
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      {post.platform} / {post.post_type}
+                    </p>
+                  </div>
+                  <StatusBadge status={post.status} />
+                  <p className="text-sm text-zinc-500">
+                    {post.scheduled_for
+                      ? new Date(post.scheduled_for).toLocaleString()
+                      : "Not scheduled"}
+                  </p>
+                </Link>
+              ))}
             </div>
-            <Link
-              href="/app/posts"
-              className="inline-flex h-10 items-center justify-center rounded border border-slate-300 px-4 text-sm font-medium text-slate-900 transition hover:bg-slate-50"
-            >
-              View posts
-            </Link>
-          </div>
-          <div className="divide-y divide-slate-200">
-            {queue.map((item) => (
-              <div
-                key={item.title}
-                className="grid gap-2 px-5 py-4 sm:grid-cols-[1fr_120px_120px] sm:items-center"
-              >
-                <p className="font-medium text-slate-950">{item.title}</p>
-                <p className="text-sm text-slate-500">{item.owner}</p>
-                <p className="w-fit rounded bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                  {item.state}
-                </p>
-              </div>
-            ))}
-          </div>
+          ) : (
+            <div className="p-5">
+              <EmptyState
+                title="No generated posts yet"
+                description="Create your first idea and generate a content package to start the weekly queue."
+                action={
+                  <Link
+                    href="/app/ideas"
+                    className="inline-flex h-10 items-center rounded bg-[#d4ff00] px-4 text-sm font-semibold text-[#0a0a0b]"
+                  >
+                    Create first idea
+                  </Link>
+                }
+              />
+            </div>
+          )}
         </div>
       </section>
     </>

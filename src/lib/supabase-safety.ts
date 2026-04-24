@@ -1,4 +1,6 @@
 export const REQUIRED_SUPABASE_PROJECT_REF = "rxcxgnmnwonqzizjrgoh";
+export const EXPECTED_SUPABASE_URL =
+  "https://rxcxgnmnwonqzizjrgoh.supabase.co";
 
 export type SupabaseUrlSafetyResult =
   | {
