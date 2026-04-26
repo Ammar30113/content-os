@@ -10,15 +10,20 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 type AuthMode = "sign-in" | "sign-up";
 
 export function AuthForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = normalizeNextPath(searchParams.get("next"));
+  const callbackError = searchParams.get("error");
+  const initialError =
+    callbackError === "confirmation_failed"
+      ? "Could not confirm the email link. Try signing in, or create and confirm the user from the Supabase dashboard."
+      : null;
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") || "/app/dashboard";
+  const [error, setError] = useState<string | null>(initialError);
   const envStatus = useMemo(() => getPublicEnvStatus(), []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -32,7 +37,13 @@ export function AuthForm() {
       const result =
         mode === "sign-in"
           ? await supabase.auth.signInWithPassword({ email, password })
-          : await supabase.auth.signUp({ email, password });
+          : await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+              },
+            });
 
       if (result.error) {
         throw result.error;
@@ -48,7 +59,9 @@ export function AuthForm() {
       router.refresh();
     } catch (authError) {
       setError(
-        authError instanceof Error ? authError.message : "Authentication failed.",
+        authError instanceof Error
+          ? formatAuthError(authError.message)
+          : "Authentication failed.",
       );
     } finally {
       setIsLoading(false);
@@ -140,4 +153,25 @@ export function AuthForm() {
       ) : null}
     </div>
   );
+}
+
+function normalizeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/app/dashboard";
+  }
+
+  return value;
+}
+
+function formatAuthError(message: string) {
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    normalizedMessage.includes("rate limit") ||
+    normalizedMessage.includes("too many")
+  ) {
+    return "Supabase email rate limit exceeded. Wait for the limit to reset, use the existing confirmed account, or create/confirm your user in the Supabase dashboard.";
+  }
+
+  return message;
 }

@@ -76,6 +76,22 @@ The migration creates:
 - RLS policies for user-owned rows
 - `post-images` storage bucket and folder policies
 
+For the fastest internal MVP login, create your first user in Supabase:
+
+1. Open Supabase Dashboard → Authentication → Users.
+2. Add your own email/password user and mark the user as confirmed, or turn off email confirmation under Authentication → Sign In / Providers → Email.
+3. Add these allowed redirect URLs under Authentication → URL Configuration:
+
+```text
+http://localhost:3000/auth/callback
+https://your-vercel-domain.vercel.app/auth/callback
+```
+
+Supabase's built-in email provider has a low project-wide email-send limit. If
+you see `email rate limit exceeded`, wait for the limit to reset, create/confirm
+the user from the dashboard, or configure custom SMTP before repeated signup
+testing.
+
 ## Routes
 
 - `/` - internal positioning page
