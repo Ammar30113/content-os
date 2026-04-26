@@ -49,11 +49,15 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 CRON_SECRET=
 ```
 
 Do not commit `.env.local` or real secrets.
+
+`OPENAI_MODEL` defaults to `gpt-4o-mini` if omitted. Use a model your OpenAI
+project has access to and that supports structured outputs on the Responses API.
 
 ## Supabase Setup
 
