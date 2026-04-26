@@ -18,6 +18,7 @@ export const templateTypes = [
   "founder_story",
 ] as const;
 export const templateHints = ["auto", ...templateTypes] as const;
+export const postQuantities = ["1", "3", "5", "10", "20"] as const;
 export const postStatuses = [
   "draft",
   "reviewing",
@@ -36,6 +37,9 @@ export const ideaInputSchema = z.object({
   post_type: z.enum(postTypes),
   tone: z.enum(tones),
   template_hint: z.enum(templateHints),
+  quantity: z.coerce.number().int().min(1).max(20).optional().default(1),
+  generation_count: z.coerce.number().int().min(1).max(20).optional().default(1),
+  generation_index: z.coerce.number().int().min(1).max(20).optional().default(1),
 });
 
 export const templateFieldsSchema = z.object({

@@ -4,7 +4,13 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FilePlus2, Save, Sparkles } from "lucide-react";
 
-import { platforms, postTypes, templateHints, tones } from "@/lib/content/types";
+import {
+  platforms,
+  postQuantities,
+  postTypes,
+  templateHints,
+  tones,
+} from "@/lib/content/types";
 
 const defaultForm = {
   title: "",
@@ -14,6 +20,7 @@ const defaultForm = {
   post_type: "single",
   tone: "educational",
   template_hint: "auto",
+  quantity: "1",
 };
 
 type ActionState = {
@@ -61,59 +68,123 @@ export function IdeaGeneratorForm() {
     }
   }
 
+  function getQuantity() {
+    const parsed = Number(form.quantity);
+
+    if (!Number.isFinite(parsed)) {
+      return 1;
+    }
+
+    return Math.min(20, Math.max(1, Math.trunc(parsed)));
+  }
+
+  async function generateOnePackage(index: number, quantity: number) {
+    const response = await fetch("/api/generate-content", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...form,
+        quantity,
+        generation_count: quantity,
+        generation_index: index,
+      }),
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(payload.error || "Could not generate content.");
+    }
+
+    return payload;
+  }
+
+  async function renderPackageImage(payload: {
+    post: { id: string };
+    content: {
+      template_type: string;
+      template_fields: Record<string, unknown>;
+    };
+  }) {
+    const renderResponse = await fetch("/api/render-template", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        post_id: payload.post.id,
+        template_type: payload.content.template_type,
+        template_fields: payload.content.template_fields,
+      }),
+    });
+    const renderPayload = await renderResponse.json();
+
+    if (!renderResponse.ok) {
+      return renderPayload.error || "Image render failed.";
+    }
+
+    return null;
+  }
+
   async function generatePackage() {
+    const quantity = getQuantity();
+    const createdPostIds: string[] = [];
+    const imageFailures: string[] = [];
+
     setState({
       loading: true,
-      message: "Generating structured content package...",
+      message:
+        quantity === 1
+          ? "Generating structured content package..."
+          : `Generating 1 of ${quantity} content packages...`,
       error: null,
     });
 
     try {
-      const response = await fetch("/api/generate-content", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const payload = await response.json();
-
-      if (!response.ok) {
-        throw new Error(payload.error || "Could not generate content.");
-      }
-
-      setState({
-        loading: true,
-        message: "Rendering branded template image...",
-        error: null,
-      });
-
-      const renderResponse = await fetch("/api/render-template", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          post_id: payload.post.id,
-          template_type: payload.content.template_type,
-          template_fields: payload.content.template_fields,
-        }),
-      });
-      const renderPayload = await renderResponse.json();
-
-      if (!renderResponse.ok) {
+      for (let index = 1; index <= quantity; index += 1) {
         setState({
-          loading: false,
+          loading: true,
           message:
-            "Content generated. Image render failed, but the post is editable.",
-          error: renderPayload.error || "Image render failed.",
+            quantity === 1
+              ? "Generating structured content package..."
+              : `Generating ${index} of ${quantity} content packages...`,
+          error: null,
         });
-        router.push(`/app/posts/${payload.post.id}`);
-        return;
+
+        const payload = await generateOnePackage(index, quantity);
+        createdPostIds.push(payload.post.id);
+
+        setState({
+          loading: true,
+          message:
+            quantity === 1
+              ? "Rendering branded template image..."
+              : `Rendering image ${index} of ${quantity}...`,
+          error: null,
+        });
+
+        const imageError = await renderPackageImage(payload);
+
+        if (imageError) {
+          imageFailures.push(`${index}: ${imageError}`);
+        }
       }
+
+      const failureMessage = imageFailures.length
+        ? ` ${imageFailures.length} image${imageFailures.length === 1 ? "" : "s"} failed and can be regenerated from the post editor.`
+        : "";
 
       setState({
         loading: false,
-        message: "Content package and branded image ready.",
+        message:
+          quantity === 1
+            ? `Content package ready.${failureMessage}`
+            : `${createdPostIds.length} content packages ready.${failureMessage}`,
         error: null,
       });
-      router.push(`/app/posts/${payload.post.id}`);
+
+      router.push(
+        quantity === 1 && createdPostIds[0]
+          ? `/app/posts/${createdPostIds[0]}`
+          : "/app/posts",
+      );
       router.refresh();
     } catch (error) {
       setState({
@@ -121,7 +192,7 @@ export function IdeaGeneratorForm() {
         message: null,
         error:
           error instanceof Error
-            ? error.message
+            ? `${error.message}${createdPostIds.length ? ` ${createdPostIds.length} post${createdPostIds.length === 1 ? "" : "s"} were created before the failure.` : ""}`
             : "Could not generate content package.",
       });
     }
@@ -183,7 +254,7 @@ export function IdeaGeneratorForm() {
           />
         </label>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <SelectField
             label="Platform"
             value={form.platform}
@@ -208,6 +279,12 @@ export function IdeaGeneratorForm() {
             options={templateHints}
             onChange={(value) => updateField("template_hint", value)}
           />
+          <SelectField
+            label="Posts"
+            value={form.quantity}
+            options={postQuantities}
+            onChange={(value) => updateField("quantity", value)}
+          />
         </div>
       </div>
 
@@ -227,7 +304,11 @@ export function IdeaGeneratorForm() {
           className="inline-flex h-11 items-center justify-center gap-2 rounded bg-[#d4ff00] px-4 text-sm font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68] disabled:opacity-50"
         >
           <Sparkles size={17} />
-          {state.loading ? "Working..." : "Generate content package"}
+          {state.loading
+            ? "Working..."
+            : getQuantity() === 1
+              ? "Generate content package"
+              : `Generate ${getQuantity()} packages`}
         </button>
       </div>
 

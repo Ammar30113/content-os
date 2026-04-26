@@ -1,6 +1,6 @@
 import "server-only";
 
-import { ImageResponse } from "@vercel/og";
+import { ImageResponse } from "next/dist/compiled/@vercel/og/index.node.js";
 
 import type { TemplateFields, TemplateType } from "@/lib/content/types";
 import { TemplateRenderer } from "@/templates";

@@ -112,6 +112,8 @@ export async function POST(request: Request) {
     assertContentOsSupabaseWriteSafety();
     const input = ideaInputSchema.parse(await request.json());
     const { supabase, user } = await requireApiUser();
+    const generationCount = input.generation_count || input.quantity || 1;
+    const generationIndex = Math.min(input.generation_index || 1, generationCount);
     const sourceSummary = input.source_url
       ? await summarizeSourceUrl(input.source_url)
       : null;
@@ -120,7 +122,10 @@ export async function POST(request: Request) {
       .from("content_ideas")
       .insert({
         user_id: user.id,
-        title: input.title,
+        title:
+          generationCount > 1
+            ? `${input.title} (${generationIndex}/${generationCount})`
+            : input.title,
         brief: input.brief,
         source_url: input.source_url || null,
         source_summary: sourceSummary,
@@ -156,6 +161,15 @@ export async function POST(request: Request) {
               post_type: input.post_type,
               tone: input.tone,
               template_hint: input.template_hint,
+              batch_generation:
+                generationCount > 1
+                  ? {
+                      current_package: generationIndex,
+                      total_packages: generationCount,
+                      instruction:
+                        "Make this a distinct angle in the batch. Avoid repeating the same hook, headline, CTA, examples, or template fields used by other batch items.",
+                    }
+                  : null,
               content_focus: [
                 "AI news",
                 "AI tools",
