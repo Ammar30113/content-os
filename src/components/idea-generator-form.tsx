@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FilePlus2, Save, Sparkles } from "lucide-react";
 
 import {
+  type BatchAngle,
   platforms,
   postQuantities,
   postTypes,
@@ -27,6 +28,38 @@ type ActionState = {
   loading: boolean;
   message: string | null;
   error: string | null;
+};
+
+type GeneratedPostSummary = {
+  hook?: string | null;
+  headline?: string | null;
+  pillar?: string | null;
+};
+
+type GeneratePayload = {
+  idea: { id: string };
+  post: {
+    id: string;
+    hook?: string | null;
+    headline?: string | null;
+    pillar?: string | null;
+  };
+  content: {
+    hook: string;
+    headline: string;
+    pillar: string;
+    template_type: string;
+    template_fields: Record<string, unknown>;
+  };
+};
+
+type BatchPlanPayload = {
+  idea: { id: string };
+  plan: {
+    campaign_title: string;
+    strategy_summary: string;
+    angles: BatchAngle[];
+  };
 };
 
 export function IdeaGeneratorForm() {
@@ -78,12 +111,48 @@ export function IdeaGeneratorForm() {
     return Math.min(20, Math.max(1, Math.trunc(parsed)));
   }
 
-  async function generateOnePackage(index: number, quantity: number) {
+  async function createBatchPlan(quantity: number) {
+    const response = await fetch("/api/generate-batch-plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...form,
+        quantity,
+        generation_count: quantity,
+      }),
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(payload.error || "Could not plan campaign.");
+    }
+
+    return payload as BatchPlanPayload;
+  }
+
+  async function generateOnePackage({
+    index,
+    quantity,
+    ideaId,
+    batchAngle,
+    generatedSoFar,
+  }: {
+    index: number;
+    quantity: number;
+    ideaId?: string;
+    batchAngle?: BatchAngle;
+    generatedSoFar?: GeneratedPostSummary[];
+  }) {
     const response = await fetch("/api/generate-content", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
+        idea_id: ideaId,
+        batch_angle: batchAngle,
+        recent_context: {
+          generated_so_far: generatedSoFar || [],
+        },
         quantity,
         generation_count: quantity,
         generation_index: index,
@@ -95,7 +164,7 @@ export function IdeaGeneratorForm() {
       throw new Error(payload.error || "Could not generate content.");
     }
 
-    return payload;
+    return payload as GeneratePayload;
   }
 
   async function renderPackageImage(payload: {
@@ -127,6 +196,7 @@ export function IdeaGeneratorForm() {
     const quantity = getQuantity();
     const createdPostIds: string[] = [];
     const imageFailures: string[] = [];
+    const generatedSoFar: GeneratedPostSummary[] = [];
 
     setState({
       loading: true,
@@ -138,32 +208,69 @@ export function IdeaGeneratorForm() {
     });
 
     try {
-      for (let index = 1; index <= quantity; index += 1) {
+      if (quantity === 1) {
         setState({
           loading: true,
-          message:
-            quantity === 1
-              ? "Generating structured content package..."
-              : `Generating ${index} of ${quantity} content packages...`,
+          message: "Generating structured content package...",
           error: null,
         });
 
-        const payload = await generateOnePackage(index, quantity);
+        const payload = await generateOnePackage({ index: 1, quantity });
         createdPostIds.push(payload.post.id);
 
         setState({
           loading: true,
-          message:
-            quantity === 1
-              ? "Rendering branded template image..."
-              : `Rendering image ${index} of ${quantity}...`,
+          message: "Rendering branded template image...",
           error: null,
         });
 
         const imageError = await renderPackageImage(payload);
 
         if (imageError) {
-          imageFailures.push(`${index}: ${imageError}`);
+          imageFailures.push(`1: ${imageError}`);
+        }
+      } else {
+        setState({
+          loading: true,
+          message: `Planning ${quantity}-post campaign...`,
+          error: null,
+        });
+
+        const batchPlan = await createBatchPlan(quantity);
+        const angles = batchPlan.plan.angles;
+
+        for (const angle of angles) {
+          setState({
+            loading: true,
+            message: `Generating ${angle.index}/${quantity}: ${angle.working_title}`,
+            error: null,
+          });
+
+          const payload = await generateOnePackage({
+            index: angle.index,
+            quantity,
+            ideaId: batchPlan.idea.id,
+            batchAngle: angle,
+            generatedSoFar,
+          });
+          createdPostIds.push(payload.post.id);
+          generatedSoFar.push({
+            hook: payload.content.hook || payload.post.hook,
+            headline: payload.content.headline || payload.post.headline,
+            pillar: payload.content.pillar || payload.post.pillar,
+          });
+
+          setState({
+            loading: true,
+            message: `Rendering image ${angle.index}/${quantity}: ${angle.working_title}`,
+            error: null,
+          });
+
+          const imageError = await renderPackageImage(payload);
+
+          if (imageError) {
+            imageFailures.push(`${angle.index}: ${imageError}`);
+          }
         }
       }
 
@@ -222,17 +329,21 @@ export function IdeaGeneratorForm() {
 
       <div className="mt-6 grid gap-4">
         <label className="block">
-          <span className="text-sm font-medium text-zinc-300">Title</span>
+          <span className="text-sm font-medium text-zinc-300">
+            Topic / niche
+          </span>
           <input
             required
             value={form.title}
             onChange={(event) => updateField("title", event.target.value)}
             className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#d4ff00]"
-            placeholder="AI agents are quietly changing local search"
+            placeholder="AI won't replace you, lazy AI users will"
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-zinc-300">Brief</span>
+          <span className="text-sm font-medium text-zinc-300">
+            Brief / constraints
+          </span>
           <textarea
             required
             value={form.brief}

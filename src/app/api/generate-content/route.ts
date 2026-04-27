@@ -3,6 +3,7 @@ import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
 import { jsonError, jsonOk } from "@/lib/api";
+import { WORD_OF_AI_SYSTEM_PROMPT } from "@/lib/content/brand";
 import {
   generatedContentSchema,
   ideaInputSchema,
@@ -13,6 +14,7 @@ import {
   getOpenAIEnv,
 } from "@/lib/env";
 import { requireApiUser } from "@/lib/auth";
+import { summarizeSourceUrl } from "@/lib/content/source";
 
 const openAITemplateFieldsSchema = z.object({
   headline: z.string(),
@@ -53,39 +55,6 @@ const openAIContentSchema = z.object({
   template_fields: openAITemplateFieldsSchema,
 });
 
-async function summarizeSourceUrl(sourceUrl: string) {
-  try {
-    const response = await fetch(sourceUrl, {
-      signal: AbortSignal.timeout(7000),
-      headers: {
-        "User-Agent": "Content OS internal research bot",
-      },
-    });
-
-    if (!response.ok) {
-      return `Unavailable: source returned HTTP ${response.status}.`;
-    }
-
-    const text = await response.text();
-    const cleanText = text
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (!cleanText) {
-      return "Unavailable: source did not contain readable text.";
-    }
-
-    return cleanText.slice(0, 1800);
-  } catch (error) {
-    return `Unavailable: ${
-      error instanceof Error ? error.message : "source fetch failed"
-    }.`;
-  }
-}
-
 function normalizeTemplateFields(
   fields: z.infer<typeof openAITemplateFieldsSchema>,
 ) {
@@ -114,27 +83,55 @@ export async function POST(request: Request) {
     const { supabase, user } = await requireApiUser();
     const generationCount = input.generation_count || input.quantity || 1;
     const generationIndex = Math.min(input.generation_index || 1, generationCount);
-    const sourceSummary = input.source_url
-      ? await summarizeSourceUrl(input.source_url)
-      : null;
+    const generatedSoFar = input.recent_context?.generated_so_far || [];
+    let sourceSummary: string | null = null;
+    let idea: {
+      id: string;
+      title: string;
+      brief: string | null;
+      source_url: string | null;
+      source_summary: string | null;
+      user_id: string;
+    };
 
-    const { data: idea, error: ideaError } = await supabase
-      .from("content_ideas")
-      .insert({
-        user_id: user.id,
-        title:
-          generationCount > 1
-            ? `${input.title} (${generationIndex}/${generationCount})`
-            : input.title,
-        brief: input.brief,
-        source_url: input.source_url || null,
-        source_summary: sourceSummary,
-      })
-      .select()
-      .single();
+    if (input.idea_id) {
+      const { data: existingIdea, error: ideaError } = await supabase
+        .from("content_ideas")
+        .select("id, title, brief, source_url, source_summary, user_id")
+        .eq("id", input.idea_id)
+        .single();
 
-    if (ideaError || !idea) {
-      throw new Error(ideaError?.message || "Could not create idea.");
+      if (ideaError || !existingIdea || existingIdea.user_id !== user.id) {
+        throw new Error("Campaign idea not found or not owned by current user.");
+      }
+
+      idea = existingIdea;
+      sourceSummary = existingIdea.source_summary;
+    } else {
+      sourceSummary = input.source_url
+        ? await summarizeSourceUrl(input.source_url)
+        : null;
+
+      const { data: newIdea, error: ideaError } = await supabase
+        .from("content_ideas")
+        .insert({
+          user_id: user.id,
+          title:
+            generationCount > 1
+              ? `${input.title} (${generationIndex}/${generationCount})`
+              : input.title,
+          brief: input.brief,
+          source_url: input.source_url || null,
+          source_summary: sourceSummary,
+        })
+        .select("id, title, brief, source_url, source_summary, user_id")
+        .single();
+
+      if (ideaError || !newIdea) {
+        throw new Error(ideaError?.message || "Could not create idea.");
+      }
+
+      idea = newIdea;
     }
 
     const { apiKey, model } = getOpenAIEnv();
@@ -145,31 +142,55 @@ export async function POST(request: Request) {
       input: [
         {
           role: "system",
-          content:
-            "You are Content OS for Word of AI (@wordofaii), a sharp AI/tech media brand. Generate practical, save-worthy social content for a smart Gen Z, founder, and AI-curious audience. Avoid corporate fluff, fake claims, and hard selling. Rallio may be mentioned lightly only when local discovery, creator economy, or founder context makes it natural. QuoteStack should be rare and only natural in founder/B2B context.",
+          content: [
+            WORD_OF_AI_SYSTEM_PROMPT,
+            "Generate one complete social post package.",
+            "If a batch_angle is provided, treat it as the source of truth for this post's angle, pillar, visual direction, and CTA intent.",
+            "Do not copy hooks, headlines, examples, caption structure, or template fields from generated_so_far.",
+            "Avoid generic non-positions. Take a clear builder-to-builder point of view.",
+          ].join(" "),
         },
         {
           role: "user",
           content: JSON.stringify(
             {
-              task: "Generate a complete social post package.",
-              title: input.title,
-              brief: input.brief,
-              source_url: input.source_url || null,
+              task: input.batch_angle
+                ? "Generate this specific planned post from the batch campaign."
+                : "Generate a complete social post package.",
+              title: idea.title || input.title,
+              brief: idea.brief || input.brief,
+              source_url: idea.source_url || input.source_url || null,
               source_summary: sourceSummary || "No source URL provided.",
               platform: input.platform,
               post_type: input.post_type,
               tone: input.tone,
               template_hint: input.template_hint,
+              batch_angle: input.batch_angle || null,
               batch_generation:
                 generationCount > 1
                   ? {
                       current_package: generationIndex,
                       total_packages: generationCount,
                       instruction:
-                        "Make this a distinct angle in the batch. Avoid repeating the same hook, headline, CTA, examples, or template fields used by other batch items.",
+                        "Obey the planned batch angle. This post must be distinct from other batch items in hook, headline, takeaway, CTA, examples, caption shape, and template fields.",
                     }
                   : null,
+              generated_so_far: generatedSoFar,
+              caption_rules: {
+                instagram:
+                  "Strong first line, short paragraphs, direct builder voice, 1-3 emojis max, 15-25 varied hashtags.",
+                x:
+                  "Under 280 characters, punchy, 0-1 hashtag, no thread unless post_type is thread.",
+              },
+              cta_rotation:
+                "Use follow most often. Rallio and QuoteStack mentions should be rare and natural. Never hard sell.",
+              planned_output_contract: input.batch_angle
+                ? {
+                    pillar_must_equal: input.batch_angle.pillar,
+                    template_type_must_equal: input.batch_angle.template_type,
+                    cta_should_match: input.batch_angle.cta_intent,
+                  }
+                : null,
               content_focus: [
                 "AI news",
                 "AI tools",
@@ -197,6 +218,8 @@ export async function POST(request: Request) {
 
     const content = generatedContentSchema.parse({
       ...parsed,
+      pillar: input.batch_angle?.pillar || parsed.pillar,
+      template_type: input.batch_angle?.template_type || parsed.template_type,
       template_fields: normalizeTemplateFields(parsed.template_fields),
     });
 

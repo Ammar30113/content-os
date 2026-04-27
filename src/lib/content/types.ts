@@ -19,6 +19,7 @@ export const templateTypes = [
 ] as const;
 export const templateHints = ["auto", ...templateTypes] as const;
 export const postQuantities = ["1", "3", "5", "10", "20"] as const;
+export const ctaIntents = ["follow", "rallio", "quotestack"] as const;
 export const postStatuses = [
   "draft",
   "reviewing",
@@ -29,7 +30,34 @@ export const postStatuses = [
   "archived",
 ] as const;
 
+export const batchAngleSchema = z.object({
+  index: z.number().int().min(1).max(20),
+  working_title: z.string(),
+  pillar: z.enum(templateTypes),
+  template_type: z.enum(templateTypes),
+  hook_direction: z.string(),
+  audience_pain_point: z.string(),
+  unique_takeaway: z.string(),
+  caption_structure: z.string(),
+  cta_intent: z.enum(ctaIntents),
+  do_not_repeat: z.string(),
+});
+
+export const recentContextSchema = z.object({
+  generated_so_far: z
+    .array(
+      z.object({
+        hook: z.string().nullable().optional(),
+        headline: z.string().nullable().optional(),
+        pillar: z.string().nullable().optional(),
+      }),
+    )
+    .optional()
+    .default([]),
+});
+
 export const ideaInputSchema = z.object({
+  idea_id: z.string().uuid().optional(),
   title: z.string().trim().min(3, "Add a sharper idea title."),
   brief: z.string().trim().min(10, "Add a little more context."),
   source_url: z.string().trim().url().optional().or(z.literal("")),
@@ -40,6 +68,8 @@ export const ideaInputSchema = z.object({
   quantity: z.coerce.number().int().min(1).max(20).optional().default(1),
   generation_count: z.coerce.number().int().min(1).max(20).optional().default(1),
   generation_index: z.coerce.number().int().min(1).max(20).optional().default(1),
+  batch_angle: batchAngleSchema.optional(),
+  recent_context: recentContextSchema.optional(),
 });
 
 export const templateFieldsSchema = z.object({
@@ -105,6 +135,7 @@ export const postUpdateSchema = z.object({
 });
 
 export type IdeaInput = z.infer<typeof ideaInputSchema>;
+export type BatchAngle = z.infer<typeof batchAngleSchema>;
 export type GeneratedContent = z.infer<typeof generatedContentSchema>;
 export type TemplateFields = z.infer<typeof templateFieldsSchema>;
 export type TemplateType = (typeof templateTypes)[number];
