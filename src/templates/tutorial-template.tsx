@@ -1,49 +1,50 @@
 import type { TemplateFields } from "@/lib/content/types";
-import { TemplateFrame, brand, headlineStyle, safeText, subheadStyle } from "./shared";
+import {
+  TemplateFrame,
+  brand,
+  centerStackStyle,
+  displayHeadline,
+  headlineStyle,
+  safeText,
+  subheadStyle,
+} from "./shared";
 
 export function TutorialTemplate({ fields }: { fields: TemplateFields }) {
   return (
-    <TemplateFrame chip="HOW TO">
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          height: "100%",
-          gap: 30,
-        }}
-      >
+    <TemplateFrame chip="HOW TO" accent={brand.lime}>
+      <div style={{ ...centerStackStyle, maxWidth: 780 }}>
         {fields.step_number ? (
           <div
             style={{
-              fontSize: 150,
-              lineHeight: 0.8,
+              fontSize: 112,
+              lineHeight: 0.9,
               color: brand.lime,
               fontWeight: 950,
+              letterSpacing: -2,
             }}
           >
             {fields.step_number}
           </div>
         ) : null}
-        <div style={{ ...headlineStyle, fontSize: 78 }}>
-          {safeText(fields.headline, "Steal this AI workflow")}
+        <div style={{ ...headlineStyle, fontSize: 58 }}>
+          {displayHeadline(fields.headline, "Steal this AI workflow")}
         </div>
-        <div style={{ ...subheadStyle, maxWidth: 840 }}>
+        <div style={{ ...subheadStyle, maxWidth: 700 }}>
           {safeText(fields.subhead, "A practical prompt pattern you can use today.")}
         </div>
         {fields.code_snippet ? (
           <div
             style={{
-              marginTop: 20,
-              border: "2px solid rgba(255, 255, 255, 0.12)",
-              borderRadius: 24,
-              background: "#111114",
-              padding: 30,
-              fontSize: 27,
+              marginTop: 6,
+              border: "1px solid rgba(247, 247, 242, 0.16)",
+              background: "rgba(10, 10, 11, 0.52)",
+              padding: 26,
+              fontSize: 23,
               lineHeight: 1.28,
               color: "#E7E7E0",
               fontFamily: "Menlo, Consolas, monospace",
               whiteSpace: "pre-wrap",
+              maxWidth: 710,
             }}
           >
             {fields.code_snippet}

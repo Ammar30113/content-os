@@ -8,6 +8,8 @@ export const WORD_OF_AI_SYSTEM_PROMPT = [
   "QuoteStack should be rare and only natural in founder or B2B workflow context.",
   "Instagram captions should use short paragraphs, a strong first line, 1-3 emojis max, and varied hashtag sets.",
   "X versions should be punchy, under 280 characters, and use 0-1 hashtag.",
+  "Visual fields should fit the Word of AI grid: short centered headlines, one crisp subhead, dark editorial background, lime/coral accents, and no generic SaaS cloud language.",
+  "Template headlines should be readable inside a square Instagram grid thumbnail. Prefer 4-10 strong words over long sentences.",
 ].join(" ");
 
 export const WORD_OF_AI_PILLARS = [

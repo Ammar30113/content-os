@@ -1,41 +1,50 @@
 import type { TemplateFields } from "@/lib/content/types";
-import { TemplateFrame, brand, headlineStyle, safeText, subheadStyle } from "./shared";
+import {
+  TemplateFrame,
+  brand,
+  centerStackStyle,
+  displayHeadline,
+  headlineStyle,
+  safeText,
+  subheadStyle,
+} from "./shared";
 
 export function CreatorEconomyTemplate({ fields }: { fields: TemplateFields }) {
   const heroText = fields.stat || fields.quote || "Distribution is the product";
 
   return (
-    <TemplateFrame chip="CREATOR ECONOMY">
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          height: "100%",
-          gap: 30,
-        }}
-      >
+    <TemplateFrame chip="CREATOR ECONOMY" accent={brand.coral}>
+      <div style={{ ...centerStackStyle, maxWidth: 800 }}>
         <div
           style={{
-            color: brand.lime,
-            fontSize: heroText.length > 28 ? 74 : 126,
-            lineHeight: 0.9,
-            letterSpacing: -3,
+            color: brand.coral,
+            fontSize: heroText.length > 30 ? 58 : 88,
+            lineHeight: 1,
+            letterSpacing: heroText.length > 30 ? 2 : -1,
             fontWeight: 950,
-            maxWidth: 880,
+            textAlign: "center",
           }}
         >
           {heroText}
         </div>
         {fields.attribution ? (
-          <div style={{ color: brand.coral, fontSize: 30, fontWeight: 800 }}>
+          <div
+            style={{
+              color: "rgba(247, 247, 242, 0.72)",
+              fontSize: 24,
+              fontWeight: 800,
+              letterSpacing: 2.2,
+              textAlign: "center",
+              textTransform: "uppercase",
+            }}
+          >
             {fields.attribution}
           </div>
         ) : null}
-        <div style={{ ...headlineStyle, fontSize: 58, maxWidth: 880 }}>
-          {safeText(fields.headline, "The new creator edge is local trust")}
+        <div style={{ ...headlineStyle, fontSize: 48 }}>
+          {displayHeadline(fields.headline, "The new creator edge is local trust")}
         </div>
-        <div style={{ ...subheadStyle, maxWidth: 850 }}>
+        <div style={{ ...subheadStyle, maxWidth: 700 }}>
           {safeText(fields.subhead, "Attention compounds when it turns into action.")}
         </div>
       </div>
