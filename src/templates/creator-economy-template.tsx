@@ -1,22 +1,30 @@
 import type { TemplateFields } from "@/lib/content/types";
 import {
-  BottomHeadlineBand,
+  BottomBar,
   TemplateFrame,
+  TextCard,
   Watermark,
   brand,
+  compactText,
   displayHeadline,
   safeText,
 } from "./shared";
 
 export function CreatorEconomyTemplate({ fields }: { fields: TemplateFields }) {
-  const heroText = safeText(
+  const heroText = displayHeadline(
     fields.stat || fields.quote,
     "Distribution is the product",
+    64,
   );
   const headline = displayHeadline(
     fields.headline,
     "The new creator edge is local trust",
-    88,
+    72,
+  );
+  const subhead = compactText(
+    fields.subhead,
+    "Attention compounds when it turns into action.",
+    112,
   );
 
   return (
@@ -27,41 +35,22 @@ export function CreatorEconomyTemplate({ fields }: { fields: TemplateFields }) {
       <div
         style={{
           position: "absolute",
-          left: 72,
-          top: 150,
-          width: 936,
-          height: 454,
+          left: 112,
+          top: 172,
+          width: 856,
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 26,
-          zIndex: 2,
+          gap: 22,
+          zIndex: 3,
         }}
       >
         <div
           style={{
-            position: "absolute",
-            left: 0,
-            top: 42,
-            width: 936,
-            height: 298,
-            border: "2px solid rgba(255,107,74,0.35)",
-            backgroundColor: "rgba(0,0,0,0.34)",
-            transform: "rotate(-2deg)",
-          }}
-        />
-        <div
-          style={{
             color: brand.coral,
-            fontSize: heroText.length > 42 ? 58 : 92,
-            lineHeight: 0.98,
+            fontSize: heroText.length > 42 ? 56 : 84,
+            lineHeight: 0.96,
             fontWeight: 900,
-            letterSpacing: 0,
-            textAlign: "center",
             textTransform: "uppercase",
-            maxWidth: 820,
-            zIndex: 2,
           }}
         >
           {heroText}
@@ -69,25 +58,24 @@ export function CreatorEconomyTemplate({ fields }: { fields: TemplateFields }) {
         {fields.attribution ? (
           <div
             style={{
-              color: "rgba(247,247,242,0.78)",
-              fontSize: 25,
+              color: "rgba(247,247,242,0.72)",
+              fontSize: 24,
               fontWeight: 800,
-              letterSpacing: 1.8,
+              letterSpacing: 2,
               textTransform: "uppercase",
-              zIndex: 2,
             }}
           >
             {fields.attribution}
           </div>
         ) : null}
       </div>
-      <BottomHeadlineBand
+      <TextCard
         headline={headline}
-        subhead={safeText(fields.subhead, "Attention compounds when it turns into action.")}
-        label={safeText(fields.swipe_hint, "Steal the play")}
+        subhead={subhead}
         accent={brand.coral}
-        minHeight={330}
+        top={534}
       />
+      <BottomBar label={safeText(fields.swipe_hint, "Steal the play")} accent={brand.coral} />
       <Watermark align="right" />
     </TemplateFrame>
   );

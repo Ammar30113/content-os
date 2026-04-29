@@ -196,11 +196,13 @@ export async function POST(request: Request) {
               },
               visual_system: {
                 style:
-                  "AI Newsroom / Builder Desk. Dark, high-contrast, bold headline band, lime/coral accents, sharper than a plain quote card.",
+                  "AI Newsroom / Builder Desk. Dark, high-contrast, text-first, sharp, and readable. Do not make fake hero visuals when no real image URL is provided.",
                 template_fields:
                   "Use headline, subhead, visual_subject, swipe_hint, bottom_label, source_name, date, tools, stat, quote, pull_quote, and code_snippet to direct the image. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null.",
                 thumbnail_rule:
                   "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
+                placeholder_rule:
+                  "Never output placeholder labels like Tool A, Tool B, Product X, or Founder Y. Use specific real names from the input or role labels like Research agent, Drafting agent, Review agent.",
               },
               cta_rotation:
                 "Use follow most often. Rallio and QuoteStack mentions should be rare and natural. Never hard sell.",

@@ -4,14 +4,11 @@ import type React from "react";
 export const CANVAS_SIZE = 1080;
 export const brand = {
   background: "#0A0A0B",
-  gridEdge: "#050607",
-  gridMid: "#575757",
-  gridSoft: "#252629",
   lime: "#D4FF00",
   coral: "#FF6B4A",
   white: "#F7F7F2",
   muted: "#A1A1AA",
-  panel: "#17171A",
+  panel: "#151518",
 };
 
 export function TemplateFrame({
@@ -45,7 +42,7 @@ export function TemplateFrame({
           width: "100%",
           height: "100%",
           background:
-            "radial-gradient(circle at 50% 28%, rgba(97,97,97,0.78) 0%, rgba(40,41,44,0.82) 34%, rgba(10,10,11,1) 76%)",
+            "radial-gradient(circle at 54% 34%, rgba(74,74,78,0.74) 0%, rgba(22,23,26,0.96) 45%, rgba(5,5,6,1) 86%)",
         }}
       />
       <div
@@ -56,31 +53,22 @@ export function TemplateFrame({
           width: "100%",
           height: "100%",
           background:
-            "linear-gradient(90deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.1) 28%, rgba(0,0,0,0.1) 72%, rgba(0,0,0,0.9) 100%)",
+            "linear-gradient(90deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.12) 48%, rgba(0,0,0,0.92) 100%)",
         }}
       />
+      <AccentRail accent={accent} />
       <div
         style={{
           position: "absolute",
-          left: 0,
-          top: 0,
-          width: "100%",
-          height: "100%",
-          border: "1px solid rgba(255,255,255,0.06)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          top: 56,
-          left: 64,
-          height: 44,
+          top: 64,
+          left: 72,
+          height: 42,
           padding: "0 18px",
           display: "flex",
           alignItems: "center",
           backgroundColor: accent,
           color: brand.background,
-          fontSize: 19,
+          fontSize: 18,
           fontWeight: 900,
           letterSpacing: 2,
           textTransform: "uppercase",
@@ -89,14 +77,45 @@ export function TemplateFrame({
       >
         {chip}
       </div>
+      <div
+        style={{
+          position: "absolute",
+          top: 72,
+          right: 72,
+          color: "rgba(247,247,242,0.52)",
+          fontSize: 18,
+          fontWeight: 800,
+          letterSpacing: 2,
+          textTransform: "uppercase",
+          zIndex: 5,
+        }}
+      >
+        WORD OF AI
+      </div>
       {children}
     </div>
   );
 }
 
+export function AccentRail({ accent = brand.lime }: { accent?: string }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 72,
+        top: 128,
+        bottom: 84,
+        width: 4,
+        backgroundColor: accent,
+        opacity: 0.9,
+      }}
+    />
+  );
+}
+
 export function Watermark({
   align = "right",
-  color = "rgba(247, 247, 242, 0.66)",
+  color = "rgba(247,247,242,0.58)",
 }: {
   align?: "left" | "center" | "right";
   color?: string;
@@ -105,16 +124,16 @@ export function Watermark({
     <div
       style={{
         position: "absolute",
-        bottom: 38,
-        left: align === "left" ? 64 : 0,
-        right: align === "right" ? 64 : 0,
+        bottom: 46,
+        left: align === "left" ? 96 : 0,
+        right: align === "right" ? 72 : 0,
         display: "flex",
         justifyContent:
           align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center",
         color,
         fontSize: 23,
         fontWeight: 800,
-        letterSpacing: 2.4,
+        letterSpacing: 2.3,
         zIndex: 6,
       }}
     >
@@ -123,61 +142,59 @@ export function Watermark({
   );
 }
 
-export function BottomHeadlineBand({
+export function TextCard({
+  eyebrow,
   headline,
   subhead,
-  label,
   accent = brand.lime,
-  minHeight = 292,
+  align = "left",
+  top = 186,
 }: {
+  eyebrow?: string;
   headline: string;
   subhead?: string;
-  label?: string;
   accent?: string;
-  minHeight?: number;
+  align?: "left" | "center";
+  top?: number;
 }) {
   return (
     <div
       style={{
         position: "absolute",
-        left: 0,
-        bottom: 0,
-        width: "100%",
-        height: minHeight,
-        backgroundColor: "rgba(0, 0, 0, 0.93)",
-        borderTop: "2px solid rgba(247,247,242,0.84)",
-        padding: "36px 60px 68px",
+        left: 112,
+        top,
+        width: 856,
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 14,
-        zIndex: 4,
+        alignItems: align === "center" ? "center" : "flex-start",
+        gap: 28,
+        zIndex: 3,
       }}
     >
-      {label ? (
+      {eyebrow ? (
         <div
           style={{
             color: accent,
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: 900,
-            letterSpacing: 2.8,
+            letterSpacing: 3,
             textTransform: "uppercase",
+            textAlign: align,
           }}
         >
-          {label}
+          {eyebrow}
         </div>
       ) : null}
       <div
         style={{
           color: brand.white,
-          fontSize: headline.length > 68 ? 45 : 55,
+          fontSize: headline.length > 68 ? 58 : 72,
           lineHeight: 0.96,
           fontWeight: 900,
           letterSpacing: 0,
-          textAlign: "center",
           textTransform: "uppercase",
-          maxWidth: 960,
+          textAlign: align,
+          maxWidth: 856,
         }}
       >
         {headline}
@@ -186,11 +203,11 @@ export function BottomHeadlineBand({
         <div
           style={{
             color: "rgba(247,247,242,0.78)",
-            fontSize: 23,
-            lineHeight: 1.18,
-            fontWeight: 700,
-            textAlign: "center",
-            maxWidth: 840,
+            fontSize: 30,
+            lineHeight: 1.22,
+            fontWeight: 600,
+            textAlign: align,
+            maxWidth: 760,
           }}
         >
           {subhead}
@@ -200,275 +217,79 @@ export function BottomHeadlineBand({
   );
 }
 
-export function HeroVisual({
-  src,
-  subject,
-  sourceName,
-  logo,
+export function BottomBar({
+  label,
   accent = brand.lime,
-  variant = "news",
-  height = 680,
 }: {
-  src?: string;
-  subject?: string;
-  sourceName?: string;
-  logo?: string;
+  label?: string;
   accent?: string;
-  variant?: "news" | "tool" | "tutorial" | "creator" | "founder";
-  height?: number;
 }) {
-  const initials = getInitials(sourceName || subject || "AI");
+  if (!label) {
+    return null;
+  }
 
   return (
     <div
       style={{
         position: "absolute",
-        left: 0,
-        top: 0,
-        width: "100%",
-        height,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "hidden",
+        left: 112,
+        bottom: 112,
+        color: accent,
+        fontSize: 21,
+        fontWeight: 900,
+        letterSpacing: 3,
+        textTransform: "uppercase",
+        zIndex: 4,
       }}
     >
-      {src ? (
-        <img
-          src={src}
-          alt=""
-          width={1080}
-          height={height}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-          }}
-        />
-      ) : (
-        <AbstractVisual
-          subject={subject || sourceName || "AI SYSTEM UPDATE"}
-          initials={initials}
-          accent={accent}
-          variant={variant}
-        />
-      )}
+      {label}
+    </div>
+  );
+}
+
+export function ImagePanel({
+  src,
+  height = 570,
+}: {
+  src: string;
+  height?: number;
+}) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 112,
+        top: 148,
+        width: 856,
+        height,
+        border: "2px solid rgba(247,247,242,0.16)",
+        backgroundColor: "#060607",
+        display: "flex",
+        overflow: "hidden",
+        zIndex: 2,
+      }}
+    >
+      <img
+        src={src}
+        alt=""
+        width={856}
+        height={height}
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      />
       <div
         style={{
           position: "absolute",
           left: 0,
-          top: 0,
+          bottom: 0,
           width: "100%",
-          height: "100%",
+          height: 180,
           background:
-            "linear-gradient(180deg, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.08) 45%, rgba(0,0,0,0.68) 100%)",
+            "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.82) 100%)",
         }}
       />
-      {logo ? (
-        <img
-          src={logo}
-          alt=""
-          width={104}
-          height={104}
-          style={{
-            position: "absolute",
-            right: 64,
-            top: 52,
-            width: 104,
-            height: 104,
-            objectFit: "contain",
-            backgroundColor: "rgba(0,0,0,0.72)",
-            border: "1px solid rgba(255,255,255,0.18)",
-          }}
-        />
-      ) : null}
     </div>
   );
 }
-
-function AbstractVisual({
-  subject,
-  initials,
-  accent,
-  variant,
-}: {
-  subject: string;
-  initials: string;
-  accent: string;
-  variant: "news" | "tool" | "tutorial" | "creator" | "founder";
-}) {
-  const secondary = variant === "creator" ? brand.coral : brand.white;
-
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-        background:
-          variant === "tutorial"
-            ? "linear-gradient(135deg, #101113 0%, #25272b 52%, #070708 100%)"
-            : "radial-gradient(circle at 50% 42%, #646464 0%, #2c2d31 42%, #070708 100%)",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          left: 90,
-          top: 140,
-          width: 900,
-          height: 320,
-          border: "2px solid rgba(247,247,242,0.12)",
-          transform: "rotate(-5deg)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          right: 96,
-          top: 116,
-          width: 184,
-          height: 184,
-          backgroundColor: accent,
-          color: brand.background,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: initials.length > 2 ? 54 : 74,
-          lineHeight: 1,
-          fontWeight: 900,
-          letterSpacing: 0,
-        }}
-      >
-        {initials}
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: 108,
-          bottom: 116,
-          width: 220,
-          height: 220,
-          borderRadius: 999,
-          border: `18px solid ${accent}`,
-          opacity: 0.82,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: 138,
-          bottom: 146,
-          width: 160,
-          height: 160,
-          borderRadius: 999,
-          border: `10px solid ${secondary}`,
-          opacity: 0.56,
-        }}
-      />
-      <div
-        style={{
-          color: "rgba(247,247,242,0.9)",
-          fontSize: subject.length > 24 ? 40 : 52,
-          lineHeight: 1,
-          fontWeight: 900,
-          letterSpacing: 0,
-          textAlign: "center",
-          textTransform: "uppercase",
-          maxWidth: 650,
-        }}
-      >
-        {subject}
-      </div>
-    </div>
-  );
-}
-
-export function SourceBadge({
-  sourceName,
-  date,
-  accent = brand.lime,
-}: {
-  sourceName?: string;
-  date?: string;
-  accent?: string;
-}) {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: 64,
-        top: 118,
-        display: "flex",
-        gap: 12,
-        alignItems: "center",
-        zIndex: 6,
-      }}
-    >
-      <div
-        style={{
-          width: 14,
-          height: 14,
-          backgroundColor: accent,
-        }}
-      />
-      <div
-        style={{
-          color: "rgba(247,247,242,0.84)",
-          fontSize: 21,
-          fontWeight: 800,
-          letterSpacing: 1.4,
-          textTransform: "uppercase",
-        }}
-      >
-        {safeText(sourceName, "WORD OF AI")}
-        {date ? ` / ${date}` : ""}
-      </div>
-    </div>
-  );
-}
-
-export const headlineStyle = {
-  fontSize: 58,
-  lineHeight: 1.02,
-  letterSpacing: 0,
-  fontWeight: 900,
-  color: brand.white,
-  textAlign: "center",
-  textTransform: "uppercase",
-} satisfies React.CSSProperties;
-
-export const subheadStyle = {
-  fontSize: 34,
-  lineHeight: 1.32,
-  color: "#F1F1EE",
-  fontWeight: 600,
-  textAlign: "center",
-} satisfies React.CSSProperties;
-
-export const metaStyle = {
-  color: "rgba(247, 247, 242, 0.66)",
-  fontSize: 24,
-  fontWeight: 800,
-  letterSpacing: 0,
-  textTransform: "uppercase",
-  textAlign: "center",
-} satisfies React.CSSProperties;
-
-export const centerStackStyle = {
-  position: "relative",
-  zIndex: 1,
-  width: "100%",
-  maxWidth: 760,
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 36,
-} satisfies React.CSSProperties;
 
 export function safeText(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -486,7 +307,15 @@ export function safeUrl(value: unknown) {
     : undefined;
 }
 
-export function displayHeadline(value: unknown, fallback = "", limit = 92) {
+export function displayHeadline(value: unknown, fallback = "", limit = 74) {
+  const text = safeText(value, fallback)
+    .replace(/^["'“”]+|["'“”]+$/g, "")
+    .trim();
+
+  return text.length > limit ? `${text.slice(0, limit - 3).trim()}...` : text;
+}
+
+export function compactText(value: unknown, fallback = "", limit = 116) {
   const text = safeText(value, fallback);
 
   return text.length > limit ? `${text.slice(0, limit - 3).trim()}...` : text;

@@ -1,110 +1,77 @@
 import type { TemplateFields } from "@/lib/content/types";
 import {
-  BottomHeadlineBand,
+  BottomBar,
   TemplateFrame,
+  TextCard,
   Watermark,
   brand,
+  compactText,
   displayHeadline,
   safeText,
 } from "./shared";
 
 export function TutorialTemplate({ fields }: { fields: TemplateFields }) {
-  const headline = displayHeadline(fields.headline, "Steal this AI workflow", 86);
-  const snippet = safeText(
+  const headline = displayHeadline(fields.headline, "Steal this AI workflow", 72);
+  const subhead = compactText(
+    fields.subhead,
+    "A practical prompt pattern you can use today.",
+    110,
+  );
+  const snippet = compactText(
     fields.code_snippet,
-    "Role: operator\nTask: turn this messy workflow into a repeatable AI system\nOutput: steps, risks, next action",
+    "1. Define the job\n2. Give the agent context\n3. Review before it ships",
+    190,
   );
 
   return (
     <TemplateFrame chip={safeText(fields.bottom_label, "HOW TO")} accent={brand.lime}>
+      <TextCard
+        eyebrow={safeText(fields.visual_subject, `Step ${safeText(fields.step_number, "01")}`)}
+        headline={headline}
+        subhead={subhead}
+        accent={brand.lime}
+        top={154}
+      />
       <div
         style={{
           position: "absolute",
-          left: 78,
-          top: 150,
-          width: 924,
-          height: 468,
-          backgroundColor: "rgba(0,0,0,0.7)",
-          border: "2px solid rgba(247,247,242,0.18)",
+          left: 112,
+          top: 572,
+          width: 856,
+          minHeight: 260,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          border: "1px solid rgba(247,247,242,0.18)",
           display: "flex",
           flexDirection: "column",
-          overflow: "hidden",
-          zIndex: 2,
+          padding: "34px 38px",
+          gap: 22,
+          zIndex: 3,
         }}
       >
         <div
           style={{
-            height: 66,
-            borderBottom: "1px solid rgba(247,247,242,0.14)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 28px",
+            color: brand.lime,
+            fontSize: 20,
+            fontWeight: 900,
+            letterSpacing: 3,
+            textTransform: "uppercase",
           }}
         >
-          <div
-            style={{
-              color: brand.lime,
-              fontSize: 22,
-              fontWeight: 900,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-            }}
-          >
-            Prompt block
-          </div>
-          <div
-            style={{
-              color: "rgba(247,247,242,0.56)",
-              fontSize: 20,
-              fontWeight: 800,
-            }}
-          >
-            {safeText(fields.step_number, "01")}
-          </div>
+          Prompt recipe
         </div>
         <div
           style={{
-            padding: "34px 38px",
-            color: "#F7F7F2",
+            color: brand.white,
             fontFamily: "Menlo, Consolas, monospace",
-            fontSize: snippet.length > 170 ? 24 : 30,
-            lineHeight: 1.26,
+            fontSize: snippet.length > 140 ? 25 : 30,
+            lineHeight: 1.32,
             whiteSpace: "pre-wrap",
-            display: "flex",
-            flex: 1,
-            alignItems: "center",
           }}
         >
           {snippet}
         </div>
       </div>
-      <div
-        style={{
-          position: "absolute",
-          right: 76,
-          top: 112,
-          width: 122,
-          height: 122,
-          backgroundColor: brand.lime,
-          color: brand.background,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 56,
-          fontWeight: 900,
-          zIndex: 3,
-        }}
-      >
-        {safeText(fields.step_number, "01")}
-      </div>
-      <BottomHeadlineBand
-        headline={headline}
-        subhead={safeText(fields.subhead, "A practical prompt pattern you can use today.")}
-        label={safeText(fields.swipe_hint, "Save this")}
-        accent={brand.lime}
-        minHeight={330}
-      />
+      <BottomBar label={safeText(fields.swipe_hint, "Save this")} />
       <Watermark align="right" />
     </TemplateFrame>
   );
