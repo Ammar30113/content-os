@@ -4,8 +4,8 @@ import type React from "react";
 export const CANVAS_SIZE = 1080;
 export const brand = {
   background: "#0A0A0B",
-  lime: "#D4FF00",
-  coral: "#FF6B4A",
+  lime: "#B8C28A",
+  coral: "#C98270",
   white: "#F7F7F2",
   muted: "#A1A1AA",
   panel: "#151518",
@@ -42,7 +42,7 @@ export function TemplateFrame({
           width: "100%",
           height: "100%",
           background:
-            "radial-gradient(circle at 54% 34%, rgba(74,74,78,0.74) 0%, rgba(22,23,26,0.96) 45%, rgba(5,5,6,1) 86%)",
+            "radial-gradient(circle at 54% 34%, rgba(54,54,58,0.68) 0%, rgba(18,19,21,0.96) 45%, rgba(5,5,6,1) 86%)",
         }}
       />
       <div
@@ -66,11 +66,12 @@ export function TemplateFrame({
           padding: "0 18px",
           display: "flex",
           alignItems: "center",
-          backgroundColor: accent,
-          color: brand.background,
-          fontSize: 18,
+          backgroundColor: "rgba(0,0,0,0.28)",
+          border: `1px solid ${accent}`,
+          color: accent,
+          fontSize: 17,
           fontWeight: 900,
-          letterSpacing: 2,
+          letterSpacing: 2.4,
           textTransform: "uppercase",
           zIndex: 5,
         }}
@@ -105,9 +106,9 @@ export function AccentRail({ accent = brand.lime }: { accent?: string }) {
         left: 72,
         top: 128,
         bottom: 84,
-        width: 4,
+        width: 2,
         backgroundColor: accent,
-        opacity: 0.9,
+        opacity: 0.52,
       }}
     />
   );
@@ -175,9 +176,9 @@ export function TextCard({
         <div
           style={{
             color: accent,
-            fontSize: 22,
+            fontSize: 19,
             fontWeight: 900,
-            letterSpacing: 3,
+            letterSpacing: 3.2,
             textTransform: "uppercase",
             textAlign: align,
           }}
@@ -235,9 +236,9 @@ export function BottomBar({
         left: 112,
         bottom: 112,
         color: accent,
-        fontSize: 21,
+        fontSize: 18,
         fontWeight: 900,
-        letterSpacing: 3,
+        letterSpacing: 3.2,
         textTransform: "uppercase",
         zIndex: 4,
       }}

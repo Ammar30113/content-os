@@ -61,8 +61,9 @@ export function ToolStackTemplate({ fields }: { fields: TemplateFields }) {
               style={{
                 width: 36,
                 height: 36,
-                backgroundColor: index === 1 ? brand.coral : brand.lime,
-                color: brand.background,
+                backgroundColor: "rgba(0,0,0,0.24)",
+                border: `1px solid ${index === 1 ? brand.coral : brand.lime}`,
+                color: index === 1 ? brand.coral : brand.lime,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
