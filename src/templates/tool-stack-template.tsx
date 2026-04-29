@@ -15,7 +15,7 @@ const defaultTools = ["Research agent", "Drafting agent", "Review agent"];
 
 export function ToolStackTemplate({ fields }: { fields: TemplateFields }) {
   const tools = normalizeTools(fields.tools);
-  const headline = displayHeadline(fields.headline, "3 AI tools worth saving", 72);
+  const headline = displayHeadline(fields.headline, "3 AI tools worth saving", 74);
   const subhead = compactText(
     fields.subhead,
     "A practical stack for faster creator work.",
@@ -29,17 +29,17 @@ export function ToolStackTemplate({ fields }: { fields: TemplateFields }) {
         headline={headline}
         subhead={subhead}
         accent={brand.lime}
-        top={154}
+        top={184}
       />
       <div
         style={{
           position: "absolute",
           left: 112,
-          top: 560,
+          bottom: 172,
           width: 856,
           display: "flex",
-          flexDirection: "column",
-          gap: 18,
+          flexDirection: "row",
+          gap: 14,
           zIndex: 3,
         }}
       >
@@ -47,26 +47,28 @@ export function ToolStackTemplate({ fields }: { fields: TemplateFields }) {
           <div
             key={`${tool}-${index}`}
             style={{
-              height: 92,
+              minHeight: 76,
+              flex: 1,
               backgroundColor: "rgba(0,0,0,0.42)",
               border: "1px solid rgba(247,247,242,0.16)",
               display: "flex",
               alignItems: "center",
               gap: 24,
-              padding: "0 26px",
+              padding: "16px 18px",
             }}
           >
             <div
               style={{
-                width: 48,
-                height: 48,
+                width: 36,
+                height: 36,
                 backgroundColor: index === 1 ? brand.coral : brand.lime,
                 color: brand.background,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 25,
+                fontSize: 20,
                 fontWeight: 900,
+                flexShrink: 0,
               }}
             >
               {index + 1}
@@ -74,7 +76,8 @@ export function ToolStackTemplate({ fields }: { fields: TemplateFields }) {
             <div
               style={{
                 color: brand.white,
-                fontSize: 34,
+                fontSize: tool.length > 18 ? 20 : 23,
+                lineHeight: 1.1,
                 fontWeight: 800,
                 textTransform: "uppercase",
               }}
