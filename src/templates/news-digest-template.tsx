@@ -1,67 +1,49 @@
 import type { TemplateFields } from "@/lib/content/types";
 import {
+  BottomHeadlineBand,
+  HeroVisual,
+  SourceBadge,
   TemplateFrame,
+  Watermark,
   brand,
-  centerStackStyle,
   displayHeadline,
-  headlineStyle,
-  metaStyle,
   safeText,
-  subheadStyle,
+  safeUrl,
 } from "./shared";
 
 export function NewsDigestTemplate({ fields }: { fields: TemplateFields }) {
+  const headline = displayHeadline(fields.headline, "AI just shifted again", 96);
+  const sourceName = safeText(fields.source_name, "WORD OF AI");
+  const heroImage = safeUrl(fields.hero_image_url);
+  const logo =
+    safeUrl(fields.product_logo) ||
+    safeUrl(fields.source_logo) ||
+    safeUrl(fields.source_logo_url);
+
   return (
-    <TemplateFrame chip="AI NEWS" accent={brand.lime}>
-      <div
-        style={{
-          position: "absolute",
-          right: 86,
-          top: 76,
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          color: "rgba(247, 247, 242, 0.72)",
-          fontSize: 21,
-          fontWeight: 800,
-          letterSpacing: 2,
-          textTransform: "uppercase",
-        }}
-      >
-        {fields.source_logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={fields.source_logo}
-            alt=""
-            width={48}
-            height={48}
-            style={{ borderRadius: 12 }}
-          />
-        ) : null}
-        <span>{safeText(fields.source_name, "WORD OF AI")}</span>
-      </div>
-      <div style={centerStackStyle}>
-        <div style={headlineStyle}>
-          {displayHeadline(fields.headline, "AI just shifted again")}
-        </div>
-        <div style={{ ...subheadStyle, maxWidth: 720 }}>
-          {safeText(fields.subhead, "What changed, why it matters, and what to do next.")}
-        </div>
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          bottom: 92,
-          width: "100%",
-          display: "flex",
-          justifyContent: "center",
-          ...metaStyle,
-          color: brand.lime,
-        }}
-      >
-        {safeText(fields.date, new Date().toLocaleDateString("en-US"))}
-      </div>
+    <TemplateFrame chip={safeText(fields.bottom_label, "AI NEWS")} accent={brand.lime}>
+      <HeroVisual
+        src={heroImage}
+        logo={logo}
+        subject={safeText(fields.visual_subject, headline)}
+        sourceName={sourceName}
+        accent={brand.lime}
+        variant="news"
+        height={734}
+      />
+      <SourceBadge
+        sourceName={sourceName}
+        date={safeText(fields.date, "")}
+        accent={brand.lime}
+      />
+      <BottomHeadlineBand
+        headline={headline}
+        subhead={safeText(fields.subhead, "What changed, why it matters, and what to do next.")}
+        label={safeText(fields.swipe_hint, "Swipe for more")}
+        accent={brand.lime}
+        minHeight={318}
+      />
+      <Watermark align="right" />
     </TemplateFrame>
   );
 }

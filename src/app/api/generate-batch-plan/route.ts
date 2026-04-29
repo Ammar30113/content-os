@@ -124,6 +124,8 @@ export async function POST(request: Request) {
                 "Each working_title must be unique.",
                 "Each hook_direction must imply a different post, not a wording variant.",
                 "Each unique_takeaway must teach or argue a different point.",
+                "Use do_not_repeat to name the visual concept to avoid, not only copy to avoid.",
+                "Vary visual treatment across angles: news image band, tool cards, prompt block, stat/quote, or founder note.",
                 "For quantity 5 or more, use at least 3 distinct pillars unless the user explicitly forced one template.",
               ],
             },

@@ -21,7 +21,13 @@ const openAITemplateFieldsSchema = z.object({
   subhead: z.string(),
   source_name: z.string().nullable(),
   source_logo: z.string().nullable(),
+  source_logo_url: z.string().nullable(),
   date: z.string().nullable(),
+  hero_image_url: z.string().nullable(),
+  product_logo: z.string().nullable(),
+  visual_subject: z.string().nullable(),
+  swipe_hint: z.string().nullable(),
+  bottom_label: z.string().nullable(),
   tools: z.array(z.string()).nullable(),
   tool_logos: z.array(z.string()).nullable(),
   step_number: z.string().nullable(),
@@ -62,8 +68,14 @@ function normalizeTemplateFields(
     headline: fields.headline,
     subhead: fields.subhead,
     source_name: fields.source_name || undefined,
-    source_logo: fields.source_logo || undefined,
+    source_logo: fields.source_logo || fields.source_logo_url || undefined,
+    source_logo_url: fields.source_logo_url || fields.source_logo || undefined,
     date: fields.date || undefined,
+    hero_image_url: fields.hero_image_url || undefined,
+    product_logo: fields.product_logo || undefined,
+    visual_subject: fields.visual_subject || undefined,
+    swipe_hint: fields.swipe_hint || undefined,
+    bottom_label: fields.bottom_label || undefined,
     tools: fields.tools || undefined,
     tool_logos: fields.tool_logos || undefined,
     step_number: fields.step_number || undefined,
@@ -181,6 +193,14 @@ export async function POST(request: Request) {
                   "Strong first line, short paragraphs, direct builder voice, 1-3 emojis max, 15-25 varied hashtags.",
                 x:
                   "Under 280 characters, punchy, 0-1 hashtag, no thread unless post_type is thread.",
+              },
+              visual_system: {
+                style:
+                  "AI Newsroom / Builder Desk. Dark, high-contrast, bold headline band, lime/coral accents, sharper than a plain quote card.",
+                template_fields:
+                  "Use headline, subhead, visual_subject, swipe_hint, bottom_label, source_name, date, tools, stat, quote, pull_quote, and code_snippet to direct the image. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null.",
+                thumbnail_rule:
+                  "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
               },
               cta_rotation:
                 "Use follow most often. Rallio and QuoteStack mentions should be rare and natural. Never hard sell.",

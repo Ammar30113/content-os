@@ -276,6 +276,13 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
         </Panel>
 
         <Panel title="Template fields">
+          <p className="text-sm leading-6 text-zinc-500">
+            Visual fields can include <code>hero_image_url</code>,{" "}
+            <code>source_logo_url</code>, <code>product_logo</code>,{" "}
+            <code>visual_subject</code>, <code>swipe_hint</code>, and{" "}
+            <code>bottom_label</code>. Leave URL fields blank unless you have a
+            real image URL.
+          </p>
           <label className="block">
             <span className="text-sm font-medium text-zinc-300">Template type</span>
             <select

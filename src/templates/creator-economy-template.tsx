@@ -1,28 +1,67 @@
 import type { TemplateFields } from "@/lib/content/types";
 import {
+  BottomHeadlineBand,
   TemplateFrame,
+  Watermark,
   brand,
-  centerStackStyle,
   displayHeadline,
-  headlineStyle,
   safeText,
-  subheadStyle,
 } from "./shared";
 
 export function CreatorEconomyTemplate({ fields }: { fields: TemplateFields }) {
-  const heroText = fields.stat || fields.quote || "Distribution is the product";
+  const heroText = safeText(
+    fields.stat || fields.quote,
+    "Distribution is the product",
+  );
+  const headline = displayHeadline(
+    fields.headline,
+    "The new creator edge is local trust",
+    88,
+  );
 
   return (
-    <TemplateFrame chip="CREATOR ECONOMY" accent={brand.coral}>
-      <div style={{ ...centerStackStyle, maxWidth: 800 }}>
+    <TemplateFrame
+      chip={safeText(fields.bottom_label, "CREATOR ECONOMY")}
+      accent={brand.coral}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 72,
+          top: 150,
+          width: 936,
+          height: 454,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 26,
+          zIndex: 2,
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 42,
+            width: 936,
+            height: 298,
+            border: "2px solid rgba(255,107,74,0.35)",
+            backgroundColor: "rgba(0,0,0,0.34)",
+            transform: "rotate(-2deg)",
+          }}
+        />
         <div
           style={{
             color: brand.coral,
-            fontSize: heroText.length > 30 ? 58 : 88,
-            lineHeight: 1,
-            letterSpacing: heroText.length > 30 ? 2 : -1,
-            fontWeight: 950,
+            fontSize: heroText.length > 42 ? 58 : 92,
+            lineHeight: 0.98,
+            fontWeight: 900,
+            letterSpacing: 0,
             textAlign: "center",
+            textTransform: "uppercase",
+            maxWidth: 820,
+            zIndex: 2,
           }}
         >
           {heroText}
@@ -30,24 +69,26 @@ export function CreatorEconomyTemplate({ fields }: { fields: TemplateFields }) {
         {fields.attribution ? (
           <div
             style={{
-              color: "rgba(247, 247, 242, 0.72)",
-              fontSize: 24,
+              color: "rgba(247,247,242,0.78)",
+              fontSize: 25,
               fontWeight: 800,
-              letterSpacing: 2.2,
-              textAlign: "center",
+              letterSpacing: 1.8,
               textTransform: "uppercase",
+              zIndex: 2,
             }}
           >
             {fields.attribution}
           </div>
         ) : null}
-        <div style={{ ...headlineStyle, fontSize: 48 }}>
-          {displayHeadline(fields.headline, "The new creator edge is local trust")}
-        </div>
-        <div style={{ ...subheadStyle, maxWidth: 700 }}>
-          {safeText(fields.subhead, "Attention compounds when it turns into action.")}
-        </div>
       </div>
+      <BottomHeadlineBand
+        headline={headline}
+        subhead={safeText(fields.subhead, "Attention compounds when it turns into action.")}
+        label={safeText(fields.swipe_hint, "Steal the play")}
+        accent={brand.coral}
+        minHeight={330}
+      />
+      <Watermark align="right" />
     </TemplateFrame>
   );
 }
