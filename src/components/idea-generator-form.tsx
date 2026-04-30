@@ -1,11 +1,12 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FilePlus2, Save, Sparkles } from "lucide-react";
+import { Check, FilePlus2, ImageUp, Save, Sparkles } from "lucide-react";
 
 import {
   type BatchAngle,
+  imageModes,
   platforms,
   postQuantities,
   postTypes,
@@ -13,21 +14,45 @@ import {
   tones,
 } from "@/lib/content/types";
 
-const defaultForm = {
+type Platform = (typeof platforms)[number];
+type ImageMode = (typeof imageModes)[number];
+
+type FormState = {
+  title: string;
+  brief: string;
+  source_url: string;
+  platform: Platform;
+  selected_platforms: Platform[];
+  post_type: string;
+  tone: string;
+  template_hint: string;
+  quantity: string;
+  image_mode: ImageMode;
+};
+
+const defaultForm: FormState = {
   title: "",
   brief: "",
   source_url: "",
   platform: "instagram",
+  selected_platforms: ["instagram", "x"],
   post_type: "single",
   tone: "educational",
   template_hint: "auto",
   quantity: "1",
+  image_mode: "template",
 };
 
 type ActionState = {
   loading: boolean;
   message: string | null;
   error: string | null;
+};
+
+type ReferenceImage = {
+  asset_id: string;
+  file_name: string;
+  image_url: string;
 };
 
 type GeneratedPostSummary = {
@@ -63,26 +88,119 @@ type BatchPlanPayload = {
 };
 
 export function IdeaGeneratorForm() {
-  const [form, setForm] = useState(defaultForm);
+  const [form, setForm] = useState<FormState>(defaultForm);
   const [state, setState] = useState<ActionState>({
     loading: false,
     message: null,
     error: null,
   });
+  const [referenceFile, setReferenceFile] = useState<File | null>(null);
+  const [referenceImage, setReferenceImage] = useState<ReferenceImage | null>(
+    null,
+  );
   const router = useRouter();
 
-  function updateField(name: string, value: string) {
+  const selectedPlatforms = useMemo(
+    () => (form.selected_platforms.length ? form.selected_platforms : ["instagram"]),
+    [form.selected_platforms],
+  );
+
+  function updateField<K extends keyof FormState>(name: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function togglePlatform(platform: Platform) {
+    setForm((current) => {
+      const selected = current.selected_platforms.includes(platform)
+        ? current.selected_platforms.filter((item) => item !== platform)
+        : [...current.selected_platforms, platform];
+
+      if (!selected.length) {
+        return current;
+      }
+
+      return {
+        ...current,
+        selected_platforms: selected,
+        platform: selected[0],
+      };
+    });
+  }
+
+  function handleReferenceFile(event: ChangeEvent<HTMLInputElement>) {
+    setReferenceFile(event.target.files?.[0] || null);
+    setReferenceImage(null);
+  }
+
+  function getQuantity() {
+    const parsed = Number(form.quantity);
+
+    if (!Number.isFinite(parsed)) {
+      return 1;
+    }
+
+    return Math.min(20, Math.max(1, Math.trunc(parsed)));
+  }
+
+  function buildRequestPayload(reference: ReferenceImage | null, quantity?: number) {
+    return {
+      ...form,
+      platform: selectedPlatforms[0],
+      selected_platforms: selectedPlatforms,
+      reference_image_url: reference?.image_url || "",
+      reference_image_asset_id: reference?.asset_id,
+      quantity: quantity || getQuantity(),
+      generation_count: quantity || getQuantity(),
+    };
+  }
+
+  async function uploadReferenceImage() {
+    if (referenceImage) {
+      return referenceImage;
+    }
+
+    if (!referenceFile) {
+      return null;
+    }
+
+    setState({
+      loading: true,
+      message: "Uploading reference image...",
+      error: null,
+    });
+
+    const uploadData = new FormData();
+    uploadData.append("image", referenceFile);
+
+    const response = await fetch("/api/media/reference-upload", {
+      method: "POST",
+      body: uploadData,
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(payload.error || "Could not upload reference image.");
+    }
+
+    const uploaded = {
+      asset_id: payload.asset.id as string,
+      file_name: referenceFile.name,
+      image_url: payload.image_url as string,
+    };
+    setReferenceImage(uploaded);
+
+    return uploaded;
   }
 
   async function saveIdea() {
     setState({ loading: true, message: "Saving idea...", error: null });
 
     try {
+      const reference = await uploadReferenceImage();
       const response = await fetch("/api/ideas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(buildRequestPayload(reference)),
       });
       const payload = await response.json();
 
@@ -101,25 +219,11 @@ export function IdeaGeneratorForm() {
     }
   }
 
-  function getQuantity() {
-    const parsed = Number(form.quantity);
-
-    if (!Number.isFinite(parsed)) {
-      return 1;
-    }
-
-    return Math.min(20, Math.max(1, Math.trunc(parsed)));
-  }
-
-  async function createBatchPlan(quantity: number) {
+  async function createBatchPlan(quantity: number, reference: ReferenceImage | null) {
     const response = await fetch("/api/generate-batch-plan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        quantity,
-        generation_count: quantity,
-      }),
+      body: JSON.stringify(buildRequestPayload(reference, quantity)),
     });
     const payload = await response.json();
 
@@ -136,25 +240,25 @@ export function IdeaGeneratorForm() {
     ideaId,
     batchAngle,
     generatedSoFar,
+    reference,
   }: {
     index: number;
     quantity: number;
     ideaId?: string;
     batchAngle?: BatchAngle;
     generatedSoFar?: GeneratedPostSummary[];
+    reference: ReferenceImage | null;
   }) {
     const response = await fetch("/api/generate-content", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
+        ...buildRequestPayload(reference, quantity),
         idea_id: ideaId,
         batch_angle: batchAngle,
         recent_context: {
           generated_so_far: generatedSoFar || [],
         },
-        quantity,
-        generation_count: quantity,
         generation_index: index,
       }),
     });
@@ -202,12 +306,18 @@ export function IdeaGeneratorForm() {
       loading: true,
       message:
         quantity === 1
-          ? "Generating structured content package..."
-          : `Generating 1 of ${quantity} content packages...`,
+          ? "Preparing content package..."
+          : `Preparing ${quantity}-post campaign...`,
       error: null,
     });
 
     try {
+      const reference = await uploadReferenceImage();
+
+      if (form.image_mode === "uploaded" && !reference) {
+        throw new Error("Choose a reference image before using it as the final image.");
+      }
+
       if (quantity === 1) {
         setState({
           loading: true,
@@ -215,19 +325,25 @@ export function IdeaGeneratorForm() {
           error: null,
         });
 
-        const payload = await generateOnePackage({ index: 1, quantity });
+        const payload = await generateOnePackage({
+          index: 1,
+          quantity,
+          reference,
+        });
         createdPostIds.push(payload.post.id);
 
-        setState({
-          loading: true,
-          message: "Rendering branded template image...",
-          error: null,
-        });
+        if (form.image_mode === "template") {
+          setState({
+            loading: true,
+            message: "Rendering branded template image...",
+            error: null,
+          });
 
-        const imageError = await renderPackageImage(payload);
+          const imageError = await renderPackageImage(payload);
 
-        if (imageError) {
-          imageFailures.push(`1: ${imageError}`);
+          if (imageError) {
+            imageFailures.push(`1: ${imageError}`);
+          }
         }
       } else {
         setState({
@@ -236,7 +352,7 @@ export function IdeaGeneratorForm() {
           error: null,
         });
 
-        const batchPlan = await createBatchPlan(quantity);
+        const batchPlan = await createBatchPlan(quantity, reference);
         const angles = batchPlan.plan.angles;
 
         for (const angle of angles) {
@@ -252,6 +368,7 @@ export function IdeaGeneratorForm() {
             ideaId: batchPlan.idea.id,
             batchAngle: angle,
             generatedSoFar,
+            reference,
           });
           createdPostIds.push(payload.post.id);
           generatedSoFar.push({
@@ -260,16 +377,18 @@ export function IdeaGeneratorForm() {
             pillar: payload.content.pillar || payload.post.pillar,
           });
 
-          setState({
-            loading: true,
-            message: `Rendering image ${angle.index}/${quantity}: ${angle.working_title}`,
-            error: null,
-          });
+          if (form.image_mode === "template") {
+            setState({
+              loading: true,
+              message: `Rendering ${angle.index}/${quantity}: ${angle.working_title}`,
+              error: null,
+            });
 
-          const imageError = await renderPackageImage(payload);
+            const imageError = await renderPackageImage(payload);
 
-          if (imageError) {
-            imageFailures.push(`${angle.index}: ${imageError}`);
+            if (imageError) {
+              imageFailures.push(`${angle.index}: ${imageError}`);
+            }
           }
         }
       }
@@ -277,13 +396,17 @@ export function IdeaGeneratorForm() {
       const failureMessage = imageFailures.length
         ? ` ${imageFailures.length} image${imageFailures.length === 1 ? "" : "s"} failed and can be regenerated from the post editor.`
         : "";
+      const imageModeMessage =
+        form.image_mode === "uploaded"
+          ? " Uploaded image was used as the final image."
+          : "";
 
       setState({
         loading: false,
         message:
           quantity === 1
-            ? `Content package ready.${failureMessage}`
-            : `${createdPostIds.length} content packages ready.${failureMessage}`,
+            ? `Content package ready.${imageModeMessage}${failureMessage}`
+            : `${createdPostIds.length} content packages ready.${imageModeMessage}${failureMessage}`,
         error: null,
       });
 
@@ -316,13 +439,13 @@ export function IdeaGeneratorForm() {
       className="rounded border border-zinc-800 bg-zinc-950 p-5"
     >
       <div className="flex items-center gap-3">
-        <span className="grid size-10 place-items-center rounded bg-[#d4ff00] text-[#0a0a0b]">
+        <span className="grid size-10 place-items-center rounded border border-[#b8c28a]/40 bg-[#b8c28a]/10 text-[#d7ddb8]">
           <FilePlus2 size={18} />
         </span>
         <div>
           <h2 className="text-lg font-semibold text-white">New content idea</h2>
           <p className="text-sm text-zinc-500">
-            Brief it once, generate the package, render the image.
+            Brief it once, generate the package, render or attach the image.
           </p>
         </div>
       </div>
@@ -336,7 +459,7 @@ export function IdeaGeneratorForm() {
             required
             value={form.title}
             onChange={(event) => updateField("title", event.target.value)}
-            className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#d4ff00]"
+            className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#b8c28a]"
             placeholder="AI won't replace you, lazy AI users will"
           />
         </label>
@@ -348,7 +471,7 @@ export function IdeaGeneratorForm() {
             required
             value={form.brief}
             onChange={(event) => updateField("brief", event.target.value)}
-            className="mt-2 min-h-32 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 py-3 text-sm leading-6 text-white outline-none focus:border-[#d4ff00]"
+            className="mt-2 min-h-32 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 py-3 text-sm leading-6 text-white outline-none focus:border-[#b8c28a]"
             placeholder="What should this post teach, react to, or make people save?"
           />
         </label>
@@ -360,18 +483,74 @@ export function IdeaGeneratorForm() {
             type="url"
             value={form.source_url}
             onChange={(event) => updateField("source_url", event.target.value)}
-            className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#d4ff00]"
+            className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#b8c28a]"
             placeholder="https://..."
           />
         </label>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <SelectField
-            label="Platform"
-            value={form.platform}
-            options={platforms}
-            onChange={(value) => updateField("platform", value)}
-          />
+        <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+          <section className="rounded border border-zinc-800 bg-[#0a0a0b] p-4">
+            <p className="text-sm font-medium text-zinc-300">
+              Channels to prepare
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {platforms.map((platform) => {
+                const active = selectedPlatforms.includes(platform);
+
+                return (
+                  <button
+                    key={platform}
+                    type="button"
+                    onClick={() => togglePlatform(platform)}
+                    className={`inline-flex h-9 items-center gap-2 rounded border px-3 text-sm font-semibold transition ${
+                      active
+                        ? "border-[#b8c28a]/60 bg-[#b8c28a]/10 text-[#d7ddb8]"
+                        : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
+                    }`}
+                  >
+                    {active ? <Check size={15} /> : null}
+                    {platform}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="rounded border border-zinc-800 bg-[#0a0a0b] p-4">
+            <p className="text-sm font-medium text-zinc-300">
+              Reference / final image
+            </p>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleReferenceFile}
+              className="mt-3 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 py-2 text-sm text-zinc-300"
+            />
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <ImageModeButton
+                active={form.image_mode === "template"}
+                title="Render template"
+                description="Default Word of AI image."
+                onClick={() => updateField("image_mode", "template")}
+              />
+              <ImageModeButton
+                active={form.image_mode === "uploaded"}
+                title="Use uploaded"
+                description="Bypass template image."
+                onClick={() => updateField("image_mode", "uploaded")}
+              />
+            </div>
+            {referenceFile || referenceImage ? (
+              <p className="mt-3 text-xs text-zinc-500">
+                {referenceImage
+                  ? `Uploaded: ${referenceImage.file_name}`
+                  : `Selected: ${referenceFile?.name}`}
+              </p>
+            ) : null}
+          </section>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <SelectField
             label="Post type"
             value={form.post_type}
@@ -412,7 +591,7 @@ export function IdeaGeneratorForm() {
         <button
           type="submit"
           disabled={state.loading}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded bg-[#d4ff00] px-4 text-sm font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68] disabled:opacity-50"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded border border-[#b8c28a]/50 bg-[#b8c28a]/15 px-4 text-sm font-semibold text-[#eef4cc] transition hover:bg-[#b8c28a]/20 disabled:opacity-50"
         >
           <Sparkles size={17} />
           {state.loading
@@ -424,7 +603,7 @@ export function IdeaGeneratorForm() {
       </div>
 
       {state.message ? (
-        <p className="mt-4 rounded border border-[#d4ff00]/30 bg-[#d4ff00]/10 p-3 text-sm text-[#ecff8a]">
+        <p className="mt-4 rounded border border-[#b8c28a]/30 bg-[#b8c28a]/10 p-3 text-sm text-[#eef4cc]">
           {state.message}
         </p>
       ) : null}
@@ -454,7 +633,7 @@ function SelectField({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#d4ff00]"
+        className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#b8c28a]"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -463,5 +642,37 @@ function SelectField({
         ))}
       </select>
     </label>
+  );
+}
+
+function ImageModeButton({
+  active,
+  title,
+  description,
+  onClick,
+}: {
+  active: boolean;
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded border p-3 text-left transition ${
+        active
+          ? "border-[#b8c28a]/60 bg-[#b8c28a]/10"
+          : "border-zinc-800 hover:border-zinc-600"
+      }`}
+    >
+      <span className="flex items-center gap-2 text-sm font-semibold text-white">
+        {active ? <ImageUp size={15} className="text-[#d7ddb8]" /> : null}
+        {title}
+      </span>
+      <span className="mt-1 block text-xs leading-5 text-zinc-500">
+        {description}
+      </span>
+    </button>
   );
 }

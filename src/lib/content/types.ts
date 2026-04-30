@@ -20,6 +20,7 @@ export const templateTypes = [
 export const templateHints = ["auto", ...templateTypes] as const;
 export const postQuantities = ["1", "3", "5", "10", "20"] as const;
 export const ctaIntents = ["follow", "rallio", "quotestack"] as const;
+export const imageModes = ["template", "uploaded"] as const;
 export const postStatuses = [
   "draft",
   "reviewing",
@@ -62,12 +63,16 @@ export const ideaInputSchema = z.object({
   brief: z.string().trim().min(10, "Add a little more context."),
   source_url: z.string().trim().url().optional().or(z.literal("")),
   platform: z.enum(platforms),
+  selected_platforms: z.array(z.enum(platforms)).min(1).optional().default(["instagram"]),
   post_type: z.enum(postTypes),
   tone: z.enum(tones),
   template_hint: z.enum(templateHints),
   quantity: z.coerce.number().int().min(1).max(20).optional().default(1),
   generation_count: z.coerce.number().int().min(1).max(20).optional().default(1),
   generation_index: z.coerce.number().int().min(1).max(20).optional().default(1),
+  reference_image_url: z.string().trim().url().optional().or(z.literal("")),
+  reference_image_asset_id: z.string().uuid().optional(),
+  image_mode: z.enum(imageModes).optional().default("template"),
   batch_angle: batchAngleSchema.optional(),
   recent_context: recentContextSchema.optional(),
 });
@@ -80,6 +85,10 @@ export const templateFieldsSchema = z.object({
   source_logo_url: z.string().optional(),
   date: z.string().optional(),
   hero_image_url: z.string().optional(),
+  reference_image_url: z.string().optional(),
+  reference_image_asset_id: z.string().optional(),
+  selected_platforms: z.array(z.enum(platforms)).optional(),
+  image_mode: z.enum(imageModes).optional(),
   product_logo: z.string().optional(),
   visual_subject: z.string().optional(),
   swipe_hint: z.string().optional(),

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import {
   CalendarPlus,
   Check,
+  Clipboard,
+  Clock,
   ImageUp,
   RefreshCw,
   Save,
@@ -13,6 +15,8 @@ import {
 
 import {
   normalizeHashtags,
+  parseJsonField,
+  platforms,
   postStatuses,
   templateTypes,
 } from "@/lib/content/types";
@@ -73,6 +77,37 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   });
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const router = useRouter();
+  const parsedTemplateFields = useMemo(
+    () => parseJsonField<Record<string, unknown>>(form.template_fields, {}),
+    [form.template_fields],
+  );
+  const selectedChannels = useMemo(() => {
+    const stored = parsedTemplateFields.selected_platforms;
+
+    if (Array.isArray(stored)) {
+      const validChannels = stored.filter(
+        (item): item is (typeof platforms)[number] =>
+          typeof item === "string" &&
+          platforms.includes(item as (typeof platforms)[number]),
+      );
+
+      if (validChannels.length) {
+        return validChannels;
+      }
+    }
+
+    return [post.platform];
+  }, [parsedTemplateFields, post.platform]);
+  const hashtagsText = normalizeHashtags(form.hashtags).join(" ");
+  const instagramPackage = [form.caption.trim(), hashtagsText]
+    .filter(Boolean)
+    .join("\n\n");
+  const workflowReadiness = getWorkflowReadiness({
+    status: form.status,
+    hasImage: Boolean(form.image_url),
+    hasCopy: Boolean(form.caption || form.x_version || form.linkedin_version),
+    scheduledFor: form.scheduled_for,
+  });
 
   function updateField(name: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -137,6 +172,24 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
         loading: null,
         message: null,
         error: error instanceof Error ? error.message : `${loading} failed.`,
+      });
+    }
+  }
+
+  async function copyToClipboard(value: string, label: string) {
+    if (!value.trim()) {
+      setState({ loading: null, message: null, error: `${label} is empty.` });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setState({ loading: null, message: `${label} copied.`, error: null });
+    } catch {
+      setState({
+        loading: null,
+        message: null,
+        error: `Could not copy ${label.toLowerCase()}.`,
       });
     }
   }
@@ -216,6 +269,16 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
         }),
       "Post scheduled.",
     );
+  }
+
+  function applyNextSlot() {
+    const nextSlot = getNextManualSlot(post.platform);
+    updateField("scheduled_for", formatDateTimeLocal(nextSlot));
+    setState({
+      loading: null,
+      message: "Next manual publishing slot applied.",
+      error: null,
+    });
   }
 
   return (
@@ -370,7 +433,45 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           </button>
         </Panel>
 
+        <Panel title="Publish kit">
+          <div className="rounded border border-zinc-800 bg-[#0a0a0b] p-3 text-sm">
+            <p className="font-medium text-white">Prepared channels</p>
+            <p className="mt-1 text-zinc-500">{selectedChannels.join(", ")}</p>
+          </div>
+          <CopyButton
+            label="Copy IG package"
+            value={instagramPackage}
+            onCopy={copyToClipboard}
+          />
+          <CopyButton
+            label="Copy X version"
+            value={form.x_version}
+            onCopy={copyToClipboard}
+          />
+          <CopyButton
+            label="Copy LinkedIn version"
+            value={form.linkedin_version}
+            onCopy={copyToClipboard}
+          />
+          <CopyButton
+            label="Copy hashtags"
+            value={hashtagsText}
+            onCopy={copyToClipboard}
+          />
+          <CopyButton
+            label="Copy image URL"
+            value={form.image_url}
+            onCopy={copyToClipboard}
+          />
+        </Panel>
+
         <Panel title="Workflow">
+          <div className="rounded border border-zinc-800 bg-[#0a0a0b] p-3 text-sm">
+            <p className="font-medium text-white">{workflowReadiness.title}</p>
+            <p className="mt-1 leading-5 text-zinc-500">
+              {workflowReadiness.description}
+            </p>
+          </div>
           <label className="block">
             <span className="text-sm font-medium text-zinc-300">Status</span>
             <select
@@ -396,6 +497,15 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
               className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#d4ff00]"
             />
           </label>
+          <button
+            type="button"
+            onClick={applyNextSlot}
+            disabled={Boolean(state.loading)}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
+          >
+            <Clock size={16} />
+            Use next manual slot
+          </button>
           <button
             type="submit"
             disabled={Boolean(state.loading)}
@@ -529,6 +639,108 @@ function TextareaField({
   );
 }
 
+function CopyButton({
+  label,
+  value,
+  onCopy,
+}: {
+  label: string;
+  value: string;
+  onCopy: (value: string, label: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onCopy(value, label)}
+      disabled={!value.trim()}
+      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      <Clipboard size={16} />
+      {label}
+    </button>
+  );
+}
+
+function getWorkflowReadiness({
+  status,
+  hasImage,
+  hasCopy,
+  scheduledFor,
+}: {
+  status: string;
+  hasImage: boolean;
+  hasCopy: boolean;
+  scheduledFor: string;
+}) {
+  if (status === "published") {
+    return {
+      title: "Published",
+      description: "This post is marked as published in Content OS.",
+    };
+  }
+
+  if (status === "scheduled" && scheduledFor) {
+    return {
+      title: "Ready for manual publishing",
+      description:
+        "Copy the publish kit when the scheduled slot arrives, then mark the post published.",
+    };
+  }
+
+  if (status === "approved" && hasImage && hasCopy) {
+    return {
+      title: "Approved and ready to schedule",
+      description:
+        "Pick a manual publishing time or use the next suggested slot.",
+    };
+  }
+
+  if (!hasImage) {
+    return {
+      title: "Needs image",
+      description: "Regenerate the template image or upload your own image.",
+    };
+  }
+
+  if (!hasCopy) {
+    return {
+      title: "Needs copy",
+      description: "Add platform copy before approving or scheduling.",
+    };
+  }
+
+  return {
+    title: "Draft",
+    description: "Review the copy and image, then approve the post.",
+  };
+}
+
+function getNextManualSlot(platform: string) {
+  const slots =
+    platform === "x"
+      ? [8, 11, 14, 17, 20]
+      : platform === "linkedin"
+        ? [9, 13, 16]
+        : [8, 12, 17];
+  const now = new Date();
+  const minTime = new Date(now.getTime() + 30 * 60 * 1000);
+  const maxTime = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+  for (let dayOffset = 0; dayOffset <= 2; dayOffset += 1) {
+    for (const hour of slots) {
+      const candidate = new Date(now);
+      candidate.setDate(now.getDate() + dayOffset);
+      candidate.setHours(hour, 0, 0, 0);
+
+      if (candidate >= minTime && candidate <= maxTime) {
+        return candidate;
+      }
+    }
+  }
+
+  return minTime;
+}
+
 function toDateTimeLocal(value: string | null) {
   if (!value) {
     return "";
@@ -540,5 +752,15 @@ function toDateTimeLocal(value: string | null) {
     return "";
   }
 
-  return date.toISOString().slice(0, 16);
+  return formatDateTimeLocal(date);
+}
+
+function formatDateTimeLocal(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }

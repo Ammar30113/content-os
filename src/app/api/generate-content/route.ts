@@ -61,6 +61,14 @@ const openAIContentSchema = z.object({
   template_fields: openAITemplateFieldsSchema,
 });
 
+const recentPostSchema = z.object({
+  headline: z.string().nullable(),
+  hook: z.string().nullable(),
+  pillar: z.string().nullable(),
+  cta: z.string().nullable(),
+  hashtags: z.array(z.string()).nullable(),
+});
+
 function normalizeTemplateFields(
   fields: z.infer<typeof openAITemplateFieldsSchema>,
 ) {
@@ -93,6 +101,15 @@ export async function POST(request: Request) {
     assertContentOsSupabaseWriteSafety();
     const input = ideaInputSchema.parse(await request.json());
     const { supabase, user } = await requireApiUser();
+    const selectedPlatforms = input.selected_platforms?.length
+      ? input.selected_platforms
+      : [input.platform];
+    const referenceImageUrl = input.reference_image_url || undefined;
+
+    if (input.image_mode === "uploaded" && !referenceImageUrl) {
+      throw new Error("Upload a reference image before using it as the final image.");
+    }
+
     const generationCount = input.generation_count || input.quantity || 1;
     const generationIndex = Math.min(input.generation_index || 1, generationCount);
     const generatedSoFar = input.recent_context?.generated_so_far || [];
@@ -146,6 +163,12 @@ export async function POST(request: Request) {
       idea = newIdea;
     }
 
+    const { data: recentPosts } = await supabase
+      .from("generated_posts")
+      .select("headline, hook, pillar, cta, hashtags")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    const safeRecentPosts = z.array(recentPostSchema).parse(recentPosts || []);
     const { apiKey, model } = getOpenAIEnv();
     const openai = new OpenAI({ apiKey });
 
@@ -174,9 +197,19 @@ export async function POST(request: Request) {
               source_url: idea.source_url || input.source_url || null,
               source_summary: sourceSummary || "No source URL provided.",
               platform: input.platform,
+              selected_platforms: selectedPlatforms,
               post_type: input.post_type,
               tone: input.tone,
               template_hint: input.template_hint,
+              reference_image: referenceImageUrl
+                ? {
+                    url: referenceImageUrl,
+                    mode:
+                      input.image_mode === "uploaded"
+                        ? "Use this uploaded image as the final image_url. Still generate strong copy and editable template fields."
+                        : "Use this as source/reference context. It may be used as hero_image_url only when it improves the template.",
+                  }
+                : null,
               batch_angle: input.batch_angle || null,
               batch_generation:
                 generationCount > 1
@@ -188,6 +221,7 @@ export async function POST(request: Request) {
                     }
                   : null,
               generated_so_far: generatedSoFar,
+              recent_posts_to_avoid: safeRecentPosts,
               caption_rules: {
                 instagram:
                   "Strong first line, short paragraphs, direct builder voice, 1-3 emojis max, 15-25 varied hashtags.",
@@ -203,9 +237,13 @@ export async function POST(request: Request) {
                   "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
                 placeholder_rule:
                   "Never output placeholder labels like Tool A, Tool B, Product X, or Founder Y. Use specific real names from the input or role labels like Research agent, Drafting agent, Review agent.",
+                uploaded_image_rule:
+                  "If a real reference image URL is supplied, do not invent fake screenshots, logos, portraits, or product images. Use the supplied URL only when it makes the visual more concrete.",
               },
               cta_rotation:
                 "Use follow most often. Rallio and QuoteStack mentions should be rare and natural. Never hard sell.",
+              selected_platform_output:
+                "Always return the full package. Prioritize caption for Instagram, x_version for X, and linkedin_version for LinkedIn based on selected_platforms.",
               planned_output_contract: input.batch_angle
                 ? {
                     pillar_must_equal: input.batch_angle.pillar,
@@ -238,11 +276,23 @@ export async function POST(request: Request) {
       throw new Error("OpenAI did not return a structured content package.");
     }
 
+    const normalizedTemplateFields = normalizeTemplateFields(parsed.template_fields);
+    const templateFieldsWithWorkflow = {
+      ...normalizedTemplateFields,
+      hero_image_url:
+        normalizedTemplateFields.hero_image_url ||
+        (input.image_mode === "template" ? referenceImageUrl : undefined),
+      reference_image_url: referenceImageUrl,
+      reference_image_asset_id: input.reference_image_asset_id,
+      selected_platforms: selectedPlatforms,
+      image_mode: input.image_mode,
+    };
+
     const content = generatedContentSchema.parse({
       ...parsed,
       pillar: input.batch_angle?.pillar || parsed.pillar,
       template_type: input.batch_angle?.template_type || parsed.template_type,
-      template_fields: normalizeTemplateFields(parsed.template_fields),
+      template_fields: templateFieldsWithWorkflow,
     });
 
     const { data: post, error: postError } = await supabase
@@ -267,8 +317,9 @@ export async function POST(request: Request) {
         linkedin_version: content.linkedin_version,
         image_prompt: content.image_prompt,
         template_fields: content.template_fields,
+        image_url: input.image_mode === "uploaded" ? referenceImageUrl : null,
         status: "draft",
-        image_status: "not_generated",
+        image_status: input.image_mode === "uploaded" ? "generated" : "not_generated",
       })
       .select()
       .single();

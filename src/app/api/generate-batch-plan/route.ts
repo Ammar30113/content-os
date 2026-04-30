@@ -104,9 +104,12 @@ export async function POST(request: Request) {
               source_url: input.source_url || null,
               source_summary: sourceSummary || "No source URL provided.",
               platform: input.platform,
+              selected_platforms: input.selected_platforms,
               post_type: input.post_type,
               tone: input.tone,
               template_hint: input.template_hint,
+              reference_image_url: input.reference_image_url || null,
+              image_mode: input.image_mode,
               template_policy:
                 input.template_hint === "auto"
                   ? "Choose the strongest template per angle."

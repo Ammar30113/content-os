@@ -3,6 +3,14 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { getAuthenticatedPageContext } from "@/lib/auth";
 import { getEnvStatus } from "@/lib/env";
+import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
+
+const bufferEnvVars = [
+  "BUFFER_ACCESS_TOKEN",
+  "BUFFER_INSTAGRAM_CHANNEL_ID",
+  "BUFFER_X_CHANNEL_ID",
+  "BUFFER_LINKEDIN_CHANNEL_ID",
+];
 
 export default async function SettingsPage() {
   const context = await getAuthenticatedPageContext("/app/settings");
@@ -12,12 +20,16 @@ export default async function SettingsPage() {
     return <ConfigRequired message={context.message} />;
   }
 
+  const bucketStatus = await getBucketStatus(context.supabase);
+  const openAIConfigured = Boolean(process.env.OPENAI_API_KEY);
+  const openAIModel = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
   return (
     <>
       <PageHeader
         eyebrow="Admin"
         title="Settings"
-        description="Connection health, project safety, and placeholders for future publishing accounts."
+        description="Connection health, project safety, generation config, and future publishing readiness."
       />
       <section className="grid gap-6 p-6 lg:grid-cols-[1fr_1fr] lg:p-8">
         <div className="rounded border border-zinc-800 bg-zinc-950 p-5">
@@ -42,27 +54,75 @@ export default async function SettingsPage() {
         </div>
 
         <div className="rounded border border-zinc-800 bg-zinc-950 p-5">
-          <h2 className="text-lg font-semibold text-white">App connection</h2>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white">App health</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                Core services needed for the manual workflow MVP.
+              </p>
+            </div>
+            <StatusBadge
+              status={envStatus.ok && openAIConfigured && bucketStatus.ok ? "approved" : "failed"}
+            />
+          </div>
           <dl className="mt-5 space-y-3 text-sm">
             <SettingRow label="App URL" value={envStatus.appUrl} />
             <SettingRow label="Signed-in user" value={context.user.email || context.user.id} />
-            <SettingRow label="Publishing APIs" value="Not connected in MVP" />
+            <SettingRow label="OpenAI model" value={openAIModel} />
+            <SettingRow
+              label="OpenAI key"
+              value={openAIConfigured ? "Configured" : "Missing"}
+            />
+            <SettingRow
+              label="Storage bucket"
+              value={bucketStatus.message}
+            />
+            <SettingRow label="Publishing mode" value="Manual handoff" />
           </dl>
         </div>
 
         <div className="rounded border border-zinc-800 bg-zinc-950 p-5 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-white">
-            Future social accounts
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            The database includes a `social_accounts` table for future
-            Instagram/X/LinkedIn OAuth work, but this MVP only schedules and
-            tracks manual publishing.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                Buffer autoposting checklist
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                Disabled for this MVP. These are the environment variables to
+                add when we wire the next milestone.
+              </p>
+            </div>
+            <StatusBadge status="draft" />
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {bufferEnvVars.map((name) => (
+              <SettingRow
+                key={name}
+                label={name}
+                value={process.env[name] ? "Configured" : "Not connected yet"}
+              />
+            ))}
+          </div>
         </div>
       </section>
     </>
   );
+}
+
+async function getBucketStatus(supabase: ContentOsSupabaseClient) {
+  const { data, error } = await supabase.storage.getBucket("post-images");
+
+  if (error || !data) {
+    return {
+      ok: false,
+      message: error?.message || "post-images bucket unavailable",
+    };
+  }
+
+  return {
+    ok: true,
+    message: data.public ? "post-images public bucket ready" : "post-images bucket ready",
+  };
 }
 
 function SettingRow({ label, value }: { label: string; value: string }) {
