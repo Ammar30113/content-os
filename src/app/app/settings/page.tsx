@@ -1,9 +1,11 @@
+import { headers } from "next/headers";
+
 import { ConfigRequired } from "@/components/config-required";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { getAuthenticatedPageContext } from "@/lib/auth";
 import { getEnvStatus } from "@/lib/env";
-import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 const bufferEnvVars = [
   "BUFFER_ACCESS_TOKEN",
@@ -20,7 +22,8 @@ export default async function SettingsPage() {
     return <ConfigRequired message={context.message} />;
   }
 
-  const bucketStatus = await getBucketStatus(context.supabase);
+  const bucketStatus = await getBucketStatus();
+  const appUrl = await getRuntimeAppUrl(envStatus.appUrl);
   const openAIConfigured = Boolean(process.env.OPENAI_API_KEY);
   const openAIModel = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
@@ -66,7 +69,7 @@ export default async function SettingsPage() {
             />
           </div>
           <dl className="mt-5 space-y-3 text-sm">
-            <SettingRow label="App URL" value={envStatus.appUrl} />
+            <SettingRow label="App URL" value={appUrl} />
             <SettingRow label="Signed-in user" value={context.user.email || context.user.id} />
             <SettingRow label="OpenAI model" value={openAIModel} />
             <SettingRow
@@ -94,7 +97,7 @@ export default async function SettingsPage() {
             </div>
             <StatusBadge status="draft" />
           </div>
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <div className="mt-5 grid gap-3">
             {bufferEnvVars.map((name) => (
               <SettingRow
                 key={name}
@@ -109,27 +112,56 @@ export default async function SettingsPage() {
   );
 }
 
-async function getBucketStatus(supabase: ContentOsSupabaseClient) {
-  const { data, error } = await supabase.storage.getBucket("post-images");
+async function getBucketStatus() {
+  try {
+    const supabase = createSupabaseAdminClient();
+    const { data, error } = await supabase.storage.getBucket("post-images");
 
-  if (error || !data) {
+    if (error || !data) {
+      return {
+        ok: false,
+        message: error?.message || "post-images bucket unavailable",
+      };
+    }
+
+    return {
+      ok: true,
+      message: data.public
+        ? "post-images public bucket ready"
+        : "post-images bucket ready",
+    };
+  } catch (error) {
     return {
       ok: false,
-      message: error?.message || "post-images bucket unavailable",
+      message: error instanceof Error ? error.message : "Storage check unavailable",
     };
   }
+}
 
-  return {
-    ok: true,
-    message: data.public ? "post-images public bucket ready" : "post-images bucket ready",
-  };
+async function getRuntimeAppUrl(fallback: string) {
+  const headerStore = await headers();
+  const host = headerStore.get("x-forwarded-host") || headerStore.get("host");
+
+  if (!host) {
+    return fallback;
+  }
+
+  const protocol =
+    headerStore.get("x-forwarded-proto") ||
+    (host.startsWith("localhost") || host.startsWith("127.0.0.1")
+      ? "http"
+      : "https");
+
+  return `${protocol}://${host}`;
 }
 
 function SettingRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded border border-zinc-800 bg-[#0a0a0b] p-3 sm:flex-row sm:items-center sm:justify-between">
-      <dt className="text-zinc-500">{label}</dt>
-      <dd className="break-all font-medium text-zinc-200">{value}</dd>
+    <div className="grid gap-2 rounded border border-zinc-800 bg-[#0a0a0b] p-3 sm:grid-cols-[minmax(0,240px)_minmax(0,1fr)] sm:items-center">
+      <dt className="min-w-0 break-words text-zinc-500">{label}</dt>
+      <dd className="min-w-0 break-words font-medium text-zinc-200 sm:text-right">
+        {value}
+      </dd>
     </div>
   );
 }
