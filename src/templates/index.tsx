@@ -1,6 +1,7 @@
 import type { TemplateFields, TemplateType } from "@/lib/content/types";
 import { CreatorEconomyTemplate } from "@/templates/creator-economy-template";
 import { FounderStoryTemplate } from "@/templates/founder-story-template";
+import { MemeTemplate } from "@/templates/meme-template";
 import { NewsDigestTemplate } from "@/templates/news-digest-template";
 import { ToolStackTemplate } from "@/templates/tool-stack-template";
 import { TutorialTemplate } from "@/templates/tutorial-template";
@@ -26,6 +27,10 @@ export function TemplateRenderer({
 
   if (templateType === "founder_story") {
     return <FounderStoryTemplate fields={fields} />;
+  }
+
+  if (templateType === "meme") {
+    return <MemeTemplate fields={fields} />;
   }
 
   return <NewsDigestTemplate fields={fields} />;

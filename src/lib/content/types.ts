@@ -16,6 +16,7 @@ export const templateTypes = [
   "tutorial",
   "creator_economy",
   "founder_story",
+  "meme",
 ] as const;
 export const templateHints = ["auto", ...templateTypes] as const;
 export const postQuantities = ["1", "3", "5", "10", "20"] as const;
@@ -101,6 +102,8 @@ export const templateFieldsSchema = z.object({
   quote: z.string().optional(),
   attribution: z.string().optional(),
   pull_quote: z.string().optional(),
+  meme_setup: z.string().optional(),
+  meme_punchline: z.string().optional(),
   portrait_url: z.string().optional(),
 });
 

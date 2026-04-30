@@ -118,7 +118,7 @@ export async function POST(request: Request) {
               pillars: WORD_OF_AI_PILLARS,
               angle_type_examples: WORD_OF_AI_BATCH_ANGLE_TYPES,
               weekly_mix_for_10_plus:
-                "30% news_digest, 25% tool_stack, 20% tutorial, 15% creator_economy, 10% founder_story.",
+                "25% news_digest, 25% tool_stack, 20% tutorial, 10% creator_economy, 10% founder_story, 10% meme.",
               cta_rotation:
                 "Use follow for most posts. Use rallio or quotestack rarely and never back-to-back.",
               recent_posts_to_avoid: safeRecentPosts,

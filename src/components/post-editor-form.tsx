@@ -343,8 +343,9 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             Visual fields can include <code>hero_image_url</code>,{" "}
             <code>source_logo_url</code>, <code>product_logo</code>,{" "}
             <code>visual_subject</code>, <code>swipe_hint</code>, and{" "}
-            <code>bottom_label</code>. Leave URL fields blank unless you have a
-            real image URL.
+            <code>bottom_label</code>. Meme templates can also use{" "}
+            <code>meme_setup</code> and <code>meme_punchline</code>. Leave URL
+            fields blank unless you have a real image URL.
           </p>
           <label className="block">
             <span className="text-sm font-medium text-zinc-300">Template type</span>

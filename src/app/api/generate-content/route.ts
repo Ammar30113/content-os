@@ -36,6 +36,8 @@ const openAITemplateFieldsSchema = z.object({
   quote: z.string().nullable(),
   attribution: z.string().nullable(),
   pull_quote: z.string().nullable(),
+  meme_setup: z.string().nullable(),
+  meme_punchline: z.string().nullable(),
   portrait_url: z.string().nullable(),
 });
 
@@ -92,6 +94,8 @@ function normalizeTemplateFields(
     quote: fields.quote || undefined,
     attribution: fields.attribution || undefined,
     pull_quote: fields.pull_quote || undefined,
+    meme_setup: fields.meme_setup || undefined,
+    meme_punchline: fields.meme_punchline || undefined,
     portrait_url: fields.portrait_url || undefined,
   };
 }
@@ -232,13 +236,15 @@ export async function POST(request: Request) {
                 style:
                   "AI Newsroom / Builder Desk. Dark, high-contrast, text-first, sharp, and readable. Do not make fake hero visuals when no real image URL is provided.",
                 template_fields:
-                  "Use headline, subhead, visual_subject, swipe_hint, bottom_label, source_name, date, tools, stat, quote, pull_quote, and code_snippet to direct the image. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null.",
+                  "Use headline, subhead, visual_subject, swipe_hint, bottom_label, source_name, date, tools, stat, quote, pull_quote, code_snippet, meme_setup, and meme_punchline to direct the image. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null.",
                 thumbnail_rule:
                   "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
                 placeholder_rule:
                   "Never output placeholder labels like Tool A, Tool B, Product X, or Founder Y. Use specific real names from the input or role labels like Research agent, Drafting agent, Review agent.",
                 uploaded_image_rule:
                   "If a real reference image URL is supplied, do not invent fake screenshots, logos, portraits, or product images. Use the supplied URL only when it makes the visual more concrete.",
+                meme_rule:
+                  "For meme template, return short meme_setup and meme_punchline fields. The joke should be dry AI-builder humor with a useful point, not offensive, not mean, and not dependent on a copyrighted meme image.",
               },
               cta_rotation:
                 "Use follow most often. Rallio and QuoteStack mentions should be rare and natural. Never hard sell.",
@@ -258,6 +264,7 @@ export async function POST(request: Request) {
                 "local discovery",
                 "founder build-in-public",
                 "practical prompts/tutorials",
+                "builder memes",
               ],
             },
             null,
