@@ -146,6 +146,7 @@ export async function POST(request: Request) {
                 "Each unique_takeaway must teach or argue a different point.",
                 "Use do_not_repeat to name the visual concept to avoid, not only copy to avoid.",
                 "Vary visual treatment across angles: news image band, tool cards, prompt block, stat/quote, or founder note.",
+                "Always include meme_trend_title, meme_trend_source, meme_format, and meme_adaptation. Use null for non-meme angles.",
                 "For quantity 5 or more, use at least 3 distinct pillars unless the user explicitly forced one template.",
                 "If template_hint is meme, include meme_trend_title, meme_trend_source, meme_format, and meme_adaptation for every angle.",
               ],
