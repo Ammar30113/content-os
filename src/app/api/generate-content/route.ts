@@ -15,6 +15,7 @@ import {
 } from "@/lib/env";
 import { requireApiUser } from "@/lib/auth";
 import { summarizeSourceUrl } from "@/lib/content/source";
+import { getWeeklyMemeTrends } from "@/lib/content/meme-trends";
 
 const openAITemplateFieldsSchema = z.object({
   headline: z.string(),
@@ -173,6 +174,10 @@ export async function POST(request: Request) {
       .order("created_at", { ascending: false })
       .limit(10);
     const safeRecentPosts = z.array(recentPostSchema).parse(recentPosts || []);
+    const memeTrendContext =
+      input.template_hint === "meme" || input.batch_angle?.template_type === "meme"
+        ? await getWeeklyMemeTrends(10)
+        : null;
     const { apiKey, model } = getOpenAIEnv();
     const openai = new OpenAI({ apiKey });
 
@@ -205,6 +210,26 @@ export async function POST(request: Request) {
               post_type: input.post_type,
               tone: input.tone,
               template_hint: input.template_hint,
+              meme_trend_context:
+                memeTrendContext &&
+                (input.template_hint === "meme" ||
+                  input.batch_angle?.template_type === "meme")
+                  ? {
+                      source: memeTrendContext.source,
+                      fetched_at: memeTrendContext.fetched_at,
+                      trends: memeTrendContext.trends,
+                      selected_batch_trend: input.batch_angle
+                        ? {
+                            title: input.batch_angle.meme_trend_title || null,
+                            source: input.batch_angle.meme_trend_source || null,
+                            format: input.batch_angle.meme_format || null,
+                            adaptation: input.batch_angle.meme_adaptation || null,
+                          }
+                        : null,
+                      instruction:
+                        "Use current meme trend context as inspiration for format and setup. Do not copy images, slurs, harassment, or copyrighted visual assets. Make it a Word of AI builder joke.",
+                    }
+                  : null,
               reference_image: referenceImageUrl
                 ? {
                     url: referenceImageUrl,
@@ -297,8 +322,12 @@ export async function POST(request: Request) {
 
     const content = generatedContentSchema.parse({
       ...parsed,
-      pillar: input.batch_angle?.pillar || parsed.pillar,
-      template_type: input.batch_angle?.template_type || parsed.template_type,
+      pillar:
+        input.batch_angle?.pillar ||
+        (input.template_hint !== "auto" ? input.template_hint : parsed.pillar),
+      template_type:
+        input.batch_angle?.template_type ||
+        (input.template_hint !== "auto" ? input.template_hint : parsed.template_type),
       template_fields: templateFieldsWithWorkflow,
     });
 

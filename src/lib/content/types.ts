@@ -43,6 +43,10 @@ export const batchAngleSchema = z.object({
   caption_structure: z.string(),
   cta_intent: z.enum(ctaIntents),
   do_not_repeat: z.string(),
+  meme_trend_title: z.string().optional(),
+  meme_trend_source: z.string().optional(),
+  meme_format: z.string().optional(),
+  meme_adaptation: z.string().optional(),
 });
 
 export const recentContextSchema = z.object({

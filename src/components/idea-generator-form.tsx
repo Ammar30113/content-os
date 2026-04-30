@@ -576,6 +576,13 @@ export function IdeaGeneratorForm() {
             onChange={(value) => updateField("quantity", value)}
           />
         </div>
+        {form.template_hint === "meme" ? (
+          <div className="rounded border border-[#c98270]/30 bg-[#c98270]/10 p-3 text-sm leading-6 text-[#f0c9bf]">
+            Meme mode uses weekly public trend context when generating. For
+            batches, each post is prompted to adapt a different trend format
+            instead of repeating the same joke.
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">

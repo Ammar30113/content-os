@@ -8,6 +8,7 @@ import {
   WORD_OF_AI_PILLARS,
   WORD_OF_AI_SYSTEM_PROMPT,
 } from "@/lib/content/brand";
+import { getWeeklyMemeTrends } from "@/lib/content/meme-trends";
 import {
   batchAngleSchema,
   ideaInputSchema,
@@ -52,6 +53,10 @@ export async function POST(request: Request) {
     const sourceSummary = input.source_url
       ? await summarizeSourceUrl(input.source_url)
       : null;
+    const memeTrendContext =
+      input.template_hint === "meme"
+        ? await getWeeklyMemeTrends(Math.max(quantity + 4, 10))
+        : null;
 
     const { data: idea, error: ideaError } = await supabase
       .from("content_ideas")
@@ -110,8 +115,20 @@ export async function POST(request: Request) {
               template_hint: input.template_hint,
               reference_image_url: input.reference_image_url || null,
               image_mode: input.image_mode,
+              meme_trends:
+                memeTrendContext && input.template_hint === "meme"
+                  ? {
+                      source: memeTrendContext.source,
+                      fetched_at: memeTrendContext.fetched_at,
+                      instruction:
+                        "Assign a different trend to each planned meme angle when possible. Adapt the format/context to AI builders; do not copy images or make the post depend on the original meme asset.",
+                      trends: memeTrendContext.trends,
+                    }
+                  : null,
               template_policy:
-                input.template_hint === "auto"
+                input.template_hint === "meme"
+                  ? "Force every angle to pillar meme and template_type meme. Each angle must use a different meme_trend_title when trends are available."
+                  : input.template_hint === "auto"
                   ? "Choose the strongest template per angle."
                   : `Prefer ${input.template_hint} where possible, but still make each angle distinct.`,
               allowed_template_types: templateTypes,
@@ -130,6 +147,7 @@ export async function POST(request: Request) {
                 "Use do_not_repeat to name the visual concept to avoid, not only copy to avoid.",
                 "Vary visual treatment across angles: news image band, tool cards, prompt block, stat/quote, or founder note.",
                 "For quantity 5 or more, use at least 3 distinct pillars unless the user explicitly forced one template.",
+                "If template_hint is meme, include meme_trend_title, meme_trend_source, meme_format, and meme_adaptation for every angle.",
               ],
             },
             null,
