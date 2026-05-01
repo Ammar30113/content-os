@@ -273,15 +273,6 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   }
 
   async function handleSendToBuffer() {
-    if (!form.scheduled_for) {
-      setState({
-        loading: null,
-        message: null,
-        error: "Choose a scheduled date and time before sending to Buffer.",
-      });
-      return;
-    }
-
     setState({ loading: "Sending to Buffer", message: null, error: null });
 
     try {
@@ -296,24 +287,15 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
         throw new Error(savePayload.error || "Could not save post before Buffer send.");
       }
 
-      const scheduleResponse = await fetch("/api/schedule-post", {
+      const bufferResponse = await fetch("/api/send-to-buffer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           post_id: post.id,
-          scheduled_for: new Date(form.scheduled_for).toISOString(),
+          scheduled_for: form.scheduled_for
+            ? new Date(form.scheduled_for).toISOString()
+            : undefined,
         }),
-      });
-      const schedulePayload = await scheduleResponse.json();
-
-      if (!scheduleResponse.ok) {
-        throw new Error(schedulePayload.error || "Could not schedule post before Buffer send.");
-      }
-
-      const bufferResponse = await fetch("/api/send-to-buffer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ post_id: post.id }),
       });
       const bufferPayload = await bufferResponse.json();
 
@@ -323,7 +305,9 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
 
       setState({
         loading: null,
-        message: "Saved, scheduled, and sent to Buffer.",
+        message:
+          bufferPayload.message ||
+          "Saved, sent to Buffer, and marked complete in Content OS.",
         error: null,
       });
       router.refresh();
@@ -632,7 +616,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <Send size={16} />
             {state.loading === "Sending to Buffer"
               ? "Sending..."
-              : "Save, schedule, send to Buffer"}
+              : "Save and send to Buffer"}
           </button>
           <button
             type="button"
@@ -770,8 +754,9 @@ function getWorkflowReadiness({
 }) {
   if (status === "published") {
     return {
-      title: "Published",
-      description: "This post is marked as published in Content OS.",
+      title: "Buffer handoff complete",
+      description:
+        "This post has been sent to Buffer or marked complete in Content OS.",
     };
   }
 

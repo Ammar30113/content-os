@@ -3,12 +3,17 @@ import { z } from "zod";
 import { jsonError, jsonOk } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth";
 import { sendPublishingJobToBuffer } from "@/lib/buffer/publishing";
+import {
+  ensurePublishingJobsForPost,
+  markPostBufferHandoffComplete,
+} from "@/lib/content/publishing-workflow";
 import { platforms } from "@/lib/content/types";
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
 
 const sendToBufferSchema = z.object({
   post_id: z.string().uuid(),
   platform: z.enum(platforms).optional(),
+  scheduled_for: z.string().datetime().optional(),
 });
 
 export async function POST(request: Request) {
@@ -16,6 +21,13 @@ export async function POST(request: Request) {
     assertContentOsSupabaseWriteSafety();
     const input = sendToBufferSchema.parse(await request.json());
     const { supabase, user } = await requireApiUser();
+
+    const ensured = await ensurePublishingJobsForPost(supabase, {
+      postId: input.post_id,
+      userId: user.id,
+      scheduledFor: input.scheduled_for,
+    });
+
     let query = supabase
       .from("publishing_jobs")
       .select("id, status")
@@ -34,14 +46,22 @@ export async function POST(request: Request) {
       throw new Error(error.message);
     }
 
-    if (!jobs?.length) {
-      throw new Error("Schedule this post before sending it to Buffer.");
-    }
-
-    const pendingJobs = jobs.filter((job) => job.status !== "ready");
+    const pendingJobs = (jobs || []).filter(
+      (job) => job.status !== "ready" && job.status !== "published",
+    );
 
     if (!pendingJobs.length) {
-      return jsonOk({ sent: [], message: "All selected channels are already in Buffer." });
+      const post = await markPostBufferHandoffComplete(supabase, {
+        postId: input.post_id,
+        userId: user.id,
+      });
+
+      return jsonOk({
+        sent: [],
+        post,
+        scheduled_for: ensured.scheduledFor,
+        message: "All selected channels are already in Buffer.",
+      });
     }
 
     const sent = [];
@@ -54,7 +74,17 @@ export async function POST(request: Request) {
       );
     }
 
-    return jsonOk({ sent });
+    const post = await markPostBufferHandoffComplete(supabase, {
+      postId: input.post_id,
+      userId: user.id,
+    });
+
+    return jsonOk({
+      sent,
+      post,
+      scheduled_for: ensured.scheduledFor,
+      message: "Sent to Buffer and marked complete in Content OS.",
+    });
   } catch (error) {
     return jsonError(error, 400);
   }
