@@ -549,13 +549,20 @@ export function IdeaGeneratorForm() {
         <label className="block">
           <span className="text-sm font-medium text-zinc-300">
             Brief / constraints
+            {form.content_mode === "authority_pov" ? (
+              <span className="text-zinc-500"> optional</span>
+            ) : null}
           </span>
           <textarea
-            required
+            required={form.content_mode !== "authority_pov"}
             value={form.brief}
             onChange={(event) => updateField("brief", event.target.value)}
             className="mt-2 min-h-32 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 py-3 text-sm leading-6 text-white outline-none focus:border-[#b8c28a]"
-            placeholder="What should this post teach, react to, or make people save?"
+            placeholder={
+              form.content_mode === "authority_pov"
+                ? "Optional. Add extra constraints only if the authority fields above need more context."
+                : "What should this post teach, react to, or make people save?"
+            }
           />
         </label>
         <label className="block">

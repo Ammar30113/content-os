@@ -67,30 +67,64 @@ export const recentContextSchema = z.object({
     .default([]),
 });
 
-export const ideaInputSchema = z.object({
-  idea_id: z.string().uuid().optional(),
-  title: z.string().trim().min(3, "Add a sharper idea title."),
-  brief: z.string().trim().min(10, "Add a little more context."),
-  source_url: z.string().trim().url().optional().or(z.literal("")),
-  platform: z.enum(platforms),
-  selected_platforms: z.array(z.enum(platforms)).min(1).optional().default(["instagram"]),
-  content_mode: z.enum(contentModes).optional().default("standard"),
-  recognizable_figure: z.string().trim().optional().or(z.literal("")),
-  current_event: z.string().trim().optional().or(z.literal("")),
-  contrarian_take: z.string().trim().optional().or(z.literal("")),
-  builder_lesson: z.string().trim().optional().or(z.literal("")),
-  post_type: z.enum(postTypes),
-  tone: z.enum(tones),
-  template_hint: z.enum(templateHints),
-  quantity: z.coerce.number().int().min(1).max(20).optional().default(1),
-  generation_count: z.coerce.number().int().min(1).max(20).optional().default(1),
-  generation_index: z.coerce.number().int().min(1).max(20).optional().default(1),
-  reference_image_url: z.string().trim().url().optional().or(z.literal("")),
-  reference_image_asset_id: z.string().uuid().optional(),
-  image_mode: z.enum(imageModes).optional().default("template"),
-  batch_angle: batchAngleSchema.optional(),
-  recent_context: recentContextSchema.optional(),
-});
+export const ideaInputSchema = z
+  .object({
+    idea_id: z.string().uuid().optional(),
+    title: z.string().trim().min(3, "Add a sharper idea title."),
+    brief: z.string().trim().default(""),
+    source_url: z.string().trim().url().optional().or(z.literal("")),
+    platform: z.enum(platforms),
+    selected_platforms: z
+      .array(z.enum(platforms))
+      .min(1)
+      .optional()
+      .default(["instagram"]),
+    content_mode: z.enum(contentModes).optional().default("standard"),
+    recognizable_figure: z.string().trim().optional().or(z.literal("")),
+    current_event: z.string().trim().optional().or(z.literal("")),
+    contrarian_take: z.string().trim().optional().or(z.literal("")),
+    builder_lesson: z.string().trim().optional().or(z.literal("")),
+    post_type: z.enum(postTypes),
+    tone: z.enum(tones),
+    template_hint: z.enum(templateHints),
+    quantity: z.coerce.number().int().min(1).max(20).optional().default(1),
+    generation_count: z.coerce.number().int().min(1).max(20).optional().default(1),
+    generation_index: z.coerce.number().int().min(1).max(20).optional().default(1),
+    reference_image_url: z.string().trim().url().optional().or(z.literal("")),
+    reference_image_asset_id: z.string().uuid().optional(),
+    image_mode: z.enum(imageModes).optional().default("template"),
+    batch_angle: batchAngleSchema.optional(),
+    recent_context: recentContextSchema.optional(),
+  })
+  .superRefine((input, ctx) => {
+    const hasBrief = input.brief.trim().length >= 10;
+    const hasAuthorityContext = [
+      input.recognizable_figure,
+      input.current_event,
+      input.contrarian_take,
+      input.builder_lesson,
+    ].some((value) => (value || "").trim().length >= 3);
+
+    if (input.content_mode === "authority_pov") {
+      if (!hasBrief && !hasAuthorityContext) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["brief"],
+          message: "Add a brief or fill in the Authority POV fields.",
+        });
+      }
+
+      return;
+    }
+
+    if (!hasBrief) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["brief"],
+        message: "Add a little more context.",
+      });
+    }
+  });
 
 export const templateFieldsSchema = z.object({
   headline: z.string().optional(),
