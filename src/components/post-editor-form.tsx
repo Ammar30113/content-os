@@ -108,6 +108,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     hasCopy: Boolean(form.caption || form.x_version || form.linkedin_version),
     scheduledFor: form.scheduled_for,
   });
+  const bufferPosts = getBufferPosts(parsedTemplateFields);
 
   function updateField(name: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -269,6 +270,70 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
         }),
       "Post scheduled.",
     );
+  }
+
+  async function handleSendToBuffer() {
+    if (!form.scheduled_for) {
+      setState({
+        loading: null,
+        message: null,
+        error: "Choose a scheduled date and time before sending to Buffer.",
+      });
+      return;
+    }
+
+    setState({ loading: "Sending to Buffer", message: null, error: null });
+
+    try {
+      const saveResponse = await fetch(`/api/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildPayload()),
+      });
+      const savePayload = await saveResponse.json();
+
+      if (!saveResponse.ok) {
+        throw new Error(savePayload.error || "Could not save post before Buffer send.");
+      }
+
+      const scheduleResponse = await fetch("/api/schedule-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          post_id: post.id,
+          scheduled_for: new Date(form.scheduled_for).toISOString(),
+        }),
+      });
+      const schedulePayload = await scheduleResponse.json();
+
+      if (!scheduleResponse.ok) {
+        throw new Error(schedulePayload.error || "Could not schedule post before Buffer send.");
+      }
+
+      const bufferResponse = await fetch("/api/send-to-buffer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post_id: post.id }),
+      });
+      const bufferPayload = await bufferResponse.json();
+
+      if (!bufferResponse.ok) {
+        throw new Error(bufferPayload.error || "Could not send post to Buffer.");
+      }
+
+      setState({
+        loading: null,
+        message: "Saved, scheduled, and sent to Buffer.",
+        error: null,
+      });
+      router.refresh();
+    } catch (error) {
+      setState({
+        loading: null,
+        message: null,
+        error: error instanceof Error ? error.message : "Could not send post to Buffer.",
+      });
+    }
   }
 
   function applyNextSlot() {
@@ -443,6 +508,16 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <p className="font-medium text-white">Prepared channels</p>
             <p className="mt-1 text-zinc-500">{selectedChannels.join(", ")}</p>
           </div>
+          {bufferPosts.length ? (
+            <div className="space-y-2 rounded border border-[#b8c28a]/30 bg-[#b8c28a]/10 p-3 text-sm">
+              <p className="font-medium text-[#eef7c5]">Buffer handoff</p>
+              {bufferPosts.map((entry) => (
+                <p key={entry.platform} className="text-zinc-300">
+                  {entry.platform}: {entry.status}
+                </p>
+              ))}
+            </div>
+          ) : null}
           <CopyButton
             label="Copy IG package"
             value={instagramPackage}
@@ -547,6 +622,17 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           >
             <CalendarPlus size={16} />
             {state.loading === "Scheduling" ? "Scheduling..." : "Schedule"}
+          </button>
+          <button
+            type="button"
+            onClick={handleSendToBuffer}
+            disabled={Boolean(state.loading)}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded bg-[#d4ff00] px-3 text-sm font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68] disabled:opacity-50"
+          >
+            <Send size={16} />
+            {state.loading === "Sending to Buffer"
+              ? "Sending..."
+              : "Save, schedule, send to Buffer"}
           </button>
           <button
             type="button"
@@ -723,6 +809,31 @@ function getWorkflowReadiness({
     title: "Draft",
     description: "Review the copy and image, then approve the post.",
   };
+}
+
+function getBufferPosts(fields: Record<string, unknown>) {
+  const bufferPosts = fields.buffer_posts;
+
+  if (!bufferPosts || typeof bufferPosts !== "object" || Array.isArray(bufferPosts)) {
+    return [];
+  }
+
+  return Object.entries(bufferPosts)
+    .map(([platform, value]) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return null;
+      }
+
+      const record = value as Record<string, unknown>;
+
+      return {
+        platform,
+        status: typeof record.status === "string" ? record.status : "sent",
+      };
+    })
+    .filter(
+      (entry): entry is { platform: string; status: string } => entry !== null,
+    );
 }
 
 function getNextManualSlot(platform: string) {

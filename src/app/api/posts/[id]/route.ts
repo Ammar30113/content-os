@@ -4,6 +4,7 @@ import { jsonError, jsonOk } from "@/lib/api";
 import { postUpdateSchema } from "@/lib/content/types";
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
 import { requireApiUser } from "@/lib/auth";
+import type { Json } from "@/types/database";
 
 const routeParamsSchema = z.object({
   id: z.string().uuid(),
@@ -18,10 +19,15 @@ export async function PATCH(
     const { id } = routeParamsSchema.parse(await params);
     const input = postUpdateSchema.parse(await request.json());
     const { supabase } = await requireApiUser();
+    const updatePayload = {
+      ...input,
+      carousel_slides: input.carousel_slides as Json,
+      template_fields: input.template_fields as Json,
+    };
 
     const { data, error } = await supabase
       .from("generated_posts")
-      .update(input)
+      .update(updatePayload)
       .eq("id", id)
       .select()
       .single();

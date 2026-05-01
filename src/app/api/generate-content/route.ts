@@ -20,6 +20,7 @@ import {
   enforceProductMentionGate,
   PRODUCT_MENTION_CONFIG,
 } from "@/lib/content/product-gate";
+import type { Json } from "@/types/database";
 
 const openAITemplateFieldsSchema = z.object({
   headline: z.string(),
@@ -399,7 +400,7 @@ export async function POST(request: Request) {
         x_version: content.x_version,
         linkedin_version: content.linkedin_version,
         image_prompt: content.image_prompt,
-        template_fields: content.template_fields,
+        template_fields: content.template_fields as Json,
         image_url: input.image_mode === "uploaded" ? referenceImageUrl : null,
         status: "draft",
         image_status: input.image_mode === "uploaded" ? "generated" : "not_generated",

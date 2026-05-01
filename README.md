@@ -52,6 +52,11 @@ OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4o-mini
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 CRON_SECRET=
+BUFFER_ACCESS_TOKEN=
+BUFFER_ORGANIZATION_ID=
+BUFFER_INSTAGRAM_CHANNEL_ID=
+BUFFER_X_CHANNEL_ID=
+BUFFER_LINKEDIN_CHANNEL_ID=
 ```
 
 Do not commit `.env.local` or real secrets.
@@ -106,6 +111,31 @@ testing.
 - `/app/posts/[id]` - editor, image upload/regeneration, scheduling
 - `/app/calendar` - scheduled and published posts
 - `/app/settings` - project safety and connection health
+
+## Buffer Publishing
+
+Content OS can hand scheduled posts to Buffer after review:
+
+1. Generate and approve a post.
+2. Set `Scheduled for` in the editor.
+3. Click `Save, schedule, send to Buffer`.
+4. Confirm the post appears in Buffer's queue.
+
+The production Vercel cron at `/api/cron/publish-due-posts` also sweeps queued
+publishing jobs inside the next 48 hours once per day. Vercel Hobby plans do not
+support high-frequency cron, so the editor button is the primary no-wait handoff.
+
+Buffer environment variables:
+
+```bash
+BUFFER_ACCESS_TOKEN=
+BUFFER_ORGANIZATION_ID=
+BUFFER_INSTAGRAM_CHANNEL_ID=
+BUFFER_X_CHANNEL_ID=
+BUFFER_LINKEDIN_CHANNEL_ID=
+```
+
+LinkedIn is optional until a LinkedIn Buffer channel is connected.
 
 ## Local Development
 

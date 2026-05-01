@@ -17,6 +17,18 @@ type EnvStatus = {
   message: string;
 };
 
+export type BufferPlatform = "instagram" | "x" | "linkedin";
+
+type BufferEnvStatus = {
+  ok: boolean;
+  accessTokenConfigured: boolean;
+  organizationIdConfigured: boolean;
+  channels: Record<BufferPlatform, string | null>;
+  connectedChannels: BufferPlatform[];
+  missing: string[];
+  message: string;
+};
+
 export function getAppUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 }
@@ -85,6 +97,67 @@ export function getOpenAIEnv() {
   return {
     apiKey,
     model,
+  };
+}
+
+export function getBufferEnvStatus(): BufferEnvStatus {
+  const channels: Record<BufferPlatform, string | null> = {
+    instagram: process.env.BUFFER_INSTAGRAM_CHANNEL_ID || null,
+    x: process.env.BUFFER_X_CHANNEL_ID || null,
+    linkedin: process.env.BUFFER_LINKEDIN_CHANNEL_ID || null,
+  };
+  const connectedChannels = (Object.entries(channels) as [BufferPlatform, string | null][])
+    .filter(([, value]) => Boolean(value))
+    .map(([platform]) => platform);
+  const required: [string, string | undefined][] = [
+    ["BUFFER_ACCESS_TOKEN", process.env.BUFFER_ACCESS_TOKEN],
+    ["BUFFER_ORGANIZATION_ID", process.env.BUFFER_ORGANIZATION_ID],
+  ];
+  const missing = required
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+
+  if (!connectedChannels.length) {
+    missing.push(
+      "BUFFER_INSTAGRAM_CHANNEL_ID or BUFFER_X_CHANNEL_ID or BUFFER_LINKEDIN_CHANNEL_ID",
+    );
+  }
+
+  const ok =
+    Boolean(process.env.BUFFER_ACCESS_TOKEN) &&
+    Boolean(process.env.BUFFER_ORGANIZATION_ID) &&
+    connectedChannels.length > 0;
+
+  return {
+    ok,
+    accessTokenConfigured: Boolean(process.env.BUFFER_ACCESS_TOKEN),
+    organizationIdConfigured: Boolean(process.env.BUFFER_ORGANIZATION_ID),
+    channels,
+    connectedChannels,
+    missing,
+    message: ok
+      ? `Buffer ready for ${connectedChannels.join(", ")}.`
+      : `Missing ${missing.join(", ")}.`,
+  };
+}
+
+export function getBufferEnv() {
+  const status = getBufferEnvStatus();
+  const accessToken = process.env.BUFFER_ACCESS_TOKEN;
+  const organizationId = process.env.BUFFER_ORGANIZATION_ID;
+
+  if (!accessToken) {
+    throw new Error("BUFFER_ACCESS_TOKEN is required to send posts to Buffer.");
+  }
+
+  if (!organizationId) {
+    throw new Error("BUFFER_ORGANIZATION_ID is required to send posts to Buffer.");
+  }
+
+  return {
+    accessToken,
+    organizationId,
+    channels: status.channels,
   };
 }
 

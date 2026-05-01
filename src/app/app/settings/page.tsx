@@ -5,11 +5,12 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { getAuthenticatedPageContext } from "@/lib/auth";
 import { PRODUCT_MENTION_CONFIG } from "@/lib/content/product-gate";
-import { getEnvStatus } from "@/lib/env";
+import { getBufferEnvStatus, getEnvStatus } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 const bufferEnvVars = [
   "BUFFER_ACCESS_TOKEN",
+  "BUFFER_ORGANIZATION_ID",
   "BUFFER_INSTAGRAM_CHANNEL_ID",
   "BUFFER_X_CHANNEL_ID",
   "BUFFER_LINKEDIN_CHANNEL_ID",
@@ -27,6 +28,7 @@ export default async function SettingsPage() {
   const appUrl = await getRuntimeAppUrl(envStatus.appUrl);
   const openAIConfigured = Boolean(process.env.OPENAI_API_KEY);
   const openAIModel = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const bufferStatus = getBufferEnvStatus();
 
   return (
     <>
@@ -81,7 +83,10 @@ export default async function SettingsPage() {
               label="Storage bucket"
               value={bucketStatus.message}
             />
-            <SettingRow label="Publishing mode" value="Manual handoff" />
+            <SettingRow
+              label="Publishing mode"
+              value={bufferStatus.ok ? "Buffer scheduled handoff" : "Manual handoff"}
+            />
           </dl>
         </div>
 
@@ -132,14 +137,18 @@ export default async function SettingsPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-white">
-                Buffer autoposting checklist
+                Buffer autoposting
               </h2>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
-                Disabled for this MVP. These are the environment variables to
-                add when we wire the next milestone.
+                Schedule posts in Content OS, then send them into the connected
+                Buffer queue for Instagram and X. The daily cron sweeps queued
+                jobs inside the next 48 hours.
               </p>
             </div>
-            <StatusBadge status="draft" />
+            <StatusBadge status={bufferStatus.ok ? "approved" : "draft"} />
+          </div>
+          <div className="mt-5 rounded border border-zinc-800 bg-[#0a0a0b] p-3 text-sm text-zinc-300">
+            {bufferStatus.message}
           </div>
           <div className="mt-5 grid gap-3">
             {bufferEnvVars.map((name) => (

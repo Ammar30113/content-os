@@ -5,6 +5,7 @@ import { templateFieldsSchema, templateTypes } from "@/lib/content/types";
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
 import { renderTemplatePng } from "@/lib/images/render";
 import { requireApiUser } from "@/lib/auth";
+import type { Json } from "@/types/database";
 
 export const runtime = "nodejs";
 
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
         image_status: "generated",
         image_error: null,
         template_type: input.template_type,
-        template_fields: input.template_fields,
+        template_fields: input.template_fields as Json,
       })
       .eq("id", input.post_id)
       .select()
