@@ -9,6 +9,7 @@ import {
   WORD_OF_AI_SYSTEM_PROMPT,
 } from "@/lib/content/brand";
 import { getWeeklyMemeTrends } from "@/lib/content/meme-trends";
+import { PRODUCT_MENTION_CONFIG } from "@/lib/content/product-gate";
 import {
   batchAngleSchema,
   ideaInputSchema,
@@ -112,6 +113,18 @@ export async function POST(request: Request) {
               selected_platforms: input.selected_platforms,
               post_type: input.post_type,
               tone: input.tone,
+              content_mode: input.content_mode,
+              authority_pov:
+                input.content_mode === "authority_pov"
+                  ? {
+                      recognizable_figure: input.recognizable_figure || null,
+                      current_event: input.current_event || null,
+                      contrarian_take: input.contrarian_take || null,
+                      builder_lesson: input.builder_lesson || null,
+                      instruction:
+                        "Every angle must position Word of AI beside a recognizable person, company, model, product launch, or current AI event, then land one confident builder lesson.",
+                    }
+                  : null,
               template_hint: input.template_hint,
               reference_image_url: input.reference_image_url || null,
               image_mode: input.image_mode,
@@ -137,13 +150,17 @@ export async function POST(request: Request) {
               weekly_mix_for_10_plus:
                 "25% news_digest, 25% tool_stack, 20% tutorial, 10% creator_economy, 10% founder_story, 10% meme.",
               cta_rotation:
-                "Use follow for most posts. Use rallio or quotestack rarely and never back-to-back.",
+                PRODUCT_MENTION_CONFIG.product_mentions_enabled
+                  ? "Use follow for most posts. Use rallio or quotestack rarely and never back-to-back."
+                  : "Product CTAs are paused. Set cta_intent to follow for every angle. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",
               recent_posts_to_avoid: safeRecentPosts,
               output_requirements: [
                 "Return exactly the requested number of angles.",
                 "Each working_title must be unique.",
                 "Each hook_direction must imply a different post, not a wording variant.",
                 "Each unique_takeaway must teach or argue a different point.",
+                "Always include authority_figure, topical_event, contrarian_take, and builder_lesson. Use null for non-authority angles.",
+                "If content_mode is authority_pov, every angle must include authority_figure, topical_event, contrarian_take, and builder_lesson.",
                 "Use do_not_repeat to name the visual concept to avoid, not only copy to avoid.",
                 "Vary visual treatment across angles: news image band, tool cards, prompt block, stat/quote, or founder note.",
                 "Always include meme_trend_title, meme_trend_source, meme_format, and meme_adaptation. Use null for non-meme angles.",
@@ -167,7 +184,12 @@ export async function POST(request: Request) {
       throw new Error("OpenAI did not return a structured batch plan.");
     }
 
-    const angles = normalizePlanAngles(parsed.angles, quantity);
+    const angles = normalizePlanAngles(parsed.angles, quantity).map((angle) => ({
+      ...angle,
+      cta_intent: PRODUCT_MENTION_CONFIG.product_mentions_enabled
+        ? angle.cta_intent
+        : "follow",
+    }));
 
     if (angles.length !== quantity) {
       throw new Error(

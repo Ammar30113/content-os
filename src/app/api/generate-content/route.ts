@@ -16,6 +16,10 @@ import {
 import { requireApiUser } from "@/lib/auth";
 import { summarizeSourceUrl } from "@/lib/content/source";
 import { getWeeklyMemeTrends } from "@/lib/content/meme-trends";
+import {
+  enforceProductMentionGate,
+  PRODUCT_MENTION_CONFIG,
+} from "@/lib/content/product-gate";
 
 const openAITemplateFieldsSchema = z.object({
   headline: z.string(),
@@ -39,6 +43,12 @@ const openAITemplateFieldsSchema = z.object({
   pull_quote: z.string().nullable(),
   meme_setup: z.string().nullable(),
   meme_punchline: z.string().nullable(),
+  authority_figure: z.string().nullable(),
+  topical_event: z.string().nullable(),
+  contrarian_take: z.string().nullable(),
+  builder_lesson: z.string().nullable(),
+  text_overlay_hook: z.string().nullable(),
+  review_notes: z.string().nullable(),
   portrait_url: z.string().nullable(),
 });
 
@@ -97,6 +107,12 @@ function normalizeTemplateFields(
     pull_quote: fields.pull_quote || undefined,
     meme_setup: fields.meme_setup || undefined,
     meme_punchline: fields.meme_punchline || undefined,
+    authority_figure: fields.authority_figure || undefined,
+    topical_event: fields.topical_event || undefined,
+    contrarian_take: fields.contrarian_take || undefined,
+    builder_lesson: fields.builder_lesson || undefined,
+    text_overlay_hook: fields.text_overlay_hook || undefined,
+    review_notes: fields.review_notes || undefined,
     portrait_url: fields.portrait_url || undefined,
   };
 }
@@ -192,6 +208,9 @@ export async function POST(request: Request) {
             "If a batch_angle is provided, treat it as the source of truth for this post's angle, pillar, visual direction, and CTA intent.",
             "Do not copy hooks, headlines, examples, caption structure, or template fields from generated_so_far.",
             "Avoid generic non-positions. Take a clear builder-to-builder point of view.",
+            PRODUCT_MENTION_CONFIG.product_mentions_enabled
+              ? "Product mentions may be used only when explicitly relevant."
+              : "Product mentions are paused. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",
           ].join(" "),
         },
         {
@@ -209,6 +228,18 @@ export async function POST(request: Request) {
               selected_platforms: selectedPlatforms,
               post_type: input.post_type,
               tone: input.tone,
+              content_mode: input.content_mode,
+              authority_pov:
+                input.content_mode === "authority_pov"
+                  ? {
+                      recognizable_figure: input.recognizable_figure || null,
+                      current_event: input.current_event || null,
+                      contrarian_take: input.contrarian_take || null,
+                      builder_lesson: input.builder_lesson || null,
+                      instruction:
+                        "Use the recognizable figure/current event to gain authority, then make a confident original builder point. Do not summarize the figure; use them as context for a practical insight.",
+                    }
+                  : null,
               template_hint: input.template_hint,
               meme_trend_context:
                 memeTrendContext &&
@@ -261,7 +292,7 @@ export async function POST(request: Request) {
                 style:
                   "AI Newsroom / Builder Desk. Dark, high-contrast, text-first, sharp, and readable. Do not make fake hero visuals when no real image URL is provided.",
                 template_fields:
-                  "Use headline, subhead, visual_subject, swipe_hint, bottom_label, source_name, date, tools, stat, quote, pull_quote, code_snippet, meme_setup, and meme_punchline to direct the image. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null.",
+                  "Use headline, subhead, visual_subject, swipe_hint, bottom_label, source_name, date, tools, stat, quote, pull_quote, code_snippet, meme_setup, meme_punchline, authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes to direct the image and review flow. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null.",
                 thumbnail_rule:
                   "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
                 placeholder_rule:
@@ -270,16 +301,22 @@ export async function POST(request: Request) {
                   "If a real reference image URL is supplied, do not invent fake screenshots, logos, portraits, or product images. Use the supplied URL only when it makes the visual more concrete.",
                 meme_rule:
                   "For meme template, return short meme_setup and meme_punchline fields. The joke should be dry AI-builder humor with a useful point, not offensive, not mean, and not dependent on a copyrighted meme image.",
+                authority_pov_rule:
+                  "For authority_pov mode, return authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes. Make the reel_script a short talking-head script with a hook, the authority/current-event setup, the sharp take, and one practical builder takeaway.",
               },
               cta_rotation:
-                "Use follow most often. Rallio and QuoteStack mentions should be rare and natural. Never hard sell.",
+                PRODUCT_MENTION_CONFIG.product_mentions_enabled
+                  ? "Use follow most often. Rallio and QuoteStack mentions should be rare and natural. Never hard sell."
+                  : "Use follow CTAs only. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",
               selected_platform_output:
                 "Always return the full package. Prioritize caption for Instagram, x_version for X, and linkedin_version for LinkedIn based on selected_platforms.",
               planned_output_contract: input.batch_angle
                 ? {
                     pillar_must_equal: input.batch_angle.pillar,
                     template_type_must_equal: input.batch_angle.template_type,
-                    cta_should_match: input.batch_angle.cta_intent,
+                    cta_should_match: PRODUCT_MENTION_CONFIG.product_mentions_enabled
+                      ? input.batch_angle.cta_intent
+                      : "follow",
                   }
                 : null,
               content_focus: [
@@ -318,9 +355,18 @@ export async function POST(request: Request) {
       reference_image_asset_id: input.reference_image_asset_id,
       selected_platforms: selectedPlatforms,
       image_mode: input.image_mode,
+      content_mode: input.content_mode,
+      authority_figure:
+        normalizedTemplateFields.authority_figure || input.recognizable_figure || undefined,
+      topical_event:
+        normalizedTemplateFields.topical_event || input.current_event || undefined,
+      contrarian_take:
+        normalizedTemplateFields.contrarian_take || input.contrarian_take || undefined,
+      builder_lesson:
+        normalizedTemplateFields.builder_lesson || input.builder_lesson || undefined,
     };
 
-    const content = generatedContentSchema.parse({
+    const parsedContent = generatedContentSchema.parse({
       ...parsed,
       pillar:
         input.batch_angle?.pillar ||
@@ -330,6 +376,7 @@ export async function POST(request: Request) {
         (input.template_hint !== "auto" ? input.template_hint : parsed.template_type),
       template_fields: templateFieldsWithWorkflow,
     });
+    const content = enforceProductMentionGate(parsedContent);
 
     const { data: post, error: postError } = await supabase
       .from("generated_posts")

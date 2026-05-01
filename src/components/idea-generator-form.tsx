@@ -6,6 +6,7 @@ import { Check, FilePlus2, ImageUp, Save, Sparkles } from "lucide-react";
 
 import {
   type BatchAngle,
+  contentModes,
   imageModes,
   platforms,
   postQuantities,
@@ -16,6 +17,7 @@ import {
 
 type Platform = (typeof platforms)[number];
 type ImageMode = (typeof imageModes)[number];
+type ContentMode = (typeof contentModes)[number];
 
 type FormState = {
   title: string;
@@ -23,6 +25,11 @@ type FormState = {
   source_url: string;
   platform: Platform;
   selected_platforms: Platform[];
+  content_mode: ContentMode;
+  recognizable_figure: string;
+  current_event: string;
+  contrarian_take: string;
+  builder_lesson: string;
   post_type: string;
   tone: string;
   template_hint: string;
@@ -36,6 +43,11 @@ const defaultForm: FormState = {
   source_url: "",
   platform: "instagram",
   selected_platforms: ["instagram", "x"],
+  content_mode: "standard",
+  recognizable_figure: "",
+  current_event: "",
+  contrarian_take: "",
+  builder_lesson: "",
   post_type: "single",
   tone: "educational",
   template_hint: "auto",
@@ -451,6 +463,77 @@ export function IdeaGeneratorForm() {
       </div>
 
       <div className="mt-6 grid gap-4">
+        <section className="rounded border border-zinc-800 bg-[#0a0a0b] p-4">
+          <p className="text-sm font-medium text-zinc-300">Content mode</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <ContentModeButton
+              active={form.content_mode === "standard"}
+              title="Standard campaign"
+              description="Pillars, tutorials, news, tools, founder notes, and memes."
+              onClick={() => updateField("content_mode", "standard")}
+            />
+            <ContentModeButton
+              active={form.content_mode === "authority_pov"}
+              title="Authority POV"
+              description="Use a known figure or current event to land a builder take."
+              onClick={() => updateField("content_mode", "authority_pov")}
+            />
+          </div>
+        </section>
+
+        {form.content_mode === "authority_pov" ? (
+          <section className="grid gap-4 rounded border border-[#c98270]/30 bg-[#c98270]/10 p-4 md:grid-cols-2">
+            <label className="block">
+              <span className="text-sm font-medium text-[#f0c9bf]">
+                Recognizable figure / company
+              </span>
+              <input
+                value={form.recognizable_figure}
+                onChange={(event) =>
+                  updateField("recognizable_figure", event.target.value)
+                }
+                className="mt-2 h-11 w-full rounded border border-[#c98270]/30 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#c98270]"
+                placeholder="Sam Altman, Jensen Huang, Anthropic, Perplexity"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-[#f0c9bf]">
+                Current event / topical hook
+              </span>
+              <input
+                value={form.current_event}
+                onChange={(event) => updateField("current_event", event.target.value)}
+                className="mt-2 h-11 w-full rounded border border-[#c98270]/30 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#c98270]"
+                placeholder="New model launch, AI agent mistake, funding round"
+              />
+            </label>
+            <label className="block md:col-span-2">
+              <span className="text-sm font-medium text-[#f0c9bf]">
+                Contrarian take
+              </span>
+              <input
+                value={form.contrarian_take}
+                onChange={(event) =>
+                  updateField("contrarian_take", event.target.value)
+                }
+                className="mt-2 h-11 w-full rounded border border-[#c98270]/30 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#c98270]"
+                placeholder="The real story is not the feature, it is the workflow it makes normal."
+              />
+            </label>
+            <label className="block md:col-span-2">
+              <span className="text-sm font-medium text-[#f0c9bf]">
+                Builder lesson
+              </span>
+              <textarea
+                value={form.builder_lesson}
+                onChange={(event) => updateField("builder_lesson", event.target.value)}
+                className="mt-2 min-h-24 w-full rounded border border-[#c98270]/30 bg-[#0a0a0b] px-3 py-3 text-sm leading-6 text-white outline-none focus:border-[#c98270]"
+                placeholder="What should founders/builders learn from this example?"
+              />
+            </label>
+          </section>
+        ) : null}
+
         <label className="block">
           <span className="text-sm font-medium text-zinc-300">
             Topic / niche
@@ -583,6 +666,13 @@ export function IdeaGeneratorForm() {
             instead of repeating the same joke.
           </div>
         ) : null}
+        {form.content_mode === "authority_pov" ? (
+          <div className="rounded border border-[#b8c28a]/30 bg-[#b8c28a]/10 p-3 text-sm leading-6 text-[#eef4cc]">
+            Authority POV mode keeps product CTAs paused and generates a
+            peer-level take, Reel script, and text overlay around the figure or
+            event you provide.
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -675,6 +765,38 @@ function ImageModeButton({
     >
       <span className="flex items-center gap-2 text-sm font-semibold text-white">
         {active ? <ImageUp size={15} className="text-[#d7ddb8]" /> : null}
+        {title}
+      </span>
+      <span className="mt-1 block text-xs leading-5 text-zinc-500">
+        {description}
+      </span>
+    </button>
+  );
+}
+
+function ContentModeButton({
+  active,
+  title,
+  description,
+  onClick,
+}: {
+  active: boolean;
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded border p-3 text-left transition ${
+        active
+          ? "border-[#b8c28a]/60 bg-[#b8c28a]/10"
+          : "border-zinc-800 hover:border-zinc-600"
+      }`}
+    >
+      <span className="flex items-center gap-2 text-sm font-semibold text-white">
+        {active ? <Check size={15} className="text-[#d7ddb8]" /> : null}
         {title}
       </span>
       <span className="mt-1 block text-xs leading-5 text-zinc-500">

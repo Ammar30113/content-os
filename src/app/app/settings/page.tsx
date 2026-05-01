@@ -4,6 +4,7 @@ import { ConfigRequired } from "@/components/config-required";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { getAuthenticatedPageContext } from "@/lib/auth";
+import { PRODUCT_MENTION_CONFIG } from "@/lib/content/product-gate";
 import { getEnvStatus } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
@@ -81,6 +82,49 @@ export default async function SettingsPage() {
               value={bucketStatus.message}
             />
             <SettingRow label="Publishing mode" value="Manual handoff" />
+          </dl>
+        </div>
+
+        <div className="rounded border border-zinc-800 bg-zinc-950 p-5 lg:col-span-2">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                Product mention gate
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                Audience-first growth mode keeps Rallio and QuoteStack out of
+                automatic CTAs until the page has enough trust.
+              </p>
+            </div>
+            <StatusBadge
+              status={
+                PRODUCT_MENTION_CONFIG.product_mentions_enabled
+                  ? "approved"
+                  : "draft"
+              }
+            />
+          </div>
+          <dl className="mt-5 space-y-3 text-sm">
+            <SettingRow
+              label="Product mentions"
+              value={
+                PRODUCT_MENTION_CONFIG.product_mentions_enabled
+                  ? "Enabled"
+                  : "Paused until audience threshold"
+              }
+            />
+            <SettingRow
+              label="Rallio entry mode"
+              value={PRODUCT_MENTION_CONFIG.rallio_entry_mode.replaceAll("_", " ")}
+            />
+            <SettingRow
+              label="Follower threshold"
+              value={`${PRODUCT_MENTION_CONFIG.launch_threshold_followers.toLocaleString()} followers`}
+            />
+            <SettingRow
+              label="Default CTA"
+              value={PRODUCT_MENTION_CONFIG.default_cta}
+            />
           </dl>
         </div>
 

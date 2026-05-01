@@ -344,8 +344,12 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <code>source_logo_url</code>, <code>product_logo</code>,{" "}
             <code>visual_subject</code>, <code>swipe_hint</code>, and{" "}
             <code>bottom_label</code>. Meme templates can also use{" "}
-            <code>meme_setup</code> and <code>meme_punchline</code>. Leave URL
-            fields blank unless you have a real image URL.
+            <code>meme_setup</code> and <code>meme_punchline</code>. Authority
+            POV posts can use <code>authority_figure</code>,{" "}
+            <code>topical_event</code>, <code>contrarian_take</code>,{" "}
+            <code>builder_lesson</code>, <code>text_overlay_hook</code>, and{" "}
+            <code>review_notes</code>. Leave URL fields blank unless you have a
+            real image URL.
           </p>
           <label className="block">
             <span className="text-sm font-medium text-zinc-300">Template type</span>
@@ -452,6 +456,11 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           <CopyButton
             label="Copy LinkedIn version"
             value={form.linkedin_version}
+            onCopy={copyToClipboard}
+          />
+          <CopyButton
+            label="Copy Reel script"
+            value={form.reel_script}
             onCopy={copyToClipboard}
           />
           <CopyButton

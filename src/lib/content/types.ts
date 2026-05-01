@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const platforms = ["instagram", "x", "linkedin"] as const;
 export const postTypes = ["single", "carousel", "reel", "thread"] as const;
+export const contentModes = ["standard", "authority_pov"] as const;
 export const tones = [
   "educational",
   "viral",
@@ -43,6 +44,10 @@ export const batchAngleSchema = z.object({
   caption_structure: z.string(),
   cta_intent: z.enum(ctaIntents),
   do_not_repeat: z.string(),
+  authority_figure: z.string().nullable(),
+  topical_event: z.string().nullable(),
+  contrarian_take: z.string().nullable(),
+  builder_lesson: z.string().nullable(),
   meme_trend_title: z.string().nullable(),
   meme_trend_source: z.string().nullable(),
   meme_format: z.string().nullable(),
@@ -69,6 +74,11 @@ export const ideaInputSchema = z.object({
   source_url: z.string().trim().url().optional().or(z.literal("")),
   platform: z.enum(platforms),
   selected_platforms: z.array(z.enum(platforms)).min(1).optional().default(["instagram"]),
+  content_mode: z.enum(contentModes).optional().default("standard"),
+  recognizable_figure: z.string().trim().optional().or(z.literal("")),
+  current_event: z.string().trim().optional().or(z.literal("")),
+  contrarian_take: z.string().trim().optional().or(z.literal("")),
+  builder_lesson: z.string().trim().optional().or(z.literal("")),
   post_type: z.enum(postTypes),
   tone: z.enum(tones),
   template_hint: z.enum(templateHints),
@@ -94,6 +104,7 @@ export const templateFieldsSchema = z.object({
   reference_image_asset_id: z.string().optional(),
   selected_platforms: z.array(z.enum(platforms)).optional(),
   image_mode: z.enum(imageModes).optional(),
+  content_mode: z.enum(contentModes).optional(),
   product_logo: z.string().optional(),
   visual_subject: z.string().optional(),
   swipe_hint: z.string().optional(),
@@ -108,6 +119,12 @@ export const templateFieldsSchema = z.object({
   pull_quote: z.string().optional(),
   meme_setup: z.string().optional(),
   meme_punchline: z.string().optional(),
+  authority_figure: z.string().optional(),
+  topical_event: z.string().optional(),
+  contrarian_take: z.string().optional(),
+  builder_lesson: z.string().optional(),
+  text_overlay_hook: z.string().optional(),
+  review_notes: z.string().optional(),
   portrait_url: z.string().optional(),
 });
 
