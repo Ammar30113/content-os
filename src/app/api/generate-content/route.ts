@@ -98,6 +98,35 @@ const recentPostSchema = z.object({
   hashtags: z.array(z.string()).nullable(),
 });
 
+type OpenAIContentPackage = z.infer<typeof openAIContentSchema>;
+type GeneratedContentPackage = z.infer<typeof generatedContentSchema>;
+
+const fallbackActionBullets = [
+  "defines the job before asking AI to work",
+  "gives the model context from the actual workflow",
+  "reviews the output before it reaches a customer or audience",
+  "turns repeatable tasks into a system instead of a one-off prompt",
+  "measures where human judgment still changes the result",
+];
+
+const fallbackHashtags = [
+  "#ai",
+  "#aibuilder",
+  "#aitools",
+  "#aiagents",
+  "#buildinpublic",
+  "#indiehacker",
+  "#automation",
+  "#promptengineering",
+  "#aiautomation",
+  "#founder",
+  "#productivity",
+  "#startup",
+  "#tech",
+  "#llm",
+  "#futureofwork",
+];
+
 function normalizeTemplateFields(
   fields: z.infer<typeof openAITemplateFieldsSchema>,
 ) {
@@ -131,6 +160,188 @@ function normalizeTemplateFields(
     review_notes: fields.review_notes || undefined,
     portrait_url: fields.portrait_url || undefined,
   };
+}
+
+function createQualityFallbackContent({
+  candidate,
+  contrast,
+  viralityScore,
+  visualAlignmentNote,
+  failures,
+  attempt,
+}: {
+  candidate: GeneratedContentPackage;
+  contrast: OpenAIContentPackage["contrast"];
+  viralityScore: OpenAIContentPackage["virality_score"];
+  visualAlignmentNote: string;
+  failures: string[];
+  attempt: number;
+}) {
+  const hook = scrubGenericCopy(candidate.hook || candidate.headline);
+  const headline = scrubGenericCopy(candidate.headline || hook);
+  const subhead = scrubGenericCopy(
+    candidate.subhead ||
+      "The gap is not who uses AI. It is who builds the sharper workflow.",
+  );
+  const bullets = getFallbackActionBullets(candidate, contrast);
+  const finalLine = "This isn't about using more AI. It's about building better loops.";
+  const hashtags = normalizeFallbackHashtags(candidate.hashtags);
+  const caption = [
+    hook,
+    "",
+    "The weak version adds another tool.",
+    "The useful version changes the behavior around the tool.",
+    "",
+    ...bullets.map((bullet) => `- ${bullet}`),
+    "",
+    finalLine,
+    "",
+    hashtags.join(" "),
+  ].join("\n");
+  const xVersion = buildXFallback(hook, bullets);
+  const linkedinVersion = [
+    hook,
+    "",
+    "The workflow gap usually shows up in behavior, not tooling.",
+    "",
+    ...bullets.slice(0, 4).map((bullet) => `- ${sentenceCase(bullet)}`),
+    "",
+    finalLine,
+  ].join("\n");
+
+  const repaired = generatedContentSchema.parse({
+    ...candidate,
+    hook,
+    headline,
+    subhead,
+    caption,
+    hashtags,
+    cta: "Follow @wordofaii for more builder-grade AI workflows.",
+    x_version: xVersion,
+    linkedin_version: linkedinVersion,
+    template_fields: {
+      ...candidate.template_fields,
+      headline,
+      subhead,
+      quality_gate: {
+        passed: false,
+        repaired: true,
+        attempt,
+        failures,
+        contrast,
+        visual_alignment_note: visualAlignmentNote,
+        virality_score: viralityScore,
+        notes: [
+          "OpenAI repair attempts did not pass every strict quality rule.",
+          "Content OS created a structured review draft instead of failing the run.",
+        ],
+      },
+      review_notes: [
+        candidate.template_fields.review_notes,
+        "Quality fallback used. Review caption specificity before posting.",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    },
+  });
+
+  return enforceProductMentionGate(repaired);
+}
+
+function getFallbackActionBullets(
+  candidate: GeneratedContentPackage,
+  contrast: OpenAIContentPackage["contrast"],
+) {
+  const fromContrast = contrast.differences
+    .map((difference) =>
+      difference
+        .replace(/^[-–•]\s*/, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter((difference) => hasActionShape(difference));
+  const fromVisual = [
+    candidate.template_fields.code_snippet ? "uses the prompt recipe shown in the image" : "",
+    candidate.template_fields.tools?.length
+      ? `tests ${candidate.template_fields.tools.slice(0, 2).join(" and ")} on one real task`
+      : "",
+    candidate.template_fields.meme_setup ? "turns the joke into a workflow lesson" : "",
+  ].filter(Boolean);
+
+  return uniqueStrings([...fromContrast, ...fromVisual, ...fallbackActionBullets]).slice(
+    0,
+    5,
+  );
+}
+
+function hasActionShape(value: string) {
+  const normalized = value.toLowerCase();
+
+  if (
+    /^(lazy|advanced|smart|smarter|casual|intentional|better|expert)\s+(user|users|people|builders)\b/.test(
+      normalized,
+    )
+  ) {
+    return false;
+  }
+
+  return /\b(accepts|analyzes|asks|assesses|audits|builds|checks|compares|defines|delegates|documents|edits|filters|gives|identifies|maintains|maps|measures|reviews|runs|ships|tests|tracks|uses|verifies|writes)\b/.test(
+    normalized,
+  );
+}
+
+function normalizeFallbackHashtags(hashtags: string[]) {
+  const normalized = hashtags
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
+
+  return uniqueStrings([...normalized, ...fallbackHashtags]).slice(0, 20);
+}
+
+function buildXFallback(hook: string, bullets: string[]) {
+  const compact = `${hook} The gap is behavior: ${bullets
+    .slice(0, 3)
+    .map((bullet) => bullet.replace(/\.$/, ""))
+    .join("; ")}.`;
+
+  if (compact.length <= 280) {
+    return compact;
+  }
+
+  return `${hook} The gap is behavior: define the job, give context, review before shipping.`;
+}
+
+function scrubGenericCopy(value: string) {
+  return value
+    .replace(/ai is a tool/gi, "AI exposes the workflow")
+    .replace(/use it wisely/gi, "build the loop deliberately")
+    .replace(/embrace the future/gi, "audit the workflow")
+    .replace(/stay ahead/gi, "keep the workflow honest")
+    .replace(/leverage effectively/gi, "use on a real task")
+    .replace(/unlock the power/gi, "find the useful edge")
+    .replace(/ready to level up/gi, "ready to tighten the workflow")
+    .trim();
+}
+
+function sentenceCase(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function uniqueStrings(values: string[]) {
+  const seen = new Set<string>();
+
+  return values.filter((value) => {
+    const normalized = value.trim();
+    const key = normalized.toLowerCase();
+
+    if (!normalized || seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
 }
 
 export async function POST(request: Request) {
@@ -215,6 +426,13 @@ export async function POST(request: Request) {
 
     let content: z.infer<typeof generatedContentSchema> | null = null;
     let qualityFailures: string[] = [];
+    let fallbackCandidate: GeneratedContentPackage | null = null;
+    let fallbackQualityContext: {
+      contrast: OpenAIContentPackage["contrast"];
+      viralityScore: OpenAIContentPackage["virality_score"];
+      visualAlignmentNote: string;
+      attempt: number;
+    } | null = null;
 
     for (let attempt = 1; attempt <= 4; attempt += 1) {
       const isRepairPass = qualityFailures.length > 0;
@@ -429,6 +647,13 @@ export async function POST(request: Request) {
         template_fields: templateFieldsWithWorkflow,
       });
       const candidate = enforceProductMentionGate(parsedContent);
+      fallbackCandidate = candidate;
+      fallbackQualityContext = {
+        contrast: parsed.contrast,
+        viralityScore: parsed.virality_score,
+        visualAlignmentNote: parsed.visual_alignment_note,
+        attempt,
+      };
       const qualityResult = validateGeneratedContentQuality({
         content: candidate,
         contrast: parsed.contrast,
@@ -456,6 +681,17 @@ export async function POST(request: Request) {
       }
 
       qualityFailures = qualityResult.failures;
+    }
+
+    if (!content && fallbackCandidate && fallbackQualityContext) {
+      content = createQualityFallbackContent({
+        candidate: fallbackCandidate,
+        contrast: fallbackQualityContext.contrast,
+        viralityScore: fallbackQualityContext.viralityScore,
+        visualAlignmentNote: fallbackQualityContext.visualAlignmentNote,
+        failures: qualityFailures,
+        attempt: fallbackQualityContext.attempt,
+      });
     }
 
     if (!content) {
