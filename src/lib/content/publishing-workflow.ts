@@ -6,6 +6,7 @@ import type { Database, Json } from "@/types/database";
 
 export const MANUAL_SLOT_TIME_ZONE = "America/Toronto";
 export const BUFFER_FREE_CHANNEL_CAP = 10;
+export const MANUAL_SLOT_WINDOW_DAYS = 7;
 
 type PublishPlatform = (typeof platforms)[number];
 type PublishingJob = Database["public"]["Tables"]["publishing_jobs"]["Row"];
@@ -275,10 +276,12 @@ export function getNextManualSlot(
   );
   const slots = getSlotHours(platform);
   const minTime = new Date(from.getTime() + 30 * 60 * 1000);
-  const maxTime = new Date(from.getTime() + 48 * 60 * 60 * 1000);
+  const maxTime = new Date(
+    from.getTime() + MANUAL_SLOT_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  );
   const localNow = getTimeZoneParts(from, MANUAL_SLOT_TIME_ZONE);
 
-  for (let dayOffset = 0; dayOffset <= 2; dayOffset += 1) {
+  for (let dayOffset = 0; dayOffset <= MANUAL_SLOT_WINDOW_DAYS; dayOffset += 1) {
     for (const hour of slots) {
       const candidate = zonedTimeToUtc(
         {

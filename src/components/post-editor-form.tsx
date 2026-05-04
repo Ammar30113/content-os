@@ -23,6 +23,8 @@ import {
 } from "@/lib/content/types";
 import type { Database, Json } from "@/types/database";
 
+const MANUAL_SLOT_WINDOW_DAYS = 7;
+
 type GeneratedPost = Database["public"]["Tables"]["generated_posts"]["Row"];
 
 type FormState = {
@@ -872,9 +874,11 @@ function getNextManualSlot(platform: string) {
         : [8, 12, 17];
   const now = new Date();
   const minTime = new Date(now.getTime() + 30 * 60 * 1000);
-  const maxTime = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+  const maxTime = new Date(
+    now.getTime() + MANUAL_SLOT_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  );
 
-  for (let dayOffset = 0; dayOffset <= 2; dayOffset += 1) {
+  for (let dayOffset = 0; dayOffset <= MANUAL_SLOT_WINDOW_DAYS; dayOffset += 1) {
     for (const hour of slots) {
       const candidate = new Date(now);
       candidate.setDate(now.getDate() + dayOffset);
