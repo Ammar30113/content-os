@@ -20,6 +20,7 @@ type PostListItem = {
   hook: string | null;
   caption: string | null;
   image_url: string | null;
+  publish_error: string | null;
   scheduled_for: string | null;
   published_at: string | null;
   template_type: string | null;
@@ -30,7 +31,13 @@ type PostListItem = {
 type BulkState = {
   loading: string | null;
   message: string | null;
+  details: string[];
   error: string | null;
+};
+
+type BulkSummary = {
+  message: string;
+  details?: string[];
 };
 
 export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
@@ -38,6 +45,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   const [state, setState] = useState<BulkState>({
     loading: null,
     message: null,
+    details: [],
     error: null,
   });
   const router = useRouter();
@@ -58,14 +66,19 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   async function runBulkAction(
     loading: string,
     endpoint: string,
-    successMessage: (payload: Record<string, unknown>) => string,
+    successMessage: (payload: Record<string, unknown>) => string | BulkSummary,
   ) {
     if (!selectedIds.length) {
-      setState({ loading: null, message: null, error: "Select posts first." });
+      setState({
+        loading: null,
+        message: null,
+        details: [],
+        error: "Select posts first.",
+      });
       return;
     }
 
-    setState({ loading, message: null, error: null });
+    setState({ loading, message: null, details: [], error: null });
 
     try {
       const response = await fetch(endpoint, {
@@ -81,10 +94,12 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
         );
       }
 
+      const summary = normalizeBulkSummary(successMessage(payload));
       setSelectedIds([]);
       setState({
         loading: null,
-        message: successMessage(payload),
+        message: summary.message,
+        details: summary.details || [],
         error: null,
       });
       router.refresh();
@@ -92,6 +107,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
       setState({
         loading: null,
         message: null,
+        details: [],
         error: error instanceof Error ? error.message : `${loading} failed.`,
       });
     }
@@ -156,9 +172,13 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                   (payload) => {
                     const sent = String(payload.sent_count || 0);
                     const failed = Number(payload.failed_count || 0);
+                    const details = getBulkFailureDetails(payload);
 
                     return failed
-                      ? `Sent ${sent} posts to Buffer. ${failed} need review.`
+                      ? {
+                          message: `Sent ${sent} posts to Buffer. ${failed} need review.`,
+                          details,
+                        }
                       : `Sent ${sent} posts to Buffer and marked them complete.`;
                   },
                 )
@@ -206,9 +226,16 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
           </div>
         </div>
         {state.message ? (
-          <p className="mt-3 rounded border border-[#d4ff00]/30 bg-[#d4ff00]/10 p-3 text-sm text-[#ecff8a]">
-            {state.message}
-          </p>
+          <div className="mt-3 rounded border border-[#d4ff00]/30 bg-[#d4ff00]/10 p-3 text-sm text-[#ecff8a]">
+            <p>{state.message}</p>
+            {state.details.length ? (
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-[#f2ffb8]">
+                {state.details.map((detail) => (
+                  <li key={detail}>{detail}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
         ) : null}
         {state.error ? (
           <p className="mt-3 rounded border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-100">
@@ -266,6 +293,11 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                   <p className="mt-3 line-clamp-3 text-sm leading-6 text-zinc-500">
                     {post.caption || post.hook || "Open to edit this package."}
                   </p>
+                  {post.publish_error ? (
+                    <p className="mt-3 rounded border border-red-500/30 bg-red-500/10 p-3 text-xs leading-5 text-red-100">
+                      Buffer review: {post.publish_error}
+                    </p>
+                  ) : null}
                   <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <dt className="text-zinc-500">Platform</dt>
@@ -309,4 +341,34 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
       </div>
     </div>
   );
+}
+
+function normalizeBulkSummary(result: string | BulkSummary): BulkSummary {
+  if (typeof result === "string") {
+    return { message: result };
+  }
+
+  return result;
+}
+
+function getBulkFailureDetails(payload: Record<string, unknown>) {
+  const results = Array.isArray(payload.results) ? payload.results : [];
+
+  return results
+    .filter(
+      (result): result is Record<string, unknown> =>
+        typeof result === "object" && result !== null && !Array.isArray(result),
+    )
+    .filter((result) => result.ok === false)
+    .slice(0, 6)
+    .map((result) => {
+      const shortId =
+        typeof result.post_id === "string" ? result.post_id.slice(0, 8) : "post";
+      const error =
+        typeof result.error === "string"
+          ? result.error
+          : "Buffer rejected this post.";
+
+      return `${shortId}: ${error}`;
+    });
 }

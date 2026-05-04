@@ -54,7 +54,7 @@ export async function getGeneratedPosts(supabase: ContentOsSupabaseClient) {
   return supabase
     .from("generated_posts")
     .select(
-      "id, platform, post_type, status, image_status, image_error, headline, hook, caption, image_url, scheduled_for, published_at, template_type, template_fields, created_at",
+      "id, platform, post_type, status, image_status, image_error, headline, hook, caption, image_url, publish_error, scheduled_for, published_at, template_type, template_fields, created_at",
     )
     .order("created_at", { ascending: false });
 }

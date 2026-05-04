@@ -59,10 +59,19 @@ export async function POST(request: Request) {
           sent_count: sent.length,
         });
       } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Could not send to Buffer.";
+
+        await supabase
+          .from("generated_posts")
+          .update({ publish_error: message })
+          .eq("id", postId)
+          .eq("user_id", user.id);
+
         results.push({
           post_id: postId,
           ok: false,
-          error: error instanceof Error ? error.message : "Could not send to Buffer.",
+          error: message,
         });
       }
     }
