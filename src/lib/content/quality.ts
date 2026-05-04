@@ -76,18 +76,30 @@ const vagueDifferenceTerms = [
 const actionVerbs = [
   "accepts",
   "adds",
+  "analyzes",
   "asks",
+  "assesses",
   "audits",
   "builds",
+  "calculates",
   "checks",
   "compares",
   "copies",
   "defines",
+  "delegates",
   "documents",
   "edits",
+  "filters",
+  "flags",
   "gives",
+  "identifies",
+  "inspects",
+  "limits",
+  "looks",
+  "maintains",
   "maps",
   "measures",
+  "prioritizes",
   "pastes",
   "prompts",
   "rejects",
@@ -95,10 +107,14 @@ const actionVerbs = [
   "rewrites",
   "runs",
   "ships",
+  "scopes",
+  "selects",
+  "separates",
   "tests",
   "tracks",
   "turns",
   "uses",
+  "verifies",
   "writes",
 ];
 
@@ -173,7 +189,18 @@ function validateCaptionStructure(caption: string) {
   }
 
   for (const paragraph of paragraphs) {
-    if (paragraph.length > 280) {
+    const proseLines = paragraph
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => !isBulletLine(line));
+
+    if (proseLines.some((line) => line.length > 240)) {
+      failures.push("Caption has a long line. Keep every paragraph to 1-2 short lines.");
+      break;
+    }
+
+    if (proseLines.join(" ").length > 320) {
       failures.push("Caption has a long text block. Keep every paragraph to 1-2 short lines.");
       break;
     }
@@ -194,10 +221,24 @@ function validateEnding(caption: string) {
   }
 
   const hasReframe =
-    /(this|it) (isn.t|is not) .{2,80}\. (it.s|it is) .{2,120}/i.test(finalLine);
-  const hasInsight = finalLine.includes("most people don't realize this") ||
-    finalLine.includes("most people don’t realize this");
-  const hasFilter = finalLine.includes("this is where most people lose");
+    /(this|it|the edge|the gap|the shift|the moat|the lesson).{0,80}\b(isn['’]?t|is not|wasn['’]?t|was not)\b.{2,140}\b(it['’]?s|it is|that['’]?s|that is)\b.{2,160}/i.test(
+      finalLine,
+    );
+  const hasInsight =
+    finalLine.includes("most people don't realize") ||
+    finalLine.includes("most people don’t realize") ||
+    finalLine.includes("most people miss") ||
+    finalLine.includes("the part people miss") ||
+    finalLine.includes("the real shift") ||
+    finalLine.includes("the real edge") ||
+    finalLine.includes("the real lesson");
+  const hasFilter =
+    finalLine.includes("this is where most people lose") ||
+    finalLine.includes("this is where the gap shows") ||
+    finalLine.includes("this is where the workflow breaks") ||
+    finalLine.includes("this is the filter") ||
+    finalLine.includes("that's the filter") ||
+    finalLine.includes("that’s the filter");
 
   if (!hasReframe && !hasInsight && !hasFilter) {
     return [
@@ -230,7 +271,7 @@ function validateContrast(contrast: ContentContrast) {
     );
     const hasActionVerb = actionVerbs.some((verb) =>
       new RegExp(`\\b${verb}\\b`).test(normalized),
-    );
+    ) || startsWithActionLikePhrase(normalized);
 
     if (hasVagueTerm) {
       failures.push(`Contrast difference is vague: "${difference}".`);
@@ -242,6 +283,14 @@ function validateContrast(contrast: ContentContrast) {
   }
 
   return failures;
+}
+
+function startsWithActionLikePhrase(value: string) {
+  if (/^(is|are|was|were|be|being|has|have|had|can|could|should|would)\b/.test(value)) {
+    return false;
+  }
+
+  return /^[a-z]+(?:s|es|ed|ing)\b\s+\S+/.test(value);
 }
 
 function validatePlatformTransformation(content: GeneratedContent) {

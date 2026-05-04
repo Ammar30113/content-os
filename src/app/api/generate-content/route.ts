@@ -216,7 +216,8 @@ export async function POST(request: Request) {
     let content: z.infer<typeof generatedContentSchema> | null = null;
     let qualityFailures: string[] = [];
 
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      const isRepairPass = qualityFailures.length > 0;
       const response = await openai.responses.parse({
         model,
         input: [
@@ -231,9 +232,12 @@ export async function POST(request: Request) {
               "Depth enforcement is mandatory: after the hook, expand the idea with specific behaviors, concrete contrast, and no motivational filler.",
               "Instagram caption structure is mandatory: 1-line hook, 1-2 lines of tension, 3-5 behavioral bullet points, one strong ending line, then hashtags.",
               "Every bullet must describe an action someone does. Do not write labels like advanced users, casual users, smart users, or better users.",
-              "The final line must be a reframe, insight, or filter ending. Examples: This isn't X. It's Y. / Most people don't realize this. / This is where most people lose.",
+              "The final line must be a reframe, insight, or filter ending. Examples: This isn't X. It's Y. / Most people miss this. / This is where the workflow breaks.",
               "Do not reuse content across platforms. Instagram is spaced and skimmable, X is compressed and sharper, LinkedIn is slightly expanded but still structured.",
               "Optimize for saves, shares, retention, and usefulness without inventing facts.",
+              isRepairPass
+                ? "Repair pass: keep the planned angle, but rewrite the weak caption, contrast differences, platform variants, and final line so the output passes the quality gate. Do not soften the hook."
+                : "",
               PRODUCT_MENTION_CONFIG.product_mentions_enabled
                 ? "Product mentions may be used only when explicitly relevant."
                 : "Product mentions are paused. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",

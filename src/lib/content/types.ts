@@ -213,6 +213,9 @@ export type IdeaInput = z.infer<typeof ideaInputSchema>;
 export type BatchAngle = z.infer<typeof batchAngleSchema>;
 export type GeneratedContent = z.infer<typeof generatedContentSchema>;
 export type TemplateFields = z.infer<typeof templateFieldsSchema>;
+export type Platform = (typeof platforms)[number];
+export type PostType = (typeof postTypes)[number];
+export type Tone = (typeof tones)[number];
 export type TemplateType = (typeof templateTypes)[number];
 
 export function normalizeHashtags(value: string | string[] | null | undefined) {
