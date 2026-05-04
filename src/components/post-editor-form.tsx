@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Save,
   Send,
+  Trash2,
 } from "lucide-react";
 
 import {
@@ -316,6 +317,38 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
         loading: null,
         message: null,
         error: error instanceof Error ? error.message : "Could not send post to Buffer.",
+      });
+    }
+  }
+
+  async function handleDeletePost() {
+    if (
+      !window.confirm(
+        "Delete this post? This removes related schedule jobs and generated image records.",
+      )
+    ) {
+      return;
+    }
+
+    setState({ loading: "Deleting", message: null, error: null });
+
+    try {
+      const response = await fetch(`/api/posts/${post.id}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Could not delete post.");
+      }
+
+      router.push("/app/posts");
+      router.refresh();
+    } catch (error) {
+      setState({
+        loading: null,
+        message: null,
+        error: error instanceof Error ? error.message : "Could not delete post.",
       });
     }
   }
@@ -637,6 +670,15 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           >
             <Send size={16} />
             {state.loading === "Publishing" ? "Publishing..." : "Mark published"}
+          </button>
+          <button
+            type="button"
+            onClick={handleDeletePost}
+            disabled={Boolean(state.loading)}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-red-500/40 px-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
+          >
+            <Trash2 size={16} />
+            {state.loading === "Deleting" ? "Deleting..." : "Delete post"}
           </button>
         </Panel>
 

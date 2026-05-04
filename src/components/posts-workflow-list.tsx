@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, Send, X } from "lucide-react";
+import { Check, Send, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { PostCardActions } from "@/components/post-card-actions";
@@ -169,6 +169,39 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
               {state.loading === "Sending selected"
                 ? "Sending..."
                 : "Send selected to Buffer"}
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(state.loading) || !selectedIds.length}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    `Delete ${selectedIds.length} selected post${
+                      selectedIds.length === 1 ? "" : "s"
+                    }? This removes related schedule jobs and generated image records.`,
+                  )
+                ) {
+                  return;
+                }
+
+                runBulkAction(
+                  "Deleting selected",
+                  "/api/posts/bulk/delete",
+                  (payload) => {
+                    const deleted = String(payload.deleted_count || 0);
+                    const warning =
+                      typeof payload.storage_warning === "string"
+                        ? ` Storage cleanup warning: ${payload.storage_warning}`
+                        : "";
+
+                    return `Deleted ${deleted} post${deleted === "1" ? "" : "s"}.${warning}`;
+                  },
+                );
+              }}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded border border-red-500/40 px-3 text-xs font-semibold text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
+            >
+              <Trash2 size={15} />
+              {state.loading === "Deleting selected" ? "Deleting..." : "Delete"}
             </button>
           </div>
         </div>

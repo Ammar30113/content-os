@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarPlus, Check, RefreshCw } from "lucide-react";
+import { CalendarPlus, Check, RefreshCw, Trash2 } from "lucide-react";
 
 import type { Json } from "@/types/database";
 
@@ -80,6 +80,27 @@ export function PostCardActions({
         >
           <RefreshCw size={15} />
           {loadingAction === "Regenerate image" ? "Rendering..." : "Regenerate"}
+        </button>
+        <button
+          type="button"
+          disabled={Boolean(loadingAction)}
+          onClick={() => {
+            if (
+              !window.confirm(
+                "Delete this post? This removes related schedule jobs and generated image records.",
+              )
+            ) {
+              return;
+            }
+
+            runAction("Delete", () =>
+              fetch(`/api/posts/${postId}`, { method: "DELETE" }),
+            );
+          }}
+          className="inline-flex h-9 items-center gap-2 rounded border border-red-500/40 px-3 text-xs font-semibold text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
+        >
+          <Trash2 size={15} />
+          {loadingAction === "Delete" ? "Deleting..." : "Delete"}
         </button>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
