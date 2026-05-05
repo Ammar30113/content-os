@@ -1,6 +1,7 @@
 import type { TemplateFields } from "@/lib/content/types";
 import {
   BottomBar,
+  InfoRows,
   ImagePanel,
   TemplateFrame,
   TextCard,
@@ -10,6 +11,7 @@ import {
   displayHeadline,
   safeText,
   safeUrl,
+  safeArray,
 } from "./shared";
 
 export function NewsDigestTemplate({ fields }: { fields: TemplateFields }) {
@@ -22,6 +24,7 @@ export function NewsDigestTemplate({ fields }: { fields: TemplateFields }) {
   const sourceName = safeText(fields.source_name, "WORD OF AI");
   const heroImage = safeUrl(fields.hero_image_url);
   const date = safeText(fields.date, "");
+  const infoRows = safeArray(fields.info_rows);
 
   return (
     <TemplateFrame chip={safeText(fields.bottom_label, "AI NEWS")} accent={brand.lime}>
@@ -33,6 +36,7 @@ export function NewsDigestTemplate({ fields }: { fields: TemplateFields }) {
         accent={brand.lime}
         top={heroImage ? 720 : 206}
       />
+      {!heroImage ? <InfoRows rows={infoRows} top={620} /> : null}
       <BottomBar label={safeText(fields.swipe_hint, "Swipe for context")} />
       <Watermark align="right" />
     </TemplateFrame>

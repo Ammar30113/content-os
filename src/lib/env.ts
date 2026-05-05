@@ -30,7 +30,30 @@ type BufferEnvStatus = {
 };
 
 export function getAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const configured = process.env.NEXT_PUBLIC_APP_URL;
+
+  if (configured && !isLocalhostUrl(configured)) {
+    return trimTrailingSlash(configured);
+  }
+
+  const vercelHost =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL ||
+    process.env.VERCEL_BRANCH_URL;
+
+  if (vercelHost) {
+    return `https://${trimTrailingSlash(vercelHost.replace(/^https?:\/\//i, ""))}`;
+  }
+
+  return configured ? trimTrailingSlash(configured) : "http://localhost:3000";
+}
+
+function isLocalhostUrl(value: string) {
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?/i.test(value);
+}
+
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
 }
 
 export function getEnvStatus(): EnvStatus {

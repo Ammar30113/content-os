@@ -248,6 +248,86 @@ export function BottomBar({
   );
 }
 
+export function InfoRows({
+  rows,
+  accent = brand.lime,
+  top = 610,
+  left = 112,
+  width = 856,
+}: {
+  rows: string[];
+  accent?: string;
+  top?: number;
+  left?: number;
+  width?: number;
+}) {
+  const visibleRows = rows
+    .map((row) => compactText(row, "", 74))
+    .filter(Boolean)
+    .slice(0, 3);
+
+  if (!visibleRows.length) {
+    return null;
+  }
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left,
+        top,
+        width,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+        zIndex: 4,
+      }}
+    >
+      {visibleRows.map((row, index) => (
+        <div
+          key={`${row}-${index}`}
+          style={{
+            minHeight: 54,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            border: "1px solid rgba(247,247,242,0.14)",
+            display: "flex",
+            alignItems: "center",
+            gap: 20,
+            padding: "12px 18px",
+          }}
+        >
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              border: `1px solid ${index === 1 ? brand.coral : accent}`,
+              color: index === 1 ? brand.coral : accent,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+              fontWeight: 900,
+              flexShrink: 0,
+            }}
+          >
+            {index + 1}
+          </div>
+          <div
+            style={{
+              color: "rgba(247,247,242,0.88)",
+              fontSize: 21,
+              lineHeight: 1.16,
+              fontWeight: 800,
+            }}
+          >
+            {row}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ImagePanel({
   src,
   height = 570,

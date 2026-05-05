@@ -1,6 +1,7 @@
 import type { TemplateFields } from "@/lib/content/types";
 import {
   BottomBar,
+  InfoRows,
   ImagePanel,
   TemplateFrame,
   TextCard,
@@ -8,6 +9,7 @@ import {
   brand,
   compactText,
   displayHeadline,
+  safeArray,
   safeText,
   safeUrl,
 } from "./shared";
@@ -29,6 +31,7 @@ export function FounderStoryTemplate({ fields }: { fields: TemplateFields }) {
     62,
   );
   const image = safeUrl(fields.portrait_url) || safeUrl(fields.hero_image_url);
+  const infoRows = safeArray(fields.info_rows);
 
   return (
     <TemplateFrame
@@ -61,6 +64,7 @@ export function FounderStoryTemplate({ fields }: { fields: TemplateFields }) {
         accent={brand.lime}
         top={image ? 800 : 420}
       />
+      {!image ? <InfoRows rows={infoRows} top={700} /> : null}
       <BottomBar label={safeText(fields.swipe_hint, "Founder note")} />
       <Watermark align="right" />
     </TemplateFrame>

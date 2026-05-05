@@ -1,12 +1,14 @@
 import type { TemplateFields } from "@/lib/content/types";
 import {
   BottomBar,
+  InfoRows,
   TemplateFrame,
   TextCard,
   Watermark,
   brand,
   compactText,
   displayHeadline,
+  safeArray,
   safeText,
 } from "./shared";
 
@@ -17,11 +19,14 @@ export function TutorialTemplate({ fields }: { fields: TemplateFields }) {
     "A practical prompt pattern you can use today.",
     110,
   );
+  const hasCustomSnippet = Boolean(safeText(fields.code_snippet));
   const snippet = compactText(
     fields.code_snippet,
     "1. Define the job\n2. Give the agent context\n3. Review before it ships",
     190,
   );
+  const infoRows = safeArray(fields.info_rows);
+  const showInfoRows = infoRows.length > 0 && !hasCustomSnippet;
 
   return (
     <TemplateFrame chip={safeText(fields.bottom_label, "HOW TO")} accent={brand.lime}>
@@ -32,45 +37,49 @@ export function TutorialTemplate({ fields }: { fields: TemplateFields }) {
         accent={brand.lime}
         top={154}
       />
-      <div
-        style={{
-          position: "absolute",
-          left: 112,
-          top: 572,
-          width: 856,
-          minHeight: 260,
-          backgroundColor: "rgba(0,0,0,0.5)",
-          border: "1px solid rgba(247,247,242,0.18)",
-          display: "flex",
-          flexDirection: "column",
-          padding: "34px 38px",
-          gap: 22,
-          zIndex: 3,
-        }}
-      >
+      {showInfoRows ? (
+        <InfoRows rows={infoRows} top={572} />
+      ) : (
         <div
           style={{
-            color: brand.lime,
-            fontSize: 20,
-            fontWeight: 900,
-            letterSpacing: 3,
-            textTransform: "uppercase",
+            position: "absolute",
+            left: 112,
+            top: 572,
+            width: 856,
+            minHeight: 260,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            border: "1px solid rgba(247,247,242,0.18)",
+            display: "flex",
+            flexDirection: "column",
+            padding: "34px 38px",
+            gap: 22,
+            zIndex: 3,
           }}
         >
-          Prompt recipe
+          <div
+            style={{
+              color: brand.lime,
+              fontSize: 20,
+              fontWeight: 900,
+              letterSpacing: 3,
+              textTransform: "uppercase",
+            }}
+          >
+            Prompt recipe
+          </div>
+          <div
+            style={{
+              color: brand.white,
+              fontFamily: "Menlo, Consolas, monospace",
+              fontSize: snippet.length > 140 ? 25 : 30,
+              lineHeight: 1.32,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {snippet}
+          </div>
         </div>
-        <div
-          style={{
-            color: brand.white,
-            fontFamily: "Menlo, Consolas, monospace",
-            fontSize: snippet.length > 140 ? 25 : 30,
-            lineHeight: 1.32,
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {snippet}
-        </div>
-      </div>
+      )}
       <BottomBar label={safeText(fields.swipe_hint, "Save this")} />
       <Watermark align="right" />
     </TemplateFrame>

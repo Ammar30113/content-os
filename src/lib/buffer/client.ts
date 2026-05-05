@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getBufferEnv, type BufferPlatform } from "@/lib/env";
+import { getAppUrl, getBufferEnv, type BufferPlatform } from "@/lib/env";
 
 const BUFFER_GRAPHQL_ENDPOINT = "https://api.buffer.com";
 
@@ -37,6 +37,7 @@ export type BufferPostResult = {
 };
 
 type CreateBufferPostInput = {
+  postId: string;
   platform: BufferPlatform;
   text: string;
   imageUrl: string | null;
@@ -75,6 +76,7 @@ export function getBufferChannelId(platform: BufferPlatform) {
 }
 
 export async function createBufferPost({
+  postId,
   platform,
   text,
   imageUrl,
@@ -90,11 +92,17 @@ export async function createBufferPost({
     dueAt: scheduledFor,
   };
 
-  if (imageUrl) {
+  const bufferImageUrl = getBufferImageUrl({
+    postId,
+    platform,
+    imageUrl,
+  });
+
+  if (bufferImageUrl) {
     input.assets = {
       images: [
         {
-          url: imageUrl,
+          url: bufferImageUrl,
         },
       ],
     };
@@ -150,4 +158,30 @@ export async function createBufferPost({
     id: success.post.id,
     dueAt: success.post.dueAt || null,
   };
+}
+
+function getBufferImageUrl({
+  postId,
+  platform,
+  imageUrl,
+}: {
+  postId: string;
+  platform: BufferPlatform;
+  imageUrl: string | null;
+}) {
+  if (!imageUrl) {
+    return null;
+  }
+
+  if (platform === "x" && process.env.BUFFER_ATTACH_IMAGES_TO_X !== "true") {
+    return null;
+  }
+
+  const appUrl = getAppUrl();
+
+  if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?/i.test(appUrl)) {
+    return imageUrl;
+  }
+
+  return `${appUrl}/api/public/post-image/${postId}.png`;
 }

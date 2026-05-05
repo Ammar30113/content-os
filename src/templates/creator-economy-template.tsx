@@ -1,12 +1,14 @@
 import type { TemplateFields } from "@/lib/content/types";
 import {
   BottomBar,
+  InfoRows,
   TemplateFrame,
   TextCard,
   Watermark,
   brand,
   compactText,
   displayHeadline,
+  safeArray,
   safeText,
 } from "./shared";
 
@@ -26,6 +28,7 @@ export function CreatorEconomyTemplate({ fields }: { fields: TemplateFields }) {
     "Attention compounds when it turns into action.",
     112,
   );
+  const infoRows = safeArray(fields.info_rows);
 
   return (
     <TemplateFrame
@@ -75,6 +78,7 @@ export function CreatorEconomyTemplate({ fields }: { fields: TemplateFields }) {
         accent={brand.coral}
         top={534}
       />
+      <InfoRows rows={infoRows} accent={brand.coral} top={760} />
       <BottomBar label={safeText(fields.swipe_hint, "Steal the play")} accent={brand.coral} />
       <Watermark align="right" />
     </TemplateFrame>

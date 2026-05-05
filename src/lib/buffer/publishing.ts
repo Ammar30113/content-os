@@ -79,6 +79,7 @@ export async function sendPublishingJobToBuffer(
       .eq("id", job.id);
 
     const bufferPost = await createBufferPost({
+      postId: post.id,
       platform,
       text: buildPlatformText(post, platform),
       imageUrl: post.image_url,

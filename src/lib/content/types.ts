@@ -144,6 +144,7 @@ export const templateFieldsSchema = z
     visual_subject: z.string().optional(),
     swipe_hint: z.string().optional(),
     bottom_label: z.string().optional(),
+    info_rows: z.array(z.string()).optional(),
     tools: z.array(z.string()).optional(),
     tool_logos: z.array(z.string()).optional(),
     step_number: z.string().optional(),

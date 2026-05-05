@@ -35,6 +35,7 @@ const openAITemplateFieldsSchema = z.object({
   visual_subject: z.string().nullable(),
   swipe_hint: z.string().nullable(),
   bottom_label: z.string().nullable(),
+  info_rows: z.array(z.string()).nullable(),
   tools: z.array(z.string()).nullable(),
   tool_logos: z.array(z.string()).nullable(),
   step_number: z.string().nullable(),
@@ -142,6 +143,7 @@ function normalizeTemplateFields(
     visual_subject: fields.visual_subject || undefined,
     swipe_hint: fields.swipe_hint || undefined,
     bottom_label: fields.bottom_label || undefined,
+    info_rows: fields.info_rows || undefined,
     tools: fields.tools || undefined,
     tool_logos: fields.tool_logos || undefined,
     step_number: fields.step_number || undefined,
@@ -562,7 +564,7 @@ export async function POST(request: Request) {
                   style:
                     "AI Newsroom / Builder Desk. Dark, high-contrast, text-first, sharp, and readable. Do not make fake hero visuals when no real image URL is provided.",
                   template_fields:
-                    "Use headline, subhead, visual_subject, swipe_hint, bottom_label, source_name, date, tools, stat, quote, pull_quote, code_snippet, meme_setup, meme_punchline, authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes to direct the image and review flow. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null.",
+                    "Use headline, subhead, visual_subject, swipe_hint, bottom_label, info_rows, source_name, date, tools, stat, quote, pull_quote, code_snippet, meme_setup, meme_punchline, authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes to direct the image and review flow. Add 2-3 short info_rows when the visual would benefit from concrete proof, contrast, or checklist detail. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null.",
                   thumbnail_rule:
                     "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
                   placeholder_rule:
