@@ -14,6 +14,7 @@ import {
   templateHints,
   tones,
 } from "@/lib/content/types";
+import { readApiJson } from "@/lib/http/read-api-json";
 
 type Platform = (typeof platforms)[number];
 type ImageMode = (typeof imageModes)[number];
@@ -208,7 +209,9 @@ export function IdeaGeneratorForm() {
         selected_platforms: getSelectedPlatforms(form),
       }),
     });
-    const payload = await response.json();
+    const payload = await readApiJson<TopicRoulettePayload & { error?: string }>(
+      response,
+    );
 
     if (!response.ok) {
       throw new Error(payload.error || "Could not pick an evergreen topic.");
@@ -271,16 +274,20 @@ export function IdeaGeneratorForm() {
       method: "POST",
       body: uploadData,
     });
-    const payload = await response.json();
+    const payload = await readApiJson<{
+      asset: { id: string };
+      image_url: string;
+      error?: string;
+    }>(response);
 
     if (!response.ok) {
       throw new Error(payload.error || "Could not upload reference image.");
     }
 
     const uploaded = {
-      asset_id: payload.asset.id as string,
+      asset_id: payload.asset.id,
       file_name: referenceFile.name,
-      image_url: payload.image_url as string,
+      image_url: payload.image_url,
     };
     setReferenceImage(uploaded);
 
@@ -298,7 +305,7 @@ export function IdeaGeneratorForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildRequestPayload(reference, undefined, activeForm)),
       });
-      const payload = await response.json();
+      const payload = await readApiJson<{ error?: string }>(response);
 
       if (!response.ok) {
         throw new Error(payload.error || "Could not save idea.");
@@ -325,7 +332,9 @@ export function IdeaGeneratorForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(buildRequestPayload(reference, quantity, activeForm)),
     });
-    const payload = await response.json();
+    const payload = await readApiJson<BatchPlanPayload & { error?: string }>(
+      response,
+    );
 
     if (!response.ok) {
       throw new Error(payload.error || "Could not plan campaign.");
@@ -364,7 +373,9 @@ export function IdeaGeneratorForm() {
         generation_index: index,
       }),
     });
-    const payload = await response.json();
+    const payload = await readApiJson<GeneratePayload & { error?: string }>(
+      response,
+    );
 
     if (!response.ok) {
       throw new Error(payload.error || "Could not generate content.");
@@ -389,7 +400,7 @@ export function IdeaGeneratorForm() {
         template_fields: payload.content.template_fields,
       }),
     });
-    const renderPayload = await renderResponse.json();
+    const renderPayload = await readApiJson<{ error?: string }>(renderResponse);
 
     if (!renderResponse.ok) {
       return renderPayload.error || "Image render failed.";

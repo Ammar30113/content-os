@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { PostCardActions } from "@/components/post-card-actions";
 import { StatusBadge } from "@/components/status-badge";
 import { formatTemplateName } from "@/lib/content/types";
+import { readApiJson } from "@/lib/http/read-api-json";
 import type { Json } from "@/types/database";
 
 type PostListItem = {
@@ -86,7 +87,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ post_ids: selectedIds }),
       });
-      const payload = (await response.json()) as Record<string, unknown>;
+      const payload = await readApiJson<Record<string, unknown>>(response);
 
       if (!response.ok) {
         throw new Error(
