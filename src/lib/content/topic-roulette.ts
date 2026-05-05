@@ -35,6 +35,15 @@ type SelectRouletteSeedInput = {
   }>;
 };
 
+const ALL_PILLARS: TemplateType[] = [
+  "news_digest",
+  "tool_stack",
+  "tutorial",
+  "creator_economy",
+  "founder_story",
+  "meme",
+];
+
 export const topicRouletteSeeds: TopicRouletteSeed[] = [
   {
     id: "agent-manager-gap",
@@ -440,13 +449,63 @@ export function selectRouletteSeed({
   );
   const pool = preferred.length ? preferred : topicRouletteSeeds;
   const freshPool = pool.filter((seed) => !isRecentlyUsed(seed, recentText));
-  const candidates = freshPool.length ? freshPool : pool;
+  let candidates = freshPool.length ? freshPool : pool;
+
+  const underrepresented = pickUnderrepresentedPillars(recentPosts);
+  if (underrepresented.size > 0) {
+    const balanced = candidates.filter((seed) =>
+      seedHasPillar(seed, underrepresented),
+    );
+    if (balanced.length > 0) {
+      candidates = balanced;
+    }
+  }
+
   const channelOffset = selectedPlatforms.includes("linkedin") ? 2 : 0;
   const postTypeOffset = Math.max(0, ["single", "carousel", "reel", "thread"].indexOf(postType));
   const dayOffset = Math.floor(Date.now() / 86_400_000);
   const index = (dayOffset + quantity + channelOffset + postTypeOffset) % candidates.length;
 
   return candidates[index] || topicRouletteSeeds[0];
+}
+
+function pickUnderrepresentedPillars(
+  recentPosts: SelectRouletteSeedInput["recentPosts"],
+) {
+  const counts = new Map<string, number>();
+  let totalKnown = 0;
+
+  for (const post of recentPosts) {
+    if (!post.pillar) continue;
+    counts.set(post.pillar, (counts.get(post.pillar) ?? 0) + 1);
+    totalKnown += 1;
+  }
+
+  // Need a meaningful sample before we apply mix balancing; otherwise the
+  // first few posts of a fresh account get penalized arbitrarily.
+  if (totalKnown < 5) {
+    return new Set<TemplateType>();
+  }
+
+  const fairShare = totalKnown / ALL_PILLARS.length;
+  const underrepresented = new Set<TemplateType>();
+
+  for (const pillar of ALL_PILLARS) {
+    const count = counts.get(pillar) ?? 0;
+    // A pillar is "underrepresented" if it has shipped less than half its fair share.
+    if (count < fairShare * 0.5) {
+      underrepresented.add(pillar);
+    }
+  }
+
+  return underrepresented;
+}
+
+function seedHasPillar(seed: TopicRouletteSeed, pillars: Set<TemplateType>) {
+  if (seed.templateHint !== "auto" && pillars.has(seed.templateHint)) {
+    return true;
+  }
+  return seed.angleVariants.some((angle) => pillars.has(angle.pillar));
 }
 
 export function buildRouletteBrief(seed: TopicRouletteSeed, quantity: number) {
