@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { jsonError, jsonOk } from "@/lib/api";
 import { WORD_OF_AI_SYSTEM_PROMPT } from "@/lib/content/brand";
+import { getRecentWinningHooks } from "@/lib/content/winners";
 import {
   generatedContentSchema,
   ideaInputSchema,
@@ -419,6 +420,7 @@ export async function POST(request: Request) {
       .order("created_at", { ascending: false })
       .limit(10);
     const safeRecentPosts = z.array(recentPostSchema).parse(recentPosts || []);
+    const winningHooks = await getRecentWinningHooks(supabase, 5);
     const memeTrendContext =
       input.template_hint === "meme" || input.batch_angle?.template_type === "meme"
         ? await getWeeklyMemeTrends(10)
@@ -455,6 +457,11 @@ export async function POST(request: Request) {
               "The final line must be a reframe, insight, or filter ending. Examples: This isn't X. It's Y. / Most people miss this. / This is where the workflow breaks.",
               "Do not reuse content across platforms. Instagram is spaced and skimmable, X is compressed and sharper, LinkedIn is slightly expanded but still structured.",
               "Optimize for saves, shares, retention, and usefulness without inventing facts.",
+              winningHooks.length > 0
+                ? `Voice anchor: this account's most recently approved hooks were — ${winningHooks
+                    .map((winner, index) => `(${index + 1}) "${winner.hook}"`)
+                    .join(" ")}. Match this hook density, specificity, and rhythm. Do not copy any of these lines verbatim.`
+                : "",
               isRepairPass
                 ? "Repair pass: keep the planned angle, but rewrite the weak caption, contrast differences, platform variants, and final line so the output passes the quality gate. Do not soften the hook."
                 : "",
@@ -552,6 +559,13 @@ export async function POST(request: Request) {
                     : null,
                 generated_so_far: generatedSoFar,
                 recent_posts_to_avoid: safeRecentPosts,
+                winning_hooks_voice_anchor: winningHooks.length
+                  ? {
+                      instruction:
+                        "These hooks were approved or shipped on this account. Match their voice and specificity, but do not copy them.",
+                      hooks: winningHooks,
+                    }
+                  : null,
                 caption_rules: {
                   instagram:
                     "Strong first line, 1-2 line tension, 3-5 action bullets, strong final reframe/filter/insight, then 15-25 varied hashtags. 1-3 emojis max.",
