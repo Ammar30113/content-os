@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { jsonError, jsonOk } from "@/lib/api";
 import { WORD_OF_AI_SYSTEM_PROMPT } from "@/lib/content/brand";
+import { getCtaStrategy } from "@/lib/content/cta-strategy";
+import { getPersonaCooldown } from "@/lib/content/persona-history";
 import { getRecentWinningHooks } from "@/lib/content/winners";
 import {
   generatedContentSchema,
@@ -421,6 +423,14 @@ export async function POST(request: Request) {
       .limit(10);
     const safeRecentPosts = z.array(recentPostSchema).parse(recentPosts || []);
     const winningHooks = await getRecentWinningHooks(supabase, 5);
+    const personaCooldown =
+      input.content_mode === "authority_pov"
+        ? await getPersonaCooldown(supabase, input.recognizable_figure)
+        : null;
+    const ctaStrategy = getCtaStrategy(
+      input.batch_angle?.pillar ||
+        (input.template_hint !== "auto" ? input.template_hint : null),
+    );
     const memeTrendContext =
       input.template_hint === "meme" || input.batch_angle?.template_type === "meme"
         ? await getWeeklyMemeTrends(10)
@@ -461,6 +471,16 @@ export async function POST(request: Request) {
                 ? `Voice anchor: this account's most recently approved hooks were — ${winningHooks
                     .map((winner, index) => `(${index + 1}) "${winner.hook}"`)
                     .join(" ")}. Match this hook density, specificity, and rhythm. Do not copy any of these lines verbatim.`
+                : "",
+              ctaStrategy
+                ? `CTA strategy for ${ctaStrategy.pillar}: optimize for ${ctaStrategy.primary_goal}. The CTA must read like one of these shapes — ${ctaStrategy.shapes
+                    .map((shape, index) => `(${index + 1}) "${shape}"`)
+                    .join(" ")}. Avoid: ${ctaStrategy.avoid.join(" ")} Do not default to "Follow @wordofaii" for this pillar.`
+                : "",
+              personaCooldown && personaCooldown.on_cooldown
+                ? `Persona cooldown: "${personaCooldown.figure}" was used in the last ${personaCooldown.cooldown_days} days. Recent angles already covered: ${personaCooldown.recent_uses
+                    .map((use) => `"${use.hook || use.headline || ""}" (${use.days_ago}d ago)`)
+                    .join(" | ")}. The hook, takeaway, and contrast for this post must be entirely different from those.`
                 : "",
               isRepairPass
                 ? "Repair pass: keep the planned angle, but rewrite the weak caption, contrast differences, platform variants, and final line so the output passes the quality gate. Do not soften the hook."
@@ -566,6 +586,26 @@ export async function POST(request: Request) {
                       hooks: winningHooks,
                     }
                   : null,
+                cta_strategy: ctaStrategy
+                  ? {
+                      pillar: ctaStrategy.pillar,
+                      primary_goal: ctaStrategy.primary_goal,
+                      preferred_shapes: ctaStrategy.shapes,
+                      avoid: ctaStrategy.avoid,
+                      instruction:
+                        "Use this pillar's primary engagement goal to shape the CTA. Do not default to a follow ask unless the pillar's primary_goal is follow.",
+                    }
+                  : null,
+                persona_cooldown:
+                  personaCooldown && personaCooldown.on_cooldown
+                    ? {
+                        figure: personaCooldown.figure,
+                        cooldown_days: personaCooldown.cooldown_days,
+                        recent_uses: personaCooldown.recent_uses,
+                        instruction:
+                          "This figure was used recently. The hook, contrast, takeaway, and CTA must differ entirely from the recent uses listed.",
+                      }
+                    : null,
                 caption_rules: {
                   instagram:
                     "Strong first line, 1-2 line tension, 3-5 action bullets, strong final reframe/filter/insight, then 15-25 varied hashtags. 1-3 emojis max.",
