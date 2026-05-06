@@ -6,6 +6,7 @@ import { jsonError, jsonOk } from "@/lib/api";
 import { WORD_OF_AI_SYSTEM_PROMPT } from "@/lib/content/brand";
 import { getCtaStrategy } from "@/lib/content/cta-strategy";
 import { getPersonaCooldown } from "@/lib/content/persona-history";
+import { researchTopic } from "@/lib/content/research";
 import { getRecentWinningHooks } from "@/lib/content/winners";
 import {
   generatedContentSchema,
@@ -349,6 +350,38 @@ function uniqueStrings(values: string[]) {
   });
 }
 
+function buildResearchQuery({
+  title,
+  brief,
+  authorityFigure,
+  currentEvent,
+}: {
+  title: string;
+  brief: string;
+  authorityFigure?: string;
+  currentEvent?: string;
+}): string | null {
+  const parts: string[] = [];
+  if (title?.trim()) parts.push(title.trim());
+  if (currentEvent?.trim()) parts.push(currentEvent.trim());
+  if (authorityFigure?.trim()) parts.push(authorityFigure.trim());
+
+  // Pull the first sentence of the brief in case the title is generic.
+  if (brief?.trim()) {
+    const firstSentence = brief.trim().split(/(?<=[.!?])\s+/)[0]?.slice(0, 140);
+    if (firstSentence && firstSentence.length > 12) {
+      parts.push(firstSentence);
+    }
+  }
+
+  const query = parts
+    .filter((part, index, all) => all.indexOf(part) === index)
+    .join(" — ")
+    .slice(0, 320);
+
+  return query.length >= 6 ? query : null;
+}
+
 export async function POST(request: Request) {
   try {
     assertContentOsSupabaseWriteSafety();
@@ -431,6 +464,20 @@ export async function POST(request: Request) {
       input.batch_angle?.pillar ||
         (input.template_hint !== "auto" ? input.template_hint : null),
     );
+    // Live web research via Tavily — only runs when TAVILY_API_KEY is set
+    // and we don't already have a source summary from a user-supplied URL.
+    // Skipped for memes (the joke is the point, not the facts).
+    const isMeme =
+      input.template_hint === "meme" || input.batch_angle?.template_type === "meme";
+    const researchQuery = !sourceSummary && !isMeme
+      ? buildResearchQuery({
+          title: idea.title || input.title,
+          brief: idea.brief || input.brief,
+          authorityFigure: input.recognizable_figure,
+          currentEvent: input.current_event,
+        })
+      : null;
+    const research = researchQuery ? await researchTopic(researchQuery) : null;
     const memeTrendContext =
       input.template_hint === "meme" || input.batch_angle?.template_type === "meme"
         ? await getWeeklyMemeTrends(10)
@@ -476,6 +523,9 @@ export async function POST(request: Request) {
                 ? `CTA strategy for ${ctaStrategy.pillar}: optimize for ${ctaStrategy.primary_goal}. The CTA must read like one of these shapes — ${ctaStrategy.shapes
                     .map((shape, index) => `(${index + 1}) "${shape}"`)
                     .join(" ")}. Avoid: ${ctaStrategy.avoid.join(" ")} Do not default to "Follow @wordofaii" for this pillar.`
+                : "",
+              research
+                ? `Live web research is provided in user JSON.live_research with ${research.sources.length} sources for "${research.query}". Anchor specific claims to those sources. If a fact isn't in the research, do not assert it.`
                 : "",
               personaCooldown && personaCooldown.on_cooldown
                 ? `Persona cooldown: "${personaCooldown.figure}" was used in the last ${personaCooldown.cooldown_days} days. Recent angles already covered: ${personaCooldown.recent_uses
@@ -594,6 +644,20 @@ export async function POST(request: Request) {
                       avoid: ctaStrategy.avoid,
                       instruction:
                         "Use this pillar's primary engagement goal to shape the CTA. Do not default to a follow ask unless the pillar's primary_goal is follow.",
+                    }
+                  : null,
+                live_research: research
+                  ? {
+                      query: research.query,
+                      answer: research.answer,
+                      sources: research.sources.map((source) => ({
+                        title: source.title,
+                        url: source.url,
+                        snippet: source.snippet,
+                      })),
+                      fetched_at: research.fetched_at,
+                      instruction:
+                        "Use these live web research findings as the factual ground truth. Prefer specific names, numbers, and quotes from the sources over general training-data knowledge. Do not fabricate facts; if the sources don't support a claim, drop it.",
                     }
                   : null,
                 persona_cooldown:
