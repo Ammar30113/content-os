@@ -141,8 +141,9 @@ export default async function SettingsPage() {
               </h2>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
                 Schedule posts in Content OS, then send them into the connected
-                Buffer queue for Instagram and X. The daily cron sweeps queued
-                jobs inside the next 48 hours.
+                Buffer queue. Only configured Buffer channels are used, so the
+                current Instagram-first setup will skip X/LinkedIn metadata
+                instead of failing the handoff.
               </p>
             </div>
             <StatusBadge status={bufferStatus.ok ? "approved" : "draft"} />

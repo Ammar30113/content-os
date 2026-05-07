@@ -2,6 +2,7 @@ import "server-only";
 
 import { createBufferPost } from "@/lib/buffer/client";
 import { normalizeHashtags, platforms } from "@/lib/content/types";
+import { getConfiguredBufferPlatforms } from "@/lib/env";
 import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database";
 
@@ -162,9 +163,20 @@ export async function sendDuePublishingJobsToBuffer(
   const horizonHours = options.horizonHours ?? 48;
   const limit = options.limit ?? 20;
   const horizon = new Date(Date.now() + horizonHours * 60 * 60 * 1000);
+  const configuredPlatforms = getConfiguredBufferPlatforms();
+
+  if (!configuredPlatforms.length) {
+    return {
+      sent: [],
+      failures: [],
+      scanned: 0,
+    };
+  }
+
   const { data: jobs, error } = await supabase
     .from("publishing_jobs")
     .select("id")
+    .in("platform", configuredPlatforms)
     .in("status", ["queued", "failed"])
     .lte("scheduled_for", horizon.toISOString())
     .lt("attempts", 3)

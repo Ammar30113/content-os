@@ -124,7 +124,8 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
             </p>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
               Bulk send approves, uses the next manual Buffer slot, sends to
-              Buffer, then marks the Content OS post complete.
+              configured Buffer channels, then marks the Content OS post
+              complete.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

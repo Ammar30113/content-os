@@ -28,26 +28,18 @@ export async function POST(request: Request) {
       scheduledFor: input.scheduled_for,
     });
 
-    let query = supabase
-      .from("publishing_jobs")
-      .select("id, status")
-      .eq("post_id", input.post_id)
-      .eq("user_id", user.id);
+    const targetJobs = input.platform
+      ? ensured.jobs.filter((job) => job.platform === input.platform)
+      : ensured.jobs;
 
-    if (input.platform) {
-      query = query.eq("platform", input.platform);
+    if (input.platform && !targetJobs.length) {
+      throw new Error(
+        `${input.platform} is not configured for Buffer handoff on this post.`,
+      );
     }
 
-    const { data: jobs, error } = await query.order("scheduled_for", {
-      ascending: true,
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    const pendingJobs = (jobs || []).filter(
-      (job) => job.status !== "ready" && job.status !== "published",
+    const pendingJobs = targetJobs.filter(
+      (job) => job.status === "queued" || job.status === "failed",
     );
 
     if (!pendingJobs.length) {

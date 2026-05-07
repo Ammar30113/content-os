@@ -45,7 +45,7 @@ const defaultForm: FormState = {
   brief: "",
   source_url: "",
   platform: "instagram",
-  selected_platforms: ["instagram", "x"],
+  selected_platforms: ["instagram"],
   content_mode: "standard",
   recognizable_figure: "",
   current_event: "",
@@ -582,7 +582,7 @@ export function IdeaGeneratorForm() {
                   content_mode: "standard",
                   selected_platforms: current.selected_platforms.length
                     ? current.selected_platforms
-                    : ["instagram", "x"],
+                    : ["instagram"],
                 }))
               }
             />

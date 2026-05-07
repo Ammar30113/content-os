@@ -164,6 +164,10 @@ export function getBufferEnvStatus(): BufferEnvStatus {
   };
 }
 
+export function getConfiguredBufferPlatforms(): BufferPlatform[] {
+  return getBufferEnvStatus().connectedChannels;
+}
+
 export function getBufferEnv() {
   const status = getBufferEnvStatus();
   const accessToken = process.env.BUFFER_ACCESS_TOKEN;

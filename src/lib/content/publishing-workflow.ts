@@ -1,6 +1,7 @@
 import "server-only";
 
 import { platforms } from "@/lib/content/types";
+import { getConfiguredBufferPlatforms } from "@/lib/env";
 import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database";
 
@@ -41,6 +42,24 @@ export async function ensurePublishingJobsForPost(
     post.template_fields,
     post.platform,
   );
+  const effectivePlatforms = getConfiguredPublishingPlatforms(selectedPlatforms);
+  const skippedPlatforms = selectedPlatforms.filter(
+    (platform) => !effectivePlatforms.includes(platform),
+  );
+
+  if (!effectivePlatforms.length) {
+    throw new Error(
+      `No configured Buffer channel matches this post. Selected: ${selectedPlatforms.join(", ")}. Configure a Buffer channel or update the post channels.`,
+    );
+  }
+
+  if (skippedPlatforms.length) {
+    await cancelUnconfiguredPublishingJobs(supabase, {
+      userId,
+      postId: post.id,
+      platforms: skippedPlatforms,
+    });
+  }
 
   if (post.status === "published") {
     const { data: existingJobs, error: existingJobsError } = await supabase
@@ -48,6 +67,7 @@ export async function ensurePublishingJobsForPost(
       .select("*")
       .eq("post_id", post.id)
       .eq("user_id", userId)
+      .in("platform", effectivePlatforms)
       .in("status", ["ready", "published"]);
 
     if (existingJobsError) {
@@ -58,7 +78,7 @@ export async function ensurePublishingJobsForPost(
       return {
         post,
         jobs: existingJobs,
-        selectedPlatforms,
+        selectedPlatforms: effectivePlatforms,
         scheduledFor: post.scheduled_for || new Date().toISOString(),
       };
     }
@@ -69,7 +89,7 @@ export async function ensurePublishingJobsForPost(
   await assertBufferFreeCapacity(supabase, {
     userId,
     postId,
-    platforms: selectedPlatforms,
+    platforms: effectivePlatforms,
   });
 
   const resolvedScheduledFor =
@@ -78,7 +98,7 @@ export async function ensurePublishingJobsForPost(
     (await getNextManualSlotForUser(supabase, {
       userId,
       postId,
-      platform: selectedPlatforms[0],
+      platform: effectivePlatforms[0],
     })).toISOString();
 
   const { data: scheduledPost, error: scheduleError } = await supabase
@@ -99,7 +119,7 @@ export async function ensurePublishingJobsForPost(
 
   const jobs: PublishingJob[] = [];
 
-  for (const platform of selectedPlatforms) {
+  for (const platform of effectivePlatforms) {
     const { data: existingJob } = await supabase
       .from("publishing_jobs")
       .select("id, status")
@@ -153,7 +173,7 @@ export async function ensurePublishingJobsForPost(
   return {
     post: scheduledPost,
     jobs,
-    selectedPlatforms,
+    selectedPlatforms: effectivePlatforms,
     scheduledFor: resolvedScheduledFor,
   };
 }
@@ -217,6 +237,16 @@ export function getSelectedPublishingPlatforms(
   return platforms.includes(fallback as PublishPlatform)
     ? [fallback as PublishPlatform]
     : ["instagram"];
+}
+
+export function getConfiguredPublishingPlatforms(
+  selectedPlatforms: PublishPlatform[],
+): PublishPlatform[] {
+  const configured = getConfiguredBufferPlatforms();
+
+  return selectedPlatforms.filter((platform) =>
+    configured.includes(platform),
+  );
 }
 
 export async function getNextManualSlotForUser(
@@ -355,6 +385,38 @@ function getFutureIso(value: string | null) {
   }
 
   return date.toISOString();
+}
+
+async function cancelUnconfiguredPublishingJobs(
+  supabase: ContentOsSupabaseClient,
+  {
+    userId,
+    postId,
+    platforms: skippedPlatforms,
+  }: {
+    userId: string;
+    postId: string;
+    platforms: PublishPlatform[];
+  },
+) {
+  if (!skippedPlatforms.length) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("publishing_jobs")
+    .update({
+      status: "cancelled",
+      error: "Buffer channel is not configured; skipped for Instagram-first publishing.",
+    })
+    .eq("post_id", postId)
+    .eq("user_id", userId)
+    .in("platform", skippedPlatforms)
+    .in("status", ["queued", "failed"]);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 function getSlotHours(platform: PublishPlatform) {

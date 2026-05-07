@@ -135,7 +135,9 @@ BUFFER_X_CHANNEL_ID=
 BUFFER_LINKEDIN_CHANNEL_ID=
 ```
 
-LinkedIn is optional until a LinkedIn Buffer channel is connected.
+`BUFFER_INSTAGRAM_CHANNEL_ID` is enough for the current Instagram-first workflow.
+X and LinkedIn are optional; if those env vars are missing, Content OS skips those
+channels during Buffer handoff instead of failing the post.
 
 ## Local Development
 
