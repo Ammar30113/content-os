@@ -50,6 +50,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4o-mini
+TAVILY_API_KEY=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 CRON_SECRET=
 BUFFER_ACCESS_TOKEN=
@@ -63,6 +64,12 @@ Do not commit `.env.local` or real secrets.
 
 `OPENAI_MODEL` defaults to `gpt-4o-mini` if omitted. Use a model your OpenAI
 project has access to and that supports structured outputs on the Responses API.
+
+`TAVILY_API_KEY` is optional. When set, generated posts can use live web research
+for topical context. Auto-pick topic also supports three source modes in the app:
+hybrid, live, and evergreen. Hybrid alternates between current Hacker News AI
+stories and the internal Word of AI evergreen topic bank; live prioritizes recent
+AI/builder stories; evergreen uses durable internal campaign seeds.
 
 ## Supabase Setup
 

@@ -17,7 +17,7 @@ const rouletteInputSchema = z.object({
     .array(z.enum(platforms))
     .min(1)
     .optional()
-    .default(["instagram", "x"]),
+    .default(["instagram"]),
   source: z.enum(["auto", "evergreen", "live"]).optional().default("auto"),
 });
 

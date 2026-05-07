@@ -19,9 +19,11 @@ import { readApiJson } from "@/lib/http/read-api-json";
 type Platform = (typeof platforms)[number];
 type ImageMode = (typeof imageModes)[number];
 type ContentMode = (typeof contentModes)[number];
+type TopicSourceMode = "auto" | "evergreen" | "live";
 
 type FormState = {
   auto_topic: boolean;
+  topic_source: TopicSourceMode;
   title: string;
   brief: string;
   source_url: string;
@@ -41,6 +43,7 @@ type FormState = {
 
 const defaultForm: FormState = {
   auto_topic: true,
+  topic_source: "auto",
   title: "",
   brief: "",
   source_url: "",
@@ -112,7 +115,7 @@ type TopicRoulettePayload = {
   selected_platforms: Platform[];
   roulette: {
     seed_id: string;
-    source: "evergreen_bank";
+    source: "evergreen_bank" | "live_hackernews";
     visual_direction: string;
     contrast_setup: string;
     anti_generic_notes: string;
@@ -207,6 +210,7 @@ export function IdeaGeneratorForm() {
         post_type: form.post_type,
         quantity,
         selected_platforms: getSelectedPlatforms(form),
+        source: form.topic_source,
       }),
     });
     const payload = await readApiJson<TopicRoulettePayload & { error?: string }>(
@@ -214,7 +218,7 @@ export function IdeaGeneratorForm() {
     );
 
     if (!response.ok) {
-      throw new Error(payload.error || "Could not pick an evergreen topic.");
+      throw new Error(payload.error || "Could not pick a topic.");
     }
 
     return payload as TopicRoulettePayload;
@@ -227,7 +231,12 @@ export function IdeaGeneratorForm() {
 
     setState({
       loading: true,
-      message: "Picking evergreen Word of AI topic...",
+      message:
+        form.topic_source === "live"
+          ? "Looking for a live AI topic..."
+          : form.topic_source === "evergreen"
+            ? "Picking evergreen Word of AI topic..."
+            : "Picking a hybrid Word of AI topic...",
       error: null,
     });
 
@@ -573,7 +582,7 @@ export function IdeaGeneratorForm() {
             <TopicSourceButton
               active={form.auto_topic}
               title="Auto-pick topic"
-              description="Use the evergreen Word of AI roulette bank."
+              description="Use hybrid, live, or evergreen topic sourcing."
               icon={<Shuffle size={15} className="text-[#d7ddb8]" />}
               onClick={() =>
                 setForm((current) => ({
@@ -600,10 +609,32 @@ export function IdeaGeneratorForm() {
             />
           </div>
           {form.auto_topic ? (
-            <div className="mt-3 rounded border border-[#b8c28a]/30 bg-[#b8c28a]/10 p-3 text-sm leading-6 text-[#eef4cc]">
-              Roulette picks the topic, brief, tone, and template from an
-              internal evergreen idea bank. Choose only post type and count, or
-              open advanced controls to override channels and image handling.
+            <div className="mt-3 grid gap-3">
+              <div className="grid gap-2 md:grid-cols-3">
+                <TopicSourceModeButton
+                  active={form.topic_source === "auto"}
+                  title="Hybrid"
+                  description="Mixes live AI topics with evergreen builder themes."
+                  onClick={() => updateField("topic_source", "auto")}
+                />
+                <TopicSourceModeButton
+                  active={form.topic_source === "live"}
+                  title="Live"
+                  description="Prioritizes recent AI/builder stories from public sources."
+                  onClick={() => updateField("topic_source", "live")}
+                />
+                <TopicSourceModeButton
+                  active={form.topic_source === "evergreen"}
+                  title="Evergreen"
+                  description="Uses durable Word of AI themes that stay relevant."
+                  onClick={() => updateField("topic_source", "evergreen")}
+                />
+              </div>
+              <div className="rounded border border-[#b8c28a]/30 bg-[#b8c28a]/10 p-3 text-sm leading-6 text-[#eef4cc]">
+                Auto-pick fills the topic, brief, tone, and template. Choose
+                only post type and count, or open advanced controls to override
+                channels and image handling.
+              </div>
             </div>
           ) : null}
         </section>
@@ -981,6 +1012,38 @@ function TopicSourceButton({
     >
       <span className="flex items-center gap-2 text-sm font-semibold text-white">
         {active ? icon : null}
+        {title}
+      </span>
+      <span className="mt-1 block text-xs leading-5 text-zinc-500">
+        {description}
+      </span>
+    </button>
+  );
+}
+
+function TopicSourceModeButton({
+  active,
+  title,
+  description,
+  onClick,
+}: {
+  active: boolean;
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded border p-3 text-left transition ${
+        active
+          ? "border-[#b8c28a]/60 bg-[#b8c28a]/10"
+          : "border-zinc-800 hover:border-zinc-600"
+      }`}
+    >
+      <span className="flex items-center gap-2 text-sm font-semibold text-white">
+        {active ? <Check size={15} className="text-[#d7ddb8]" /> : null}
         {title}
       </span>
       <span className="mt-1 block text-xs leading-5 text-zinc-500">
