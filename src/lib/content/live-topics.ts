@@ -8,6 +8,8 @@ export type LiveTopic = {
   rank: number;
   title: string;
   url: string;
+  discussion_url: string;
+  external_url?: string;
   source: string;
   score: number;
   comments: number;
@@ -111,7 +113,8 @@ async function fetchHnQuery(query: string): Promise<LiveTopic[]> {
         return null;
       }
 
-      const targetUrl = hit.url || hit.story_url || `https://news.ycombinator.com/item?id=${hit.objectID}`;
+      const discussionUrl = `https://news.ycombinator.com/item?id=${hit.objectID}`;
+      const externalUrl = hit.url || hit.story_url || undefined;
       const score = hit.points || 0;
 
       if (score < 10) {
@@ -121,7 +124,9 @@ async function fetchHnQuery(query: string): Promise<LiveTopic[]> {
       return {
         rank: index + 1,
         title,
-        url: targetUrl,
+        url: externalUrl || discussionUrl,
+        discussion_url: discussionUrl,
+        ...(externalUrl ? { external_url: externalUrl } : {}),
         source: "Hacker News",
         score,
         comments: hit.num_comments || 0,

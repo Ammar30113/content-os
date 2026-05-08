@@ -132,6 +132,41 @@ const fallbackHashtags = [
   "#futureofwork",
 ];
 
+const TEMPLATE_DATE_MAX_AGE_DAYS = 45;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function formatTemplateDate(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
+function toUtcDay(date: Date) {
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function normalizeGeneratedTemplateDate(value?: string | null) {
+  const fallback = formatTemplateDate();
+  const raw = value?.trim();
+
+  if (!raw) {
+    return fallback;
+  }
+
+  const isoDate = raw.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0];
+  const parsed = new Date(isoDate ? `${isoDate}T00:00:00.000Z` : raw);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return fallback;
+  }
+
+  const ageDays = (toUtcDay(new Date()) - toUtcDay(parsed)) / DAY_MS;
+
+  if (ageDays > TEMPLATE_DATE_MAX_AGE_DAYS || ageDays < -2) {
+    return fallback;
+  }
+
+  return formatTemplateDate(parsed);
+}
+
 function normalizeTemplateFields(
   fields: z.infer<typeof openAITemplateFieldsSchema>,
 ) {
@@ -141,7 +176,7 @@ function normalizeTemplateFields(
     source_name: fields.source_name || undefined,
     source_logo: fields.source_logo || fields.source_logo_url || undefined,
     source_logo_url: fields.source_logo_url || fields.source_logo || undefined,
-    date: fields.date || undefined,
+    date: normalizeGeneratedTemplateDate(fields.date),
     hero_image_url: fields.hero_image_url || undefined,
     product_logo: fields.product_logo || undefined,
     visual_subject: fields.visual_subject || undefined,
@@ -683,6 +718,7 @@ export async function POST(request: Request) {
                     "AI Newsroom / Builder Desk. Dark, high-contrast, text-first, sharp, and readable. Do not make fake hero visuals when no real image URL is provided.",
                   template_fields:
                     "Use headline, subhead, visual_subject, swipe_hint, bottom_label, info_rows, source_name, date, tools, stat, quote, pull_quote, code_snippet, meme_setup, meme_punchline, authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes to direct the image and review flow. Add 2-3 short info_rows when the visual would benefit from concrete proof, contrast, or checklist detail. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null.",
+                  date_rule: `Current date is ${formatTemplateDate()}. If the image shows a date, use the current date or the live discussion date. Never copy stale dates from GitHub repos, docs, changelogs, or archive pages unless the user explicitly asks for a historical post.`,
                   thumbnail_rule:
                     "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
                   placeholder_rule:

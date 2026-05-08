@@ -156,12 +156,19 @@ function buildLiveTopicResponse(topic: LiveTopic, input: RouletteInput) {
         : topic.pillar_hint === "tool_stack"
           ? ("educational" as const)
           : ("news" as const);
+  const liveDate = normalizeLiveTopicDate(topic.created_at);
+  const discussionUrl = topic.discussion_url || topic.url;
+  const externalLine = topic.external_url
+    ? `External link: ${topic.external_url}`
+    : "";
 
   const brief = [
     `Live topic surfaced from ${topic.source} (score ${topic.score}, ${topic.comments} comments).`,
+    `Live discussion date: ${liveDate}.`,
     "",
     `Story: ${topic.title}`,
-    `URL: ${topic.url}`,
+    `Source discussion: ${discussionUrl}`,
+    externalLine,
     "",
     `Suggested pillar: ${topic.pillar_hint}.`,
     `Hook direction: ${topic.hook_direction}`,
@@ -169,12 +176,13 @@ function buildLiveTopicResponse(topic: LiveTopic, input: RouletteInput) {
     "Treat this as a current event. Take a clear builder-to-builder position.",
     "Do not summarize the link. Deliver one sharp lesson, contrast, or workflow takeaway.",
     "If the link is a launch, focus on what changes for builders this week.",
-  ].join("\n");
+    `If the image uses a date, use ${liveDate}. Do not use an older date from the external article, repo, or product page.`,
+  ].filter(Boolean).join("\n");
 
   return {
     title: topic.title,
     brief,
-    source_url: topic.url,
+    source_url: discussionUrl,
     tone,
     template_hint: topic.pillar_hint,
     content_mode: "standard" as const,
@@ -183,7 +191,7 @@ function buildLiveTopicResponse(topic: LiveTopic, input: RouletteInput) {
       seed_id: `live:hn:${normalizeIdToken(topic.title)}`,
       source: "live_hackernews",
       visual_direction:
-        "Newsroom card. Pull the story title into a sharp builder headline. Use source_name = Hacker News if no logo URL exists.",
+        `Newsroom card. Pull the story title into a sharp builder headline. Use source_name = Hacker News if no logo URL exists. Use date = ${liveDate}; never use an older external artifact date.`,
       contrast_setup:
         "Contrast the headline narrative with the actual builder takeaway readers should act on.",
       anti_generic_notes:
@@ -194,7 +202,7 @@ function buildLiveTopicResponse(topic: LiveTopic, input: RouletteInput) {
           pillar: topic.pillar_hint,
           hook_direction: topic.hook_direction,
           unique_takeaway: "Translate the story into one operating change for AI builders.",
-          visual_direction: "News digest template with headline + crisp subhead. Source: Hacker News.",
+          visual_direction: `News digest template with headline + crisp subhead. Source: Hacker News. Date: ${liveDate}.`,
           do_not_repeat: "Do not echo the article wording. Reframe with a builder lens.",
         },
       ],
@@ -208,4 +216,14 @@ function normalizeIdToken(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
+}
+
+function normalizeLiveTopicDate(value: string) {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return parsed.toISOString().slice(0, 10);
 }
