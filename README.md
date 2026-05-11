@@ -127,6 +127,11 @@ Content OS can hand scheduled posts to Buffer after review:
 2. Set `Scheduled for` in the editor.
 3. Click `Save, schedule, send to Buffer`.
 4. Confirm the post appears in Buffer's queue.
+5. After Instagram confirms the post went live, mark it published in Content OS.
+
+Generated template images are stored as JPEGs for Instagram/Buffer compatibility.
+Older PNG images are served through the public proxy as JPEGs when Buffer fetches
+them.
 
 The production Vercel cron at `/api/cron/publish-due-posts` also sweeps queued
 publishing jobs inside the next 48 hours once per day. Vercel Hobby plans do not

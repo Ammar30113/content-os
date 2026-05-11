@@ -3,10 +3,7 @@ import { z } from "zod";
 import { jsonError, jsonOk } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth";
 import { sendPublishingJobToBuffer } from "@/lib/buffer/publishing";
-import {
-  ensurePublishingJobsForPost,
-  markPostBufferHandoffComplete,
-} from "@/lib/content/publishing-workflow";
+import { ensurePublishingJobsForPost } from "@/lib/content/publishing-workflow";
 import { platforms } from "@/lib/content/types";
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
 
@@ -43,16 +40,12 @@ export async function POST(request: Request) {
     );
 
     if (!pendingJobs.length) {
-      const post = await markPostBufferHandoffComplete(supabase, {
-        postId: input.post_id,
-        userId: user.id,
-      });
-
       return jsonOk({
         sent: [],
-        post,
+        post: ensured.post,
         scheduled_for: ensured.scheduledFor,
-        message: "All selected channels are already in Buffer.",
+        message:
+          "All selected channels are already queued in Buffer. Content OS will keep this post scheduled until it is confirmed published.",
       });
     }
 
@@ -66,16 +59,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const post = await markPostBufferHandoffComplete(supabase, {
-      postId: input.post_id,
-      userId: user.id,
-    });
-
     return jsonOk({
       sent,
-      post,
+      post: ensured.post,
       scheduled_for: ensured.scheduledFor,
-      message: "Sent to Buffer and marked complete in Content OS.",
+      message:
+        "Sent to Buffer and kept scheduled in Content OS. Mark it published after Instagram confirms it went live.",
     });
   } catch (error) {
     return jsonError(error, 400);

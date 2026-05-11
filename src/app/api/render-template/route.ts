@@ -3,7 +3,7 @@ import { z } from "zod";
 import { jsonError, jsonOk } from "@/lib/api";
 import { templateFieldsSchema, templateTypes } from "@/lib/content/types";
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
-import { renderTemplatePng } from "@/lib/images/render";
+import { renderTemplateJpeg } from "@/lib/images/render";
 import { requireApiUser } from "@/lib/auth";
 import type { Json } from "@/types/database";
 
@@ -39,17 +39,17 @@ export async function POST(request: Request) {
       .update({ image_status: "generating", image_error: null })
       .eq("id", input.post_id);
 
-    const imageBuffer = await renderTemplatePng(
+    const imageBuffer = await renderTemplateJpeg(
       input.template_type,
       input.template_fields,
     );
-    const filename = `template-${Date.now()}.png`;
+    const filename = `template-${Date.now()}.jpg`;
     const storagePath = `${user.id}/${input.post_id}/${filename}`;
 
     const { error: uploadError } = await supabase.storage
       .from("post-images")
       .upload(storagePath, imageBuffer, {
-        contentType: "image/png",
+        contentType: "image/jpeg",
         upsert: false,
       });
 

@@ -3,6 +3,8 @@ import "server-only";
 import { getAppUrl, getBufferEnv, type BufferPlatform } from "@/lib/env";
 
 const BUFFER_GRAPHQL_ENDPOINT = "https://api.buffer.com";
+const BUFFER_INSTAGRAM_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+const BUFFER_IMAGE_MIN_BYTES = 1024;
 
 type BufferGraphQLError = {
   message?: string;
@@ -99,10 +101,19 @@ export async function createBufferPost({
   });
 
   if (bufferImageUrl) {
+    await assertBufferMediaUrlReady(bufferImageUrl, platform);
+
     input.assets = {
       images: [
         {
           url: bufferImageUrl,
+          metadata: {
+            altText: "Word of AI social post graphic",
+            dimensions: {
+              width: 1080,
+              height: 1080,
+            },
+          },
         },
       ],
     };
@@ -183,5 +194,45 @@ function getBufferImageUrl({
     return imageUrl;
   }
 
-  return `${appUrl}/api/public/post-image/${postId}.png`;
+  return `${appUrl}/api/public/post-image/${postId}.jpg`;
+}
+
+async function assertBufferMediaUrlReady(url: string, platform: BufferPlatform) {
+  const response = await fetch(url, { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error(
+      `Buffer media preflight failed: image URL returned ${response.status}. Regenerate the image before sending.`,
+    );
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  const body = Buffer.from(await response.arrayBuffer());
+
+  if (!contentType.startsWith("image/")) {
+    throw new Error(
+      `Buffer media preflight failed: expected an image, got ${contentType || "unknown content type"}.`,
+    );
+  }
+
+  if (platform === "instagram" && !/^image\/jpe?g$/i.test(contentType)) {
+    throw new Error(
+      `Buffer media preflight failed: Instagram handoff image must be JPEG, got ${contentType}.`,
+    );
+  }
+
+  if (body.byteLength < BUFFER_IMAGE_MIN_BYTES) {
+    throw new Error(
+      "Buffer media preflight failed: image file is unexpectedly small. Regenerate the image before sending.",
+    );
+  }
+
+  if (
+    platform === "instagram" &&
+    body.byteLength > BUFFER_INSTAGRAM_IMAGE_MAX_BYTES
+  ) {
+    throw new Error(
+      "Buffer media preflight failed: Instagram image is over 8 MB. Regenerate or upload a smaller image.",
+    );
+  }
 }

@@ -124,8 +124,8 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
             </p>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
               Bulk send approves, uses the next manual Buffer slot, sends to
-              configured Buffer channels, then marks the Content OS post
-              complete.
+              configured Buffer channels, then keeps the Content OS post
+              scheduled until Instagram confirms it went live.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -181,7 +181,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                           message: `Sent ${sent} posts to Buffer. ${failed} need review.`,
                           details,
                         }
-                      : `Sent ${sent} posts to Buffer and marked them complete.`;
+                      : `Sent ${sent} posts to Buffer and kept them scheduled.`;
                   },
                 )
               }

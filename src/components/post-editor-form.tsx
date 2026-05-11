@@ -310,7 +310,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
         loading: null,
         message:
           bufferPayload.message ||
-          "Saved, sent to Buffer, and marked complete in Content OS.",
+          "Saved, sent to Buffer, and kept scheduled in Content OS.",
         error: null,
       });
       router.refresh();
@@ -798,9 +798,9 @@ function getWorkflowReadiness({
 }) {
   if (status === "published") {
     return {
-      title: "Buffer handoff complete",
+      title: "Published",
       description:
-        "This post has been sent to Buffer or marked complete in Content OS.",
+        "This post is marked live in Content OS after publishing was confirmed.",
     };
   }
 

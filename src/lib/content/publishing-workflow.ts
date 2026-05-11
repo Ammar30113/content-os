@@ -18,11 +18,6 @@ type EnsurePublishingJobsInput = {
   scheduledFor?: string | null;
 };
 
-type MarkBufferHandoffInput = {
-  postId: string;
-  userId: string;
-};
-
 export async function ensurePublishingJobsForPost(
   supabase: ContentOsSupabaseClient,
   { postId, userId, scheduledFor }: EnsurePublishingJobsInput,
@@ -176,42 +171,6 @@ export async function ensurePublishingJobsForPost(
     selectedPlatforms: effectivePlatforms,
     scheduledFor: resolvedScheduledFor,
   };
-}
-
-export async function markPostBufferHandoffComplete(
-  supabase: ContentOsSupabaseClient,
-  { postId, userId }: MarkBufferHandoffInput,
-) {
-  const publishedAt = new Date().toISOString();
-
-  const { error: jobsError } = await supabase
-    .from("publishing_jobs")
-    .update({ status: "published", error: null })
-    .eq("post_id", postId)
-    .eq("user_id", userId)
-    .in("status", ["ready", "published"]);
-
-  if (jobsError) {
-    throw new Error(jobsError.message);
-  }
-
-  const { data: post, error: postError } = await supabase
-    .from("generated_posts")
-    .update({
-      status: "published",
-      published_at: publishedAt,
-      publish_error: null,
-    })
-    .eq("id", postId)
-    .eq("user_id", userId)
-    .select()
-    .single();
-
-  if (postError || !post) {
-    throw new Error(postError?.message || "Could not mark Buffer handoff complete.");
-  }
-
-  return post;
 }
 
 export function getSelectedPublishingPlatforms(

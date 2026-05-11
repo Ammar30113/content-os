@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
+import { convertImageToInstagramJpeg } from "@/lib/images/render";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -8,7 +9,7 @@ export const runtime = "nodejs";
 const publicPostImageParamsSchema = z.object({
   postId: z
     .string()
-    .transform((value) => value.replace(/\.png$/i, ""))
+    .transform((value) => value.replace(/\.(png|jpe?g|webp)$/i, ""))
     .pipe(z.string().uuid()),
 });
 
@@ -45,7 +46,9 @@ export async function GET(
         .download(asset.storage_path);
 
       if (!downloadError && file) {
-        return imageResponse(file, inferContentType(asset.storage_path));
+        return imageResponse(file, inferContentType(asset.storage_path), {
+          forceJpeg: true,
+        });
       }
     }
 
@@ -61,7 +64,7 @@ export async function GET(
       imageResponseFromUrl.headers.get("content-type") || inferContentType(post.image_url);
     const body = await imageResponseFromUrl.blob();
 
-    return imageResponse(body, contentType);
+    return imageResponse(body, contentType, { forceJpeg: true });
   } catch (error) {
     return new Response(
       error instanceof Error ? error.message : "Post image could not be loaded.",
@@ -70,13 +73,24 @@ export async function GET(
   }
 }
 
-function imageResponse(file: Blob, contentType: string) {
-  return new Response(file, {
+async function imageResponse(
+  file: Blob,
+  contentType: string,
+  { forceJpeg = false }: { forceJpeg?: boolean } = {},
+) {
+  const body =
+    forceJpeg && !/^image\/jpe?g$/i.test(contentType)
+      ? await convertImageToInstagramJpeg(Buffer.from(await file.arrayBuffer()))
+      : Buffer.from(await file.arrayBuffer());
+  const resolvedContentType = forceJpeg ? "image/jpeg" : contentType;
+  const extension = resolvedContentType === "image/jpeg" ? "jpg" : "png";
+
+  return new Response(new Uint8Array(body), {
     headers: {
       "Cache-Control": "public, max-age=31536000, immutable",
-      "Content-Disposition": 'inline; filename="wordofaii-post.png"',
-      "Content-Length": String(file.size),
-      "Content-Type": contentType,
+      "Content-Disposition": `inline; filename="wordofaii-post.${extension}"`,
+      "Content-Length": String(body.byteLength),
+      "Content-Type": resolvedContentType,
     },
   });
 }

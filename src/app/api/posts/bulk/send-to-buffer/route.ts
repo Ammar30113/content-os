@@ -3,10 +3,7 @@ import { z } from "zod";
 import { jsonError, jsonOk } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth";
 import { sendPublishingJobToBuffer } from "@/lib/buffer/publishing";
-import {
-  ensurePublishingJobsForPost,
-  markPostBufferHandoffComplete,
-} from "@/lib/content/publishing-workflow";
+import { ensurePublishingJobsForPost } from "@/lib/content/publishing-workflow";
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
 
 const bulkSendToBufferSchema = z.object({
@@ -35,7 +32,7 @@ export async function POST(request: Request) {
           userId: user.id,
         });
         const pendingJobs = ensured.jobs.filter(
-          (job) => job.status !== "ready" && job.status !== "published",
+          (job) => job.status === "queued" || job.status === "failed",
         );
         const sent = [];
 
@@ -46,11 +43,6 @@ export async function POST(request: Request) {
             }),
           );
         }
-
-        await markPostBufferHandoffComplete(supabase, {
-          postId,
-          userId: user.id,
-        });
 
         results.push({
           post_id: postId,

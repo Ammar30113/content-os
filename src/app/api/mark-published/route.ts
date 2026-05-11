@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   try {
     assertContentOsSupabaseWriteSafety();
     const input = markPublishedSchema.parse(await request.json());
-    const { supabase } = await requireApiUser();
+    const { supabase, user } = await requireApiUser();
 
     const publishedAt = new Date().toISOString();
     const { data: post, error: postError } = await supabase
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
         published_at: publishedAt,
       })
       .eq("id", input.post_id)
+      .eq("user_id", user.id)
       .select()
       .single();
 
@@ -32,7 +33,8 @@ export async function POST(request: Request) {
     await supabase
       .from("publishing_jobs")
       .update({ status: "published", error: null })
-      .eq("post_id", input.post_id);
+      .eq("post_id", input.post_id)
+      .eq("user_id", user.id);
 
     return jsonOk({ post });
   } catch (error) {
