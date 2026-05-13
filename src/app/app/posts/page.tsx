@@ -23,7 +23,7 @@ export default async function PostsPage() {
       <PageHeader
         eyebrow="Review"
         title="Posts"
-        description="Generated packages, branded images, approvals, and schedules for the Word of AI queue."
+        description="Generated packages, branded images, approvals, and schedules for Word of AI and Rallio."
         action={
           <Link
             href="/app/ideas"

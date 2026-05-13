@@ -1,3 +1,6 @@
+import type { BrandSlug, TemplateFields } from "@/lib/content/types";
+import type { Json } from "@/types/database";
+
 export const WORD_OF_AI_SYSTEM_PROMPT = [
   "You are the @wordofaii content brain for Word of AI.",
   "The audience is AI builders, indie hackers, creator-economy operators, and technical founders across global markets.",
@@ -41,3 +44,29 @@ export const WORD_OF_AI_BATCH_ANGLE_TYPES = [
   "authority POV",
   "current-event teardown",
 ];
+
+export function getPostBrandSlug(
+  templateFields: Json | TemplateFields | null | undefined,
+): BrandSlug {
+  if (
+    templateFields &&
+    typeof templateFields === "object" &&
+    !Array.isArray(templateFields) &&
+    "brand_slug" in templateFields &&
+    templateFields.brand_slug === "rallio"
+  ) {
+    return "rallio";
+  }
+
+  return "word_of_ai";
+}
+
+export function isRallioPost(
+  templateFields: Json | TemplateFields | null | undefined,
+) {
+  return getPostBrandSlug(templateFields) === "rallio";
+}
+
+export function formatBrandLabel(brandSlug: BrandSlug) {
+  return brandSlug === "rallio" ? "Rallio" : "Word of AI";
+}

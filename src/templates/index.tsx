@@ -3,6 +3,7 @@ import { CreatorEconomyTemplate } from "@/templates/creator-economy-template";
 import { FounderStoryTemplate } from "@/templates/founder-story-template";
 import { MemeTemplate } from "@/templates/meme-template";
 import { NewsDigestTemplate } from "@/templates/news-digest-template";
+import { RallioTemplate } from "@/templates/rallio-templates";
 import { ToolStackTemplate } from "@/templates/tool-stack-template";
 import { TutorialTemplate } from "@/templates/tutorial-template";
 
@@ -13,6 +14,10 @@ export function TemplateRenderer({
   templateType: TemplateType;
   fields: TemplateFields;
 }) {
+  if (fields.brand_slug === "rallio") {
+    return <RallioTemplate fields={fields} />;
+  }
+
   if (templateType === "tool_stack") {
     return <ToolStackTemplate fields={fields} />;
   }

@@ -11,8 +11,17 @@ import {
 import { getWeeklyMemeTrends } from "@/lib/content/meme-trends";
 import { PRODUCT_MENTION_CONFIG } from "@/lib/content/product-gate";
 import {
+  RALLIO_BRAND,
+  RALLIO_SYSTEM_PROMPT,
+  mapRallioTemplateToCoreType,
+  templateForContentType,
+} from "@/lib/content/rallio";
+import {
   batchAngleSchema,
   ideaInputSchema,
+  rallioContentTypes,
+  rallioCtaDoors,
+  rallioTemplateTypes,
   templateTypes,
 } from "@/lib/content/types";
 import {
@@ -49,13 +58,14 @@ export async function POST(request: Request) {
   try {
     assertContentOsSupabaseWriteSafety();
     const input = ideaInputSchema.parse(await request.json());
+    const isRallio = input.brand_slug === "rallio";
     const quantity = input.quantity || 1;
     const { supabase, user } = await requireApiUser();
     const sourceSummary = input.source_url
       ? await summarizeSourceUrl(input.source_url)
       : null;
     const memeTrendContext =
-      input.template_hint === "meme"
+      !isRallio && input.template_hint === "meme"
         ? await getWeeklyMemeTrends(Math.max(quantity + 4, 10))
         : null;
 
@@ -92,7 +102,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content: [
-            WORD_OF_AI_SYSTEM_PROMPT,
+            isRallio ? RALLIO_SYSTEM_PROMPT : WORD_OF_AI_SYSTEM_PROMPT,
             "Plan a differentiated content campaign before any post is written.",
             "Every angle must be meaningfully different: not just synonyms or reordered wording.",
             "The angle plan should avoid repeating recent hooks, headlines, CTAs, examples, and visual concepts.",
@@ -102,8 +112,52 @@ export async function POST(request: Request) {
         {
           role: "user",
           content: JSON.stringify(
-            {
+            isRallio
+              ? {
+                  task: "Create a batch campaign plan for Rallio Instagram.",
+                  brand_slug: "rallio",
+                  quantity,
+                  topic_or_niche: input.title,
+                  brief: input.brief,
+                  launch_neighborhood: RALLIO_BRAND.launch_neighborhood,
+                  category_focus: RALLIO_BRAND.category_focus,
+                  platform: "instagram",
+                  selected_platforms: ["instagram"],
+                  post_type: input.post_type,
+                  tone: input.tone,
+                  template_hint: input.template_hint,
+                  reference_image_url: input.reference_image_url || null,
+                  image_mode: input.image_mode,
+                  rallio_seed_metadata: {
+                    roulette_seed_id: input.roulette_seed_id || null,
+                    content_type: input.rallio_content_type || null,
+                    cta_door: input.rallio_cta_door || null,
+                    template_type: input.rallio_template_type || null,
+                    visual_style: input.rallio_visual_style || RALLIO_BRAND.visual_style,
+                    kpi_intent: input.rallio_kpi_intent || null,
+                  },
+                  allowed_core_template_types: templateTypes,
+                  allowed_rallio_template_types: rallioTemplateTypes,
+                  allowed_rallio_content_types: rallioContentTypes,
+                  allowed_cta_doors: rallioCtaDoors,
+                  funnel_cta_policy:
+                    "Pick exactly one cta door per angle: founding_supporter, ossington_30_guide, or claim_your_business. Use cta_intent = follow in the required schema because product CTAs are not for Word of AI.",
+                  output_requirements: [
+                    "Return exactly the requested number of angles.",
+                    "Every angle must be about Rallio, Ossington, and food/drink local discovery.",
+                    "Every angle must include brand_slug = rallio.",
+                    "Every angle must include rallio_template_type, rallio_content_type, rallio_cta_door, rallio_visual_style, and rallio_kpi_intent.",
+                    "Set pillar/template_type to the closest core Content OS template type even though rendering will use the Rallio template metadata.",
+                    "Set cta_intent to follow for every angle.",
+                    "Do not mention Word of AI, QuoteStack, discounts, deals, coupons, cashback, reward hype, instant downloads, or app-store CTAs.",
+                    "Do not broaden to all of Toronto. Stay narrow: Ossington food and drink.",
+                    "Always include authority_figure, topical_event, contrarian_take, builder_lesson, meme_trend_title, meme_trend_source, meme_format, and meme_adaptation. Use null unless truly relevant.",
+                    "Vary the angle, CTA door, and visual treatment across the batch where possible.",
+                  ],
+                }
+              : {
               task: "Create a batch campaign plan for Word of AI.",
+              brand_slug: "word_of_ai",
               quantity,
               topic_or_niche: input.title,
               brief: input.brief,
@@ -164,6 +218,7 @@ export async function POST(request: Request) {
                 "Use do_not_repeat to name the visual concept to avoid, not only copy to avoid.",
                 "Vary visual treatment across angles: news image band, tool cards, prompt block, stat/quote, or founder note.",
                 "Always include meme_trend_title, meme_trend_source, meme_format, and meme_adaptation. Use null for non-meme angles.",
+                "Always include brand_slug, rallio_template_type, rallio_content_type, rallio_cta_door, rallio_visual_style, and rallio_kpi_intent. For Word of AI, set brand_slug to word_of_ai and all Rallio fields to null.",
                 "For quantity 5 or more, use at least 3 distinct pillars unless the user explicitly forced one template.",
                 "If template_hint is meme, include meme_trend_title, meme_trend_source, meme_format, and meme_adaptation for every angle.",
               ],
@@ -186,9 +241,36 @@ export async function POST(request: Request) {
 
     const angles = normalizePlanAngles(parsed.angles, quantity).map((angle) => ({
       ...angle,
-      cta_intent: PRODUCT_MENTION_CONFIG.product_mentions_enabled
-        ? angle.cta_intent
-        : "follow",
+      brand_slug: isRallio ? "rallio" : angle.brand_slug || "word_of_ai",
+      pillar:
+        isRallio && angle.rallio_template_type
+          ? mapRallioTemplateToCoreType(angle.rallio_template_type)
+          : angle.pillar,
+      template_type:
+        isRallio && angle.rallio_template_type
+          ? mapRallioTemplateToCoreType(angle.rallio_template_type)
+          : angle.template_type,
+      rallio_template_type:
+        isRallio
+          ? angle.rallio_template_type ||
+            templateForContentType(angle.rallio_content_type || input.rallio_content_type)
+          : null,
+      rallio_content_type: isRallio
+        ? angle.rallio_content_type || input.rallio_content_type || "manifesto_reel"
+        : null,
+      rallio_cta_door: isRallio
+        ? angle.rallio_cta_door || input.rallio_cta_door || "founding_supporter"
+        : null,
+      rallio_visual_style: isRallio
+        ? angle.rallio_visual_style || input.rallio_visual_style || RALLIO_BRAND.visual_style
+        : null,
+      rallio_kpi_intent: isRallio
+        ? angle.rallio_kpi_intent || input.rallio_kpi_intent || "manual_review"
+        : null,
+      cta_intent:
+        PRODUCT_MENTION_CONFIG.product_mentions_enabled && !isRallio
+          ? angle.cta_intent
+          : "follow",
     }));
 
     if (angles.length !== quantity) {

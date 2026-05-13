@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, FilePlus2, ImageUp, Save, Shuffle, Sparkles } from "lucide-react";
 
 import {
+  type BrandSlug,
   type BatchAngle,
   contentModes,
   imageModes,
@@ -24,6 +25,7 @@ type TopicSourceMode = "auto" | "evergreen" | "live";
 type FormState = {
   auto_topic: boolean;
   topic_source: TopicSourceMode;
+  brand_slug: BrandSlug;
   title: string;
   brief: string;
   source_url: string;
@@ -39,11 +41,21 @@ type FormState = {
   template_hint: string;
   quantity: string;
   image_mode: ImageMode;
+  roulette_seed_id: string;
+  rallio_content_type?: string;
+  rallio_cta_door?: string;
+  rallio_template_type?: string;
+  rallio_visual_style?: string;
+  rallio_kpi_intent?: string;
 };
 
-const defaultForm: FormState = {
+function createDefaultForm(brandSlug: BrandSlug = "word_of_ai"): FormState {
+  const isRallio = brandSlug === "rallio";
+
+  return {
   auto_topic: true,
-  topic_source: "auto",
+  topic_source: isRallio ? "evergreen" : "auto",
+  brand_slug: brandSlug,
   title: "",
   brief: "",
   source_url: "",
@@ -55,11 +67,18 @@ const defaultForm: FormState = {
   contrarian_take: "",
   builder_lesson: "",
   post_type: "single",
-  tone: "educational",
+  tone: isRallio ? "founder" : "educational",
   template_hint: "auto",
   quantity: "1",
   image_mode: "template",
-};
+  roulette_seed_id: "",
+  rallio_content_type: undefined,
+  rallio_cta_door: undefined,
+  rallio_template_type: undefined,
+  rallio_visual_style: undefined,
+  rallio_kpi_intent: undefined,
+  };
+}
 
 type ActionState = {
   loading: boolean;
@@ -106,6 +125,7 @@ type BatchPlanPayload = {
 };
 
 type TopicRoulettePayload = {
+  brand_slug?: BrandSlug;
   title: string;
   brief: string;
   source_url: string;
@@ -113,17 +133,27 @@ type TopicRoulettePayload = {
   template_hint: FormState["template_hint"];
   content_mode: ContentMode;
   selected_platforms: Platform[];
+  rallio_content_type?: string;
+  rallio_cta_door?: string;
+  rallio_template_type?: string;
+  rallio_visual_style?: string;
+  rallio_kpi_intent?: string;
   roulette: {
     seed_id: string;
-    source: "evergreen_bank" | "live_hackernews";
+    source: "evergreen_bank" | "live_hackernews" | "rallio_bank";
     visual_direction: string;
     contrast_setup: string;
     anti_generic_notes: string;
   };
 };
 
-export function IdeaGeneratorForm() {
-  const [form, setForm] = useState<FormState>(defaultForm);
+export function IdeaGeneratorForm({
+  brandSlug = "word_of_ai",
+}: {
+  brandSlug?: BrandSlug;
+}) {
+  const isRallio = brandSlug === "rallio";
+  const [form, setForm] = useState<FormState>(() => createDefaultForm(brandSlug));
   const [showAdvancedAutoTopic, setShowAdvancedAutoTopic] = useState(false);
   const [state, setState] = useState<ActionState>({
     loading: false,
@@ -142,6 +172,10 @@ export function IdeaGeneratorForm() {
   );
 
   function getSelectedPlatforms(targetForm = form) {
+    if (targetForm.brand_slug === "rallio") {
+      return ["instagram"] satisfies Platform[];
+    }
+
     return targetForm.selected_platforms.length
       ? targetForm.selected_platforms
       : (["instagram"] satisfies Platform[]);
@@ -152,6 +186,10 @@ export function IdeaGeneratorForm() {
   }
 
   function togglePlatform(platform: Platform) {
+    if (isRallio) {
+      return;
+    }
+
     setForm((current) => {
       const selected = current.selected_platforms.includes(platform)
         ? current.selected_platforms.filter((item) => item !== platform)
@@ -193,6 +231,7 @@ export function IdeaGeneratorForm() {
 
     return {
       ...targetForm,
+      brand_slug: brandSlug,
       platform: activePlatforms[0],
       selected_platforms: activePlatforms,
       reference_image_url: reference?.image_url || "",
@@ -211,6 +250,7 @@ export function IdeaGeneratorForm() {
         quantity,
         selected_platforms: getSelectedPlatforms(form),
         source: form.topic_source,
+        brand_slug: brandSlug,
       }),
     });
     const payload = await readApiJson<TopicRoulettePayload & { error?: string }>(
@@ -232,7 +272,9 @@ export function IdeaGeneratorForm() {
     setState({
       loading: true,
       message:
-        form.topic_source === "live"
+        isRallio
+          ? "Picking a Rallio launch topic..."
+          : form.topic_source === "live"
           ? "Looking for a live AI topic..."
           : form.topic_source === "evergreen"
             ? "Picking evergreen Word of AI topic..."
@@ -243,6 +285,7 @@ export function IdeaGeneratorForm() {
     const roulette = await createTopicRoulette(quantity);
     const nextForm: FormState = {
       ...form,
+      brand_slug: brandSlug,
       content_mode: roulette.content_mode,
       selected_platforms: roulette.selected_platforms,
       platform: roulette.selected_platforms[0] || "instagram",
@@ -251,6 +294,12 @@ export function IdeaGeneratorForm() {
       source_url: roulette.source_url || "",
       tone: roulette.tone,
       template_hint: roulette.template_hint,
+      roulette_seed_id: roulette.roulette.seed_id,
+      rallio_content_type: roulette.rallio_content_type,
+      rallio_cta_door: roulette.rallio_cta_door,
+      rallio_template_type: roulette.rallio_template_type,
+      rallio_visual_style: roulette.rallio_visual_style,
+      rallio_kpi_intent: roulette.rallio_kpi_intent,
       recognizable_figure: "",
       current_event: "",
       contrarian_take: "",
@@ -568,9 +617,13 @@ export function IdeaGeneratorForm() {
           <FilePlus2 size={18} />
         </span>
         <div>
-          <h2 className="text-lg font-semibold text-white">New content idea</h2>
+          <h2 className="text-lg font-semibold text-white">
+            {isRallio ? "New Rallio post" : "New content idea"}
+          </h2>
           <p className="text-sm text-zinc-500">
-            Brief it once, generate the package, render or attach the image.
+            {isRallio
+              ? "Generate taste-first Ossington content for manual review."
+              : "Brief it once, generate the package, render or attach the image."}
           </p>
         </div>
       </div>
@@ -582,7 +635,11 @@ export function IdeaGeneratorForm() {
             <TopicSourceButton
               active={form.auto_topic}
               title="Auto-pick topic"
-              description="Use hybrid, live, or evergreen topic sourcing."
+              description={
+                isRallio
+                  ? "Use the Rallio launch content bank."
+                  : "Use hybrid, live, or evergreen topic sourcing."
+              }
               icon={<Shuffle size={15} className="text-[#d7ddb8]" />}
               onClick={() =>
                 setForm((current) => ({
@@ -610,6 +667,7 @@ export function IdeaGeneratorForm() {
           </div>
           {form.auto_topic ? (
             <div className="mt-3 grid gap-3">
+              {!isRallio ? (
               <div className="grid gap-2 md:grid-cols-3">
                 <TopicSourceModeButton
                   active={form.topic_source === "auto"}
@@ -630,10 +688,11 @@ export function IdeaGeneratorForm() {
                   onClick={() => updateField("topic_source", "evergreen")}
                 />
               </div>
+              ) : null}
               <div className="rounded border border-[#b8c28a]/30 bg-[#b8c28a]/10 p-3 text-sm leading-6 text-[#eef4cc]">
-                Auto-pick fills the topic, brief, tone, and template. Choose
-                only post type and count, or open advanced controls to override
-                channels and image handling.
+                {isRallio
+                  ? "Auto-pick fills a Rallio launch topic, funnel CTA door, tone, and visual direction. Choose only post type and count, or open advanced controls to attach a reference image."
+                  : "Auto-pick fills the topic, brief, tone, and template. Choose only post type and count, or open advanced controls to override channels and image handling."}
               </div>
             </div>
           ) : null}
@@ -649,7 +708,7 @@ export function IdeaGeneratorForm() {
           </button>
         ) : null}
 
-        {!form.auto_topic || showAdvancedAutoTopic ? (
+        {!isRallio && (!form.auto_topic || showAdvancedAutoTopic) ? (
         <section className="rounded border border-zinc-800 bg-[#0a0a0b] p-4">
           <p className="text-sm font-medium text-zinc-300">Content mode</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -815,7 +874,7 @@ export function IdeaGeneratorForm() {
               <ImageModeButton
                 active={form.image_mode === "template"}
                 title="Render template"
-                description="Default Word of AI image."
+              description={isRallio ? "Default Rallio image." : "Default Word of AI image."}
                 onClick={() => updateField("image_mode", "template")}
               />
               <ImageModeButton
@@ -872,6 +931,12 @@ export function IdeaGeneratorForm() {
             onChange={(value) => updateField("quantity", value)}
           />
         </div>
+        {isRallio ? (
+          <div className="rounded border border-[#c8923a]/30 bg-[#c8923a]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
+            Rallio posts are Instagram-only and manual review/export for now.
+            Buffer is disabled until a Rallio channel exists.
+          </div>
+        ) : null}
         {form.template_hint === "meme" ? (
           <div className="rounded border border-[#c98270]/30 bg-[#c98270]/10 p-3 text-sm leading-6 text-[#f0c9bf]">
             Meme mode uses weekly public trend context when generating. For

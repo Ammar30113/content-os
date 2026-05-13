@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isRallioPost } from "@/lib/content/brand";
 import { platforms } from "@/lib/content/types";
 import { getConfiguredBufferPlatforms } from "@/lib/env";
 import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
@@ -31,6 +32,12 @@ export async function ensurePublishingJobsForPost(
 
   if (postError || !post) {
     throw new Error(postError?.message || "Generated post not found.");
+  }
+
+  if (isRallioPost(post.template_fields)) {
+    throw new Error(
+      "Rallio posts are manual-only until a Rallio Buffer channel is connected.",
+    );
   }
 
   const selectedPlatforms = getSelectedPublishingPlatforms(

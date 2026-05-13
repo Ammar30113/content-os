@@ -7,10 +7,16 @@ import {
   buildRouletteBrief,
   selectRouletteSeed,
 } from "@/lib/content/topic-roulette";
-import { platforms, postTypes } from "@/lib/content/types";
+import {
+  buildRallioRouletteBrief,
+  RALLIO_BRAND,
+  selectRallioSeed,
+} from "@/lib/content/rallio";
+import { brandSlugs, platforms, postTypes } from "@/lib/content/types";
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
 
 const rouletteInputSchema = z.object({
+  brand_slug: z.enum(brandSlugs).optional().default("word_of_ai"),
   post_type: z.enum(postTypes),
   quantity: z.coerce.number().int().min(1).max(20),
   selected_platforms: z
@@ -40,6 +46,55 @@ export async function POST(request: Request) {
       .limit(20);
 
     const safeRecentPosts = z.array(recentPostSchema).parse(recentPosts || []);
+
+    if (input.brand_slug === "rallio") {
+      const recentText = safeRecentPosts
+        .flatMap((post) => [post.headline, post.hook])
+        .filter(Boolean)
+        .join(" ");
+      const seed = selectRallioSeed({
+        postType: input.post_type,
+        quantity: input.quantity,
+        recentText,
+      });
+      const selectedAngles = seed.angleVariants.slice(
+        0,
+        Math.max(1, Math.min(input.quantity, seed.angleVariants.length)),
+      );
+
+      return jsonOk({
+        brand_slug: "rallio",
+        title: seed.title,
+        brief: buildRallioRouletteBrief(seed, input.quantity),
+        source_url: "",
+        tone: seed.preferredTone,
+        template_hint: seed.templateHint,
+        content_mode: "standard",
+        selected_platforms: ["instagram"],
+        rallio_content_type: seed.contentType,
+        rallio_cta_door: seed.ctaDoor,
+        rallio_template_type: seed.rallioTemplateType,
+        rallio_visual_style: RALLIO_BRAND.visual_style,
+        rallio_kpi_intent: seed.kpiIntent,
+        roulette: {
+          seed_id: seed.id,
+          source: "rallio_bank",
+          visual_direction: seed.visualDirection,
+          contrast_setup: seed.captionStructure,
+          anti_generic_notes: seed.doNotSay,
+          angle_hints: selectedAngles.map((angle) => ({
+            ...angle,
+            brand_slug: "rallio",
+            rallio_template_type: angle.rallioTemplateType,
+            rallio_content_type: angle.contentType,
+            rallio_cta_door: angle.ctaDoor,
+            rallio_visual_style: RALLIO_BRAND.visual_style,
+            rallio_kpi_intent: seed.kpiIntent,
+          })),
+        },
+      });
+    }
+
     const liveTopic =
       input.source === "evergreen"
         ? null

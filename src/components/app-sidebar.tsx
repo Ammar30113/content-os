@@ -4,12 +4,14 @@ import {
   FileText,
   LayoutDashboard,
   Lightbulb,
+  MapPin,
   Settings,
 } from "lucide-react";
 
 const navigationItems = [
   { href: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
+  { href: "/app/rallio", label: "Rallio", icon: MapPin },
   { href: "/app/posts", label: "Posts", icon: FileText },
   { href: "/app/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/app/settings", label: "Settings", icon: Settings },

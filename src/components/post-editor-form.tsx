@@ -21,6 +21,7 @@ import {
   postStatuses,
   templateTypes,
 } from "@/lib/content/types";
+import { isRallioPost } from "@/lib/content/brand";
 import type { Database, Json } from "@/types/database";
 
 const MANUAL_SLOT_WINDOW_DAYS = 7;
@@ -84,7 +85,12 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     () => parseJsonField<Record<string, unknown>>(form.template_fields, {}),
     [form.template_fields],
   );
+  const isRallio = isRallioPost(parsedTemplateFields);
   const selectedChannels = useMemo(() => {
+    if (isRallio) {
+      return ["instagram"];
+    }
+
     const stored = parsedTemplateFields.selected_platforms;
 
     if (Array.isArray(stored)) {
@@ -100,7 +106,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     }
 
     return [post.platform];
-  }, [parsedTemplateFields, post.platform]);
+  }, [isRallio, parsedTemplateFields, post.platform]);
   const hashtagsText = normalizeHashtags(form.hashtags).join(" ");
   const instagramPackage = [form.caption.trim(), hashtagsText]
     .filter(Boolean)
@@ -276,6 +282,16 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   }
 
   async function handleSendToBuffer() {
+    if (isRallio) {
+      setState({
+        loading: null,
+        message: null,
+        error:
+          "Rallio posts are manual-only until a Rallio Instagram channel is connected in Buffer.",
+      });
+      return;
+    }
+
     setState({ loading: "Sending to Buffer", message: null, error: null });
 
     try {
@@ -356,7 +372,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   }
 
   function applyNextSlot() {
-    const nextSlot = getNextManualSlot(post.platform);
+    const nextSlot = getNextManualSlot(isRallio ? "instagram" : post.platform);
     updateField("scheduled_for", formatDateTimeLocal(nextSlot));
     setState({
       loading: null,
@@ -432,8 +448,11 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             POV posts can use <code>authority_figure</code>,{" "}
             <code>topical_event</code>, <code>contrarian_take</code>,{" "}
             <code>builder_lesson</code>, <code>text_overlay_hook</code>, and{" "}
-            <code>review_notes</code>. Leave URL fields blank unless you have a
-            real image URL.
+            <code>review_notes</code>. Rallio posts can use{" "}
+            <code>brand_slug</code>, <code>cta_door</code>,{" "}
+            <code>rallio_template_type</code>, <code>receipt_lines</code>,{" "}
+            <code>regular_quote</code>, and <code>owner_steps</code>. Leave URL
+            fields blank unless you have a real image URL.
           </p>
           <label className="block">
             <span className="text-sm font-medium text-zinc-300">Template type</span>
@@ -527,6 +546,15 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <p className="font-medium text-white">Prepared channels</p>
             <p className="mt-1 text-zinc-500">{selectedChannels.join(", ")}</p>
           </div>
+          {isRallio ? (
+            <div className="rounded border border-[#c98236]/30 bg-[#c98236]/10 p-3 text-sm">
+              <p className="font-medium text-[#f1c892]">Rallio manual-only</p>
+              <p className="mt-1 leading-5 text-zinc-400">
+                Review and export this package manually. Buffer handoff stays
+                disabled until the Rallio Instagram channel exists.
+              </p>
+            </div>
+          ) : null}
           {bufferPosts.length ? (
             <div className="space-y-2 rounded border border-[#b8c28a]/30 bg-[#b8c28a]/10 p-3 text-sm">
               <p className="font-medium text-[#eef7c5]">Buffer handoff</p>
@@ -645,13 +673,15 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           <button
             type="button"
             onClick={handleSendToBuffer}
-            disabled={Boolean(state.loading)}
+            disabled={Boolean(state.loading) || isRallio}
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded bg-[#d4ff00] px-3 text-sm font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68] disabled:opacity-50"
           >
             <Send size={16} />
-            {state.loading === "Sending to Buffer"
-              ? "Sending..."
-              : "Save and send to Buffer"}
+            {isRallio
+              ? "Rallio Buffer not connected"
+              : state.loading === "Sending to Buffer"
+                ? "Sending..."
+                : "Save and send to Buffer"}
           </button>
           <button
             type="button"

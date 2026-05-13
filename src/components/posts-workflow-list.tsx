@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 
 import { PostCardActions } from "@/components/post-card-actions";
 import { StatusBadge } from "@/components/status-badge";
-import { formatTemplateName } from "@/lib/content/types";
+import { formatBrandLabel, getPostBrandSlug } from "@/lib/content/brand";
+import { type BrandSlug, formatTemplateName } from "@/lib/content/types";
 import { readApiJson } from "@/lib/http/read-api-json";
 import type { Json } from "@/types/database";
 
@@ -41,8 +42,11 @@ type BulkSummary = {
   details?: string[];
 };
 
+type BrandFilter = "all" | BrandSlug;
+
 export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [brandFilter, setBrandFilter] = useState<BrandFilter>("all");
   const [state, setState] = useState<BulkState>({
     loading: null,
     message: null,
@@ -51,6 +55,24 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   });
   const router = useRouter();
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const visiblePosts = useMemo(
+    () =>
+      posts.filter(
+        (post) =>
+          brandFilter === "all" ||
+          getPostBrandSlug(post.template_fields) === brandFilter,
+      ),
+    [posts, brandFilter],
+  );
+  const selectedPosts = useMemo(
+    () => posts.filter((post) => selectedSet.has(post.id)),
+    [posts, selectedSet],
+  );
+  const selectedRallioCount = selectedPosts.filter(
+    (post) => getPostBrandSlug(post.template_fields) === "rallio",
+  ).length;
+  const allVisibleSelected =
+    visiblePosts.length > 0 && visiblePosts.every((post) => selectedSet.has(post.id));
 
   function togglePost(postId: string) {
     setSelectedIds((current) =>
@@ -61,7 +83,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   }
 
   function selectAllVisible() {
-    setSelectedIds(posts.map((post) => post.id));
+    setSelectedIds(visiblePosts.map((post) => post.id));
   }
 
   async function runBulkAction(
@@ -75,6 +97,17 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
         message: null,
         details: [],
         error: "Select posts first.",
+      });
+      return;
+    }
+
+    if (endpoint.includes("send-to-buffer") && selectedRallioCount > 0) {
+      setState({
+        loading: null,
+        message: null,
+        details: [],
+        error:
+          "Rallio posts are manual-only until a Rallio Buffer channel is connected. Clear those selections before sending to Buffer.",
       });
       return;
     }
@@ -127,12 +160,31 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
               configured Buffer channels, then keeps the Content OS post
               scheduled until Instagram confirms it went live.
             </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <BrandFilterButton
+                label="All"
+                active={brandFilter === "all"}
+                onClick={() => setBrandFilter("all")}
+              />
+              <BrandFilterButton
+                label="Word of AI"
+                active={brandFilter === "word_of_ai"}
+                onClick={() => setBrandFilter("word_of_ai")}
+              />
+              <BrandFilterButton
+                label="Rallio"
+                active={brandFilter === "rallio"}
+                onClick={() => setBrandFilter("rallio")}
+              />
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={selectAllVisible}
-              disabled={Boolean(state.loading) || selectedIds.length === posts.length}
+              disabled={
+                Boolean(state.loading) || !visiblePosts.length || allVisibleSelected
+              }
               className="inline-flex h-9 items-center justify-center rounded border border-zinc-700 px-3 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
             >
               Select visible
@@ -166,7 +218,9 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
             </button>
             <button
               type="button"
-              disabled={Boolean(state.loading) || !selectedIds.length}
+              disabled={
+                Boolean(state.loading) || !selectedIds.length || selectedRallioCount > 0
+              }
               onClick={() =>
                 runBulkAction(
                   "Sending selected",
@@ -247,104 +301,148 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
-        {posts.map((post) => (
-          <article
-            key={post.id}
-            className="overflow-hidden rounded border border-zinc-800 bg-zinc-950"
-          >
-            <div className="flex items-center justify-between border-b border-zinc-900 px-4 py-3">
-              <label className="inline-flex items-center gap-3 text-sm font-medium text-zinc-300">
-                <input
-                  type="checkbox"
-                  checked={selectedSet.has(post.id)}
-                  onChange={() => togglePost(post.id)}
-                  className="h-4 w-4 accent-[#d4ff00]"
-                />
-                Select
-              </label>
-              <span className="text-xs text-zinc-600">
-                {new Date(post.created_at).toLocaleDateString()}
-              </span>
-            </div>
-            <Link href={`/app/posts/${post.id}`} className="block">
-              <div className="grid gap-0 md:grid-cols-[210px_1fr]">
-                <div className="aspect-square bg-black">
-                  {post.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={post.image_url}
-                      alt={post.headline || "Post thumbnail"}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="grid h-full place-items-center p-4 text-center text-xs leading-5 text-zinc-500">
-                      {post.image_status === "failed"
-                        ? "Image failed"
-                        : "No image yet"}
-                    </div>
-                  )}
-                </div>
-                <div className="p-5">
-                  <div className="flex flex-wrap gap-2">
-                    <StatusBadge status={post.status} />
-                    <StatusBadge status={post.image_status} />
-                  </div>
-                  <h2 className="mt-4 text-xl font-semibold leading-tight text-white">
-                    {post.headline || post.hook || "Untitled post"}
-                  </h2>
-                  <p className="mt-3 line-clamp-3 text-sm leading-6 text-zinc-500">
-                    {post.caption || post.hook || "Open to edit this package."}
-                  </p>
-                  {post.publish_error ? (
-                    <p className="mt-3 rounded border border-red-500/30 bg-red-500/10 p-3 text-xs leading-5 text-red-100">
-                      Buffer review: {post.publish_error}
-                    </p>
-                  ) : null}
-                  <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <dt className="text-zinc-500">Platform</dt>
-                      <dd className="mt-1 font-medium text-zinc-200">
-                        {post.platform}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-zinc-500">Type</dt>
-                      <dd className="mt-1 font-medium text-zinc-200">
-                        {post.post_type}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-zinc-500">Template</dt>
-                      <dd className="mt-1 font-medium text-zinc-200">
-                        {formatTemplateName(post.template_type)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-zinc-500">Schedule</dt>
-                      <dd className="mt-1 font-medium text-zinc-200">
-                        {post.scheduled_for
-                          ? new Date(post.scheduled_for).toLocaleString()
-                          : "Auto slot"}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
+        {visiblePosts.map((post) => {
+          const brandSlug = getPostBrandSlug(post.template_fields);
+
+          return (
+            <article
+              key={post.id}
+              className="overflow-hidden rounded border border-zinc-800 bg-zinc-950"
+            >
+              <div className="flex items-center justify-between border-b border-zinc-900 px-4 py-3">
+                <label className="inline-flex items-center gap-3 text-sm font-medium text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={selectedSet.has(post.id)}
+                    onChange={() => togglePost(post.id)}
+                    className="h-4 w-4 accent-[#d4ff00]"
+                  />
+                  Select
+                </label>
+                <span className="text-xs text-zinc-600">
+                  {new Date(post.created_at).toLocaleDateString()}
+                </span>
               </div>
-            </Link>
-            <div className="p-5">
-              <PostCardActions
-                postId={post.id}
-                templateType={post.template_type}
-                templateFields={post.template_fields}
-              />
-            </div>
-          </article>
-        ))}
+              <Link href={`/app/posts/${post.id}`} className="block">
+                <div className="grid gap-0 md:grid-cols-[210px_1fr]">
+                  <div className="aspect-square bg-black">
+                    {post.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={post.image_url}
+                        alt={post.headline || "Post thumbnail"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="grid h-full place-items-center p-4 text-center text-xs leading-5 text-zinc-500">
+                        {post.image_status === "failed"
+                          ? "Image failed"
+                          : "No image yet"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-5">
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                          brandSlug === "rallio"
+                            ? "border-[#c98236]/40 bg-[#c98236]/10 text-[#f1c892]"
+                            : "border-[#b8c28a]/30 bg-[#b8c28a]/10 text-[#edf5c0]"
+                        }`}
+                      >
+                        {formatBrandLabel(brandSlug)}
+                      </span>
+                      <StatusBadge status={post.status} />
+                      <StatusBadge status={post.image_status} />
+                    </div>
+                    <h2 className="mt-4 text-xl font-semibold leading-tight text-white">
+                      {post.headline || post.hook || "Untitled post"}
+                    </h2>
+                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-zinc-500">
+                      {post.caption || post.hook || "Open to edit this package."}
+                    </p>
+                    {post.publish_error ? (
+                      <p className="mt-3 rounded border border-red-500/30 bg-red-500/10 p-3 text-xs leading-5 text-red-100">
+                        Buffer review: {post.publish_error}
+                      </p>
+                    ) : null}
+                    <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <dt className="text-zinc-500">Platform</dt>
+                        <dd className="mt-1 font-medium text-zinc-200">
+                          {post.platform}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-zinc-500">Type</dt>
+                        <dd className="mt-1 font-medium text-zinc-200">
+                          {post.post_type}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-zinc-500">Template</dt>
+                        <dd className="mt-1 font-medium text-zinc-200">
+                          {formatTemplateName(post.template_type)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-zinc-500">Schedule</dt>
+                        <dd className="mt-1 font-medium text-zinc-200">
+                          {post.scheduled_for
+                            ? new Date(post.scheduled_for).toLocaleString()
+                            : "Auto slot"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                </div>
+              </Link>
+              <div className="p-5">
+                <PostCardActions
+                  postId={post.id}
+                  templateType={post.template_type}
+                  templateFields={post.template_fields}
+                />
+              </div>
+            </article>
+          );
+        })}
       </div>
+      {!visiblePosts.length ? (
+        <div className="rounded border border-zinc-800 bg-zinc-950 p-8 text-center">
+          <p className="font-semibold text-white">No posts for this brand yet.</p>
+          <p className="mt-2 text-sm text-zinc-500">
+            Switch the filter or create a new package from Ideas or Rallio.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
 
+function BrandFilterButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-8 rounded border px-3 text-xs font-semibold transition ${
+        active
+          ? "border-[#d4ff00]/40 bg-[#d4ff00]/10 text-[#ecff8a]"
+          : "border-zinc-800 text-zinc-400 hover:bg-zinc-900"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
 function normalizeBulkSummary(result: string | BulkSummary): BulkSummary {
   if (typeof result === "string") {
     return { message: result };

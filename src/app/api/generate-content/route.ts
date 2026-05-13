@@ -9,10 +9,28 @@ import { getPersonaCooldown } from "@/lib/content/persona-history";
 import { researchTopic } from "@/lib/content/research";
 import { getRecentWinningHooks } from "@/lib/content/winners";
 import {
+  brandSlugs,
   generatedContentSchema,
   ideaInputSchema,
+  rallioContentTypes,
+  rallioCtaDoors,
+  rallioTemplateTypes,
   templateTypes,
 } from "@/lib/content/types";
+import type {
+  BrandSlug,
+  Platform,
+  RallioContentType,
+  RallioCtaDoor,
+  RallioTemplateType,
+} from "@/lib/content/types";
+import {
+  enforceRallioCopySafety,
+  mapRallioTemplateToCoreType,
+  normalizeRallioMetadata,
+  RALLIO_BRAND,
+  RALLIO_SYSTEM_PROMPT,
+} from "@/lib/content/rallio";
 import {
   assertContentOsSupabaseWriteSafety,
   getOpenAIEnv,
@@ -57,6 +75,24 @@ const openAITemplateFieldsSchema = z.object({
   text_overlay_hook: z.string().nullable(),
   review_notes: z.string().nullable(),
   portrait_url: z.string().nullable(),
+  brand_slug: z.enum(brandSlugs).nullable(),
+  brand_handle: z.string().nullable(),
+  launch_neighborhood: z.string().nullable(),
+  category_focus: z.string().nullable(),
+  cta_door: z.enum(rallioCtaDoors).nullable(),
+  content_type: z.enum(rallioContentTypes).nullable(),
+  visual_style: z.string().nullable(),
+  rallio_template_type: z.enum(rallioTemplateTypes).nullable(),
+  door_label: z.string().nullable(),
+  bio_rotation_hint: z.string().nullable(),
+  kpi_intent: z.string().nullable(),
+  business_name: z.string().nullable(),
+  spot_number: z.string().nullable(),
+  spot_category: z.string().nullable(),
+  regular_quote: z.string().nullable(),
+  receipt_lines: z.array(z.string()).nullable(),
+  subtotal: z.string().nullable(),
+  owner_steps: z.array(z.string()).nullable(),
 });
 
 const openAIContentSchema = z.object({
@@ -132,6 +168,27 @@ const fallbackHashtags = [
   "#futureofwork",
 ];
 
+const rallioFallbackHashtags = [
+  "#ossington",
+  "#torontofood",
+  "#torontofoodie",
+  "#torontolife",
+  "#torontorestaurants",
+  "#localbusiness",
+  "#supportlocal",
+  "#neighbourhood",
+  "#foodguide",
+  "#rallio",
+];
+
+const rallioFallbackActionBullets = [
+  "saves spots worth revisiting, not just spots worth scrolling past",
+  "notices owner details that generic listings flatten",
+  "asks regulars what they would recommend twice",
+  "keeps the launch narrow enough to stay useful",
+  "turns neighborhood taste into a clearer map",
+];
+
 const TEMPLATE_DATE_MAX_AGE_DAYS = 45;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -200,6 +257,24 @@ function normalizeTemplateFields(
     text_overlay_hook: fields.text_overlay_hook || undefined,
     review_notes: fields.review_notes || undefined,
     portrait_url: fields.portrait_url || undefined,
+    brand_slug: fields.brand_slug || undefined,
+    brand_handle: fields.brand_handle || undefined,
+    launch_neighborhood: fields.launch_neighborhood || undefined,
+    category_focus: fields.category_focus || undefined,
+    cta_door: fields.cta_door || undefined,
+    content_type: fields.content_type || undefined,
+    visual_style: fields.visual_style || undefined,
+    rallio_template_type: fields.rallio_template_type || undefined,
+    door_label: fields.door_label || undefined,
+    bio_rotation_hint: fields.bio_rotation_hint || undefined,
+    kpi_intent: fields.kpi_intent || undefined,
+    business_name: fields.business_name || undefined,
+    spot_number: fields.spot_number || undefined,
+    spot_category: fields.spot_category || undefined,
+    regular_quote: fields.regular_quote || undefined,
+    receipt_lines: fields.receipt_lines || undefined,
+    subtotal: fields.subtotal || undefined,
+    owner_steps: fields.owner_steps || undefined,
   };
 }
 
@@ -210,6 +285,8 @@ function createQualityFallbackContent({
   visualAlignmentNote,
   failures,
   attempt,
+  brandSlug = "word_of_ai",
+  rallioFallback,
 }: {
   candidate: GeneratedContentPackage;
   contrast: OpenAIContentPackage["contrast"];
@@ -217,7 +294,21 @@ function createQualityFallbackContent({
   visualAlignmentNote: string;
   failures: string[];
   attempt: number;
+  brandSlug?: BrandSlug;
+  rallioFallback?: RallioFallbackMetadata;
 }) {
+  if (brandSlug === "rallio") {
+    return createRallioQualityFallbackContent({
+      candidate,
+      contrast,
+      viralityScore,
+      visualAlignmentNote,
+      failures,
+      attempt,
+      rallioFallback,
+    });
+  }
+
   const hook = scrubGenericCopy(candidate.hook || candidate.headline);
   const headline = scrubGenericCopy(candidate.headline || hook);
   const subhead = scrubGenericCopy(
@@ -289,6 +380,142 @@ function createQualityFallbackContent({
   return enforceProductMentionGate(repaired);
 }
 
+type RallioFallbackMetadata = {
+  contentType?: RallioContentType;
+  ctaDoor?: RallioCtaDoor;
+  templateType?: RallioTemplateType;
+  visualStyle?: string;
+  kpiIntent?: string;
+};
+
+function getRallioFallbackMetadata(
+  input: z.infer<typeof ideaInputSchema>,
+): RallioFallbackMetadata {
+  return {
+    contentType:
+      input.batch_angle?.rallio_content_type || input.rallio_content_type || undefined,
+    ctaDoor: input.batch_angle?.rallio_cta_door || input.rallio_cta_door || undefined,
+    templateType:
+      input.batch_angle?.rallio_template_type ||
+      input.rallio_template_type ||
+      undefined,
+    visualStyle:
+      input.batch_angle?.rallio_visual_style ||
+      input.rallio_visual_style ||
+      RALLIO_BRAND.visual_style,
+    kpiIntent:
+      input.batch_angle?.rallio_kpi_intent || input.rallio_kpi_intent || undefined,
+  };
+}
+
+function createRallioQualityFallbackContent({
+  candidate,
+  contrast,
+  viralityScore,
+  visualAlignmentNote,
+  failures,
+  attempt,
+  rallioFallback,
+}: {
+  candidate: GeneratedContentPackage;
+  contrast: OpenAIContentPackage["contrast"];
+  viralityScore: OpenAIContentPackage["virality_score"];
+  visualAlignmentNote: string;
+  failures: string[];
+  attempt: number;
+  rallioFallback?: RallioFallbackMetadata;
+}) {
+  const hook = scrubGenericCopy(candidate.hook || candidate.headline);
+  const headline = scrubGenericCopy(candidate.headline || "Ossington Needs Better Signal");
+  const subhead = scrubGenericCopy(
+    candidate.subhead ||
+      "Local discovery should start with taste, regulars, and owner context.",
+  );
+  const bullets = uniqueStrings([
+    ...getFallbackActionBullets(candidate, contrast),
+    ...rallioFallbackActionBullets,
+  ]).slice(0, 4);
+  const finalLine = "This isn't a deals feed. It's a better local signal.";
+  const hashtags = normalizeFallbackHashtags([
+    ...(candidate.hashtags || []),
+    ...rallioFallbackHashtags,
+  ], rallioFallbackHashtags).slice(0, 16);
+  const ctaDoor = rallioFallback?.ctaDoor || "founding_supporter";
+  const cta =
+    ctaDoor === "claim_your_business"
+      ? "Ossington owners: save this for the claim-your-business door."
+      : ctaDoor === "ossington_30_guide"
+        ? "Save this for the Ossington 30 launch guide."
+        : "Save this if you want the first Rallio supporter drop.";
+  const caption = [
+    hook,
+    "",
+    "The weak local app turns every place into the same card.",
+    "The useful one captures why people actually return.",
+    "",
+    ...bullets.map((bullet) => `- ${bullet}`),
+    "",
+    finalLine,
+    "",
+    hashtags.join(" "),
+  ].join("\n");
+  const xVersion = `${hook} The useful local signal is specific: regulars, owner context, repeat visits, and taste notes. ${finalLine}`;
+  const linkedinVersion = [
+    hook,
+    "",
+    "The local discovery problem is not a lack of listings.",
+    "It is a lack of useful signal.",
+    "",
+    ...bullets.map((bullet) => `- ${sentenceCase(bullet)}`),
+    "",
+    finalLine,
+  ].join("\n");
+  const templateFields = normalizeRallioMetadata(
+    {
+      ...candidate.template_fields,
+      headline,
+      subhead,
+      receipt_lines: candidate.template_fields.receipt_lines || bullets.slice(0, 3),
+      owner_steps: candidate.template_fields.owner_steps || bullets.slice(0, 3),
+      quality_gate: {
+        passed: false,
+        repaired: true,
+        attempt,
+        failures,
+        contrast,
+        visual_alignment_note: visualAlignmentNote,
+        virality_score: viralityScore,
+        notes: [
+          "OpenAI repair attempts did not pass every strict quality rule.",
+          "Content OS created a structured Rallio review draft instead of failing the run.",
+        ],
+      },
+      review_notes: [
+        candidate.template_fields.review_notes,
+        "Rallio fallback used. Review local specificity before posting.",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    },
+    rallioFallback,
+  );
+
+  const repaired = generatedContentSchema.parse({
+    ...candidate,
+    hook,
+    headline,
+    subhead,
+    caption,
+    hashtags,
+    cta,
+    x_version: xVersion.slice(0, 280),
+    linkedin_version: linkedinVersion,
+    template_fields: templateFields,
+  });
+
+  return enforceRallioCopySafety(repaired);
+}
+
 function getFallbackActionBullets(
   candidate: GeneratedContentPackage,
   contrast: OpenAIContentPackage["contrast"],
@@ -331,13 +558,13 @@ function hasActionShape(value: string) {
   );
 }
 
-function normalizeFallbackHashtags(hashtags: string[]) {
+function normalizeFallbackHashtags(hashtags: string[], fallback = fallbackHashtags) {
   const normalized = hashtags
     .map((tag) => tag.trim())
     .filter(Boolean)
     .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
 
-  return uniqueStrings([...normalized, ...fallbackHashtags]).slice(0, 20);
+  return uniqueStrings([...normalized, ...fallback]).slice(0, 20);
 }
 
 function buildXFallback(hook: string, bullets: string[]) {
@@ -422,9 +649,12 @@ export async function POST(request: Request) {
     assertContentOsSupabaseWriteSafety();
     const input = ideaInputSchema.parse(await request.json());
     const { supabase, user } = await requireApiUser();
-    const selectedPlatforms = input.selected_platforms?.length
-      ? input.selected_platforms
-      : [input.platform];
+    const isRallio = input.brand_slug === "rallio";
+    const selectedPlatforms: Platform[] = isRallio
+      ? ["instagram"]
+      : input.selected_platforms?.length
+        ? [...input.selected_platforms]
+        : [input.platform];
     const referenceImageUrl = input.reference_image_url || undefined;
 
     if (input.image_mode === "uploaded" && !referenceImageUrl) {
@@ -492,19 +722,21 @@ export async function POST(request: Request) {
     const safeRecentPosts = z.array(recentPostSchema).parse(recentPosts || []);
     const winningHooks = await getRecentWinningHooks(supabase, 5);
     const personaCooldown =
-      input.content_mode === "authority_pov"
+      !isRallio && input.content_mode === "authority_pov"
         ? await getPersonaCooldown(supabase, input.recognizable_figure)
         : null;
-    const ctaStrategy = getCtaStrategy(
-      input.batch_angle?.pillar ||
-        (input.template_hint !== "auto" ? input.template_hint : null),
-    );
+    const ctaStrategy = isRallio
+      ? null
+      : getCtaStrategy(
+          input.batch_angle?.pillar ||
+            (input.template_hint !== "auto" ? input.template_hint : null),
+        );
     // Live web research via Tavily — only runs when TAVILY_API_KEY is set
     // and we don't already have a source summary from a user-supplied URL.
     // Skipped for memes (the joke is the point, not the facts).
     const isMeme =
       input.template_hint === "meme" || input.batch_angle?.template_type === "meme";
-    const researchQuery = !sourceSummary && !isMeme
+    const researchQuery = !isRallio && !sourceSummary && !isMeme
       ? buildResearchQuery({
           title: idea.title || input.title,
           brief: idea.brief || input.brief,
@@ -514,7 +746,8 @@ export async function POST(request: Request) {
       : null;
     const research = researchQuery ? await researchTopic(researchQuery) : null;
     const memeTrendContext =
-      input.template_hint === "meme" || input.batch_angle?.template_type === "meme"
+      !isRallio &&
+      (input.template_hint === "meme" || input.batch_angle?.template_type === "meme")
         ? await getWeeklyMemeTrends(10)
         : null;
     const { apiKey, model } = getOpenAIEnv();
@@ -538,7 +771,7 @@ export async function POST(request: Request) {
           {
             role: "system",
             content: [
-              WORD_OF_AI_SYSTEM_PROMPT,
+              isRallio ? RALLIO_SYSTEM_PROMPT : WORD_OF_AI_SYSTEM_PROMPT,
               "Generate one complete social post package.",
               "If a batch_angle is provided, treat it as the source of truth for this post's angle, pillar, visual direction, and CTA intent.",
               "Do not copy hooks, headlines, examples, caption structure, or template fields from generated_so_far.",
@@ -570,9 +803,11 @@ export async function POST(request: Request) {
               isRepairPass
                 ? "Repair pass: keep the planned angle, but rewrite the weak caption, contrast differences, platform variants, and final line so the output passes the quality gate. Do not soften the hook."
                 : "",
-              PRODUCT_MENTION_CONFIG.product_mentions_enabled
-                ? "Product mentions may be used only when explicitly relevant."
-                : "Product mentions are paused. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",
+              isRallio
+                ? "This is a Rallio package. You may mention Rallio as the local discovery project, but never use download-now, discount, reward-hype, or broad citywide app language."
+                : PRODUCT_MENTION_CONFIG.product_mentions_enabled
+                  ? "Product mentions may be used only when explicitly relevant."
+                  : "Product mentions are paused. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",
               qualityFailures.length
                 ? `Previous attempt failed quality gate. Fix these issues: ${qualityFailures.join(" ")}`
                 : "",
@@ -585,11 +820,12 @@ export async function POST(request: Request) {
                 task: input.batch_angle
                   ? "Generate this specific planned post from the batch campaign."
                   : "Generate a complete social post package.",
+                brand_slug: input.brand_slug,
                 title: idea.title || input.title,
                 brief: idea.brief || input.brief,
                 source_url: idea.source_url || input.source_url || null,
                 source_summary: sourceSummary || "No source URL provided.",
-                platform: input.platform,
+                platform: isRallio ? "instagram" : input.platform,
                 selected_platforms: selectedPlatforms,
                 post_type: input.post_type,
                 tone: input.tone,
@@ -612,7 +848,7 @@ export async function POST(request: Request) {
                     "If the image/template includes steps, a recipe, a framework, a prompt block, or tools, the caption must expand that exact visual idea.",
                 },
                 authority_pov:
-                  input.content_mode === "authority_pov"
+                  !isRallio && input.content_mode === "authority_pov"
                     ? {
                         recognizable_figure: input.recognizable_figure || null,
                         current_event: input.current_event || null,
@@ -622,6 +858,34 @@ export async function POST(request: Request) {
                           "Use the recognizable figure/current event to gain authority, then make a confident original builder point. Do not summarize the figure; use them as context for a practical insight.",
                       }
                     : null,
+                rallio_context: isRallio
+                  ? {
+                      brand: RALLIO_BRAND,
+                      roulette_seed_id: input.roulette_seed_id || null,
+                      cta_door:
+                        input.batch_angle?.rallio_cta_door ||
+                        input.rallio_cta_door ||
+                        null,
+                      content_type:
+                        input.batch_angle?.rallio_content_type ||
+                        input.rallio_content_type ||
+                        null,
+                      rallio_template_type:
+                        input.batch_angle?.rallio_template_type ||
+                        input.rallio_template_type ||
+                        null,
+                      visual_style:
+                        input.batch_angle?.rallio_visual_style ||
+                        input.rallio_visual_style ||
+                        RALLIO_BRAND.visual_style,
+                      kpi_intent:
+                        input.batch_angle?.rallio_kpi_intent ||
+                        input.rallio_kpi_intent ||
+                        null,
+                      instruction:
+                        "Return Instagram-ready Rallio content only. Set selected_platforms to instagram. Use exactly one funnel CTA door. Store Rallio metadata in template_fields.",
+                    }
+                  : null,
                 template_hint: input.template_hint,
                 meme_trend_context:
                   memeTrendContext &&
@@ -715,9 +979,13 @@ export async function POST(request: Request) {
                 },
                 visual_system: {
                   style:
-                    "AI Newsroom / Builder Desk. Dark, high-contrast, text-first, sharp, and readable. Do not make fake hero visuals when no real image URL is provided.",
+                    isRallio
+                      ? "Rallio local editorial system. Cream/ink/amber/moss, receipt details, subtle grain, warm neighborhood taste. No generic tech visuals."
+                      : "AI Newsroom / Builder Desk. Dark, high-contrast, text-first, sharp, and readable. Do not make fake hero visuals when no real image URL is provided.",
                   template_fields:
-                    "Use headline, subhead, visual_subject, swipe_hint, bottom_label, info_rows, source_name, date, tools, stat, quote, pull_quote, code_snippet, meme_setup, meme_punchline, authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes to direct the image and review flow. Add 2-3 short info_rows when the visual would benefit from concrete proof, contrast, or checklist detail. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null.",
+                    isRallio
+                      ? "Use headline, subhead, brand_slug, brand_handle, launch_neighborhood, category_focus, cta_door, content_type, visual_style, rallio_template_type, door_label, bio_rotation_hint, kpi_intent, business_name, spot_number, spot_category, regular_quote, receipt_lines, subtotal, owner_steps, bottom_label, and review_notes. Return every template field; use null when unavailable."
+                      : "Use headline, subhead, visual_subject, swipe_hint, bottom_label, info_rows, source_name, date, tools, stat, quote, pull_quote, code_snippet, meme_setup, meme_punchline, authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes to direct the image and review flow. Add 2-3 short info_rows when the visual would benefit from concrete proof, contrast, or checklist detail. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null. Also return Rallio-only template fields as null.",
                   date_rule: `Current date is ${formatTemplateDate()}. If the image shows a date, use the current date or the live discussion date. Never copy stale dates from GitHub repos, docs, changelogs, or archive pages unless the user explicitly asks for a historical post.`,
                   thumbnail_rule:
                     "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
@@ -731,16 +999,20 @@ export async function POST(request: Request) {
                     "For authority_pov mode, return authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes. Make the reel_script a short talking-head script with a hook, the authority/current-event setup, the sharp take, and one practical builder takeaway.",
                 },
                 cta_rotation:
-                  PRODUCT_MENTION_CONFIG.product_mentions_enabled
-                    ? "Use follow most often. Rallio and QuoteStack mentions should be rare and natural. Never hard sell."
-                    : "Use follow CTAs only. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",
+                  isRallio
+                    ? "Use one of the Rallio funnel doors only: founding_supporter, ossington_30_guide, claim_your_business. No download-now CTA."
+                    : PRODUCT_MENTION_CONFIG.product_mentions_enabled
+                      ? "Use follow most often. Rallio and QuoteStack mentions should be rare and natural. Never hard sell."
+                      : "Use follow CTAs only. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",
                 selected_platform_output:
                   "Always return the full package. Prioritize caption for Instagram, x_version for X, and linkedin_version for LinkedIn based on selected_platforms.",
                 planned_output_contract: input.batch_angle
                   ? {
                       pillar_must_equal: input.batch_angle.pillar,
                       template_type_must_equal: input.batch_angle.template_type,
-                      cta_should_match: PRODUCT_MENTION_CONFIG.product_mentions_enabled
+                      cta_should_match: isRallio
+                        ? input.batch_angle.rallio_cta_door || input.rallio_cta_door
+                        : PRODUCT_MENTION_CONFIG.product_mentions_enabled
                         ? input.batch_angle.cta_intent
                         : "follow",
                     }
@@ -772,7 +1044,8 @@ export async function POST(request: Request) {
       }
 
       const normalizedTemplateFields = normalizeTemplateFields(parsed.template_fields);
-      const templateFieldsWithWorkflow = {
+      const rallioFallback = getRallioFallbackMetadata(input);
+      const baseTemplateFieldsWithWorkflow = {
         ...normalizedTemplateFields,
         hero_image_url:
           normalizedTemplateFields.hero_image_url ||
@@ -791,18 +1064,31 @@ export async function POST(request: Request) {
         builder_lesson:
           normalizedTemplateFields.builder_lesson || input.builder_lesson || undefined,
       };
+      const templateFieldsWithWorkflow = isRallio
+        ? normalizeRallioMetadata(baseTemplateFieldsWithWorkflow, rallioFallback)
+        : baseTemplateFieldsWithWorkflow;
+      const forcedTemplateType = isRallio
+        ? mapRallioTemplateToCoreType(
+            templateFieldsWithWorkflow.rallio_template_type ||
+              input.batch_angle?.rallio_template_type ||
+              input.rallio_template_type,
+          )
+        : input.batch_angle?.template_type ||
+          (input.template_hint !== "auto" ? input.template_hint : parsed.template_type);
 
       const parsedContent = generatedContentSchema.parse({
         ...parsed,
         pillar:
-          input.batch_angle?.pillar ||
-          (input.template_hint !== "auto" ? input.template_hint : parsed.pillar),
-        template_type:
-          input.batch_angle?.template_type ||
-          (input.template_hint !== "auto" ? input.template_hint : parsed.template_type),
+          isRallio
+            ? forcedTemplateType
+            : input.batch_angle?.pillar ||
+              (input.template_hint !== "auto" ? input.template_hint : parsed.pillar),
+        template_type: forcedTemplateType,
         template_fields: templateFieldsWithWorkflow,
       });
-      const candidate = enforceProductMentionGate(parsedContent);
+      const candidate = isRallio
+        ? enforceRallioCopySafety(parsedContent)
+        : enforceProductMentionGate(parsedContent);
       fallbackCandidate = candidate;
       fallbackQualityContext = {
         contrast: parsed.contrast,
@@ -847,6 +1133,8 @@ export async function POST(request: Request) {
         visualAlignmentNote: fallbackQualityContext.visualAlignmentNote,
         failures: qualityFailures,
         attempt: fallbackQualityContext.attempt,
+        brandSlug: isRallio ? "rallio" : "word_of_ai",
+        rallioFallback: isRallio ? getRallioFallbackMetadata(input) : undefined,
       });
     }
 
@@ -861,7 +1149,7 @@ export async function POST(request: Request) {
       .insert({
         user_id: user.id,
         idea_id: idea.id,
-        platform: input.platform,
+        platform: isRallio ? "instagram" : input.platform,
         post_type: input.post_type,
         tone: input.tone,
         pillar: content.pillar,

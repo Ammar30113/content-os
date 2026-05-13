@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createBufferPost } from "@/lib/buffer/client";
+import { isRallioPost } from "@/lib/content/brand";
 import { normalizeHashtags, platforms } from "@/lib/content/types";
 import { getConfiguredBufferPlatforms } from "@/lib/env";
 import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
@@ -63,6 +64,12 @@ export async function sendPublishingJobToBuffer(
 
   if (options.userId && post.user_id !== options.userId) {
     throw new Error("Post is not owned by the current user.");
+  }
+
+  if (isRallioPost(post.template_fields)) {
+    throw new Error(
+      "Rallio posts are manual-only until a Rallio Buffer channel is connected.",
+    );
   }
 
   if (job.status === "ready") {

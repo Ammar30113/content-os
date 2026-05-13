@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const platforms = ["instagram", "x", "linkedin"] as const;
+export const brandSlugs = ["word_of_ai", "rallio"] as const;
 export const postTypes = ["single", "carousel", "reel", "thread"] as const;
 export const contentModes = ["standard", "authority_pov"] as const;
 export const tones = [
@@ -22,6 +23,26 @@ export const templateTypes = [
 export const templateHints = ["auto", ...templateTypes] as const;
 export const postQuantities = ["1", "3", "5", "10", "20"] as const;
 export const ctaIntents = ["follow", "rallio", "quotestack"] as const;
+export const rallioCtaDoors = [
+  "founding_supporter",
+  "ossington_30_guide",
+  "claim_your_business",
+] as const;
+export const rallioContentTypes = [
+  "manifesto_reel",
+  "spot_carousel",
+  "receipt_single",
+  "regular_quote",
+  "owner_claim_carousel",
+  "bts_story_sequence",
+] as const;
+export const rallioTemplateTypes = [
+  "rallio_manifesto",
+  "rallio_spot_carousel",
+  "rallio_receipt",
+  "rallio_regular_quote",
+  "rallio_owner_claim",
+] as const;
 export const imageModes = ["template", "uploaded"] as const;
 export const postStatuses = [
   "draft",
@@ -52,6 +73,12 @@ export const batchAngleSchema = z.object({
   meme_trend_source: z.string().nullable(),
   meme_format: z.string().nullable(),
   meme_adaptation: z.string().nullable(),
+  brand_slug: z.enum(brandSlugs).nullable(),
+  rallio_template_type: z.enum(rallioTemplateTypes).nullable(),
+  rallio_content_type: z.enum(rallioContentTypes).nullable(),
+  rallio_cta_door: z.enum(rallioCtaDoors).nullable(),
+  rallio_visual_style: z.string().nullable(),
+  rallio_kpi_intent: z.string().nullable(),
 });
 
 export const recentContextSchema = z.object({
@@ -70,6 +97,7 @@ export const recentContextSchema = z.object({
 export const ideaInputSchema = z
   .object({
     idea_id: z.string().uuid().optional(),
+    brand_slug: z.enum(brandSlugs).optional().default("word_of_ai"),
     title: z.string().trim().min(3, "Add a sharper idea title."),
     brief: z.string().trim().default(""),
     source_url: z.string().trim().url().optional().or(z.literal("")),
@@ -93,6 +121,12 @@ export const ideaInputSchema = z
     reference_image_url: z.string().trim().url().optional().or(z.literal("")),
     reference_image_asset_id: z.string().uuid().optional(),
     image_mode: z.enum(imageModes).optional().default("template"),
+    roulette_seed_id: z.string().trim().optional().or(z.literal("")),
+    rallio_content_type: z.enum(rallioContentTypes).optional(),
+    rallio_cta_door: z.enum(rallioCtaDoors).optional(),
+    rallio_template_type: z.enum(rallioTemplateTypes).optional(),
+    rallio_visual_style: z.string().trim().optional().or(z.literal("")),
+    rallio_kpi_intent: z.string().trim().optional().or(z.literal("")),
     batch_angle: batchAngleSchema.optional(),
     recent_context: recentContextSchema.optional(),
   })
@@ -138,6 +172,24 @@ export const templateFieldsSchema = z
     reference_image_url: z.string().optional(),
     reference_image_asset_id: z.string().optional(),
     selected_platforms: z.array(z.enum(platforms)).optional(),
+    brand_slug: z.enum(brandSlugs).optional(),
+    brand_handle: z.string().optional(),
+    launch_neighborhood: z.string().optional(),
+    category_focus: z.string().optional(),
+    cta_door: z.enum(rallioCtaDoors).optional(),
+    content_type: z.enum(rallioContentTypes).optional(),
+    visual_style: z.string().optional(),
+    rallio_template_type: z.enum(rallioTemplateTypes).optional(),
+    door_label: z.string().optional(),
+    bio_rotation_hint: z.string().optional(),
+    kpi_intent: z.string().optional(),
+    business_name: z.string().optional(),
+    spot_number: z.string().optional(),
+    spot_category: z.string().optional(),
+    regular_quote: z.string().optional(),
+    receipt_lines: z.array(z.string()).optional(),
+    subtotal: z.string().optional(),
+    owner_steps: z.array(z.string()).optional(),
     image_mode: z.enum(imageModes).optional(),
     content_mode: z.enum(contentModes).optional(),
     product_logo: z.string().optional(),
@@ -215,9 +267,13 @@ export type BatchAngle = z.infer<typeof batchAngleSchema>;
 export type GeneratedContent = z.infer<typeof generatedContentSchema>;
 export type TemplateFields = z.infer<typeof templateFieldsSchema>;
 export type Platform = (typeof platforms)[number];
+export type BrandSlug = (typeof brandSlugs)[number];
 export type PostType = (typeof postTypes)[number];
 export type Tone = (typeof tones)[number];
 export type TemplateType = (typeof templateTypes)[number];
+export type RallioCtaDoor = (typeof rallioCtaDoors)[number];
+export type RallioContentType = (typeof rallioContentTypes)[number];
+export type RallioTemplateType = (typeof rallioTemplateTypes)[number];
 
 export function normalizeHashtags(value: string | string[] | null | undefined) {
   if (Array.isArray(value)) {
