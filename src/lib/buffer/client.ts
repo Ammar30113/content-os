@@ -1,6 +1,12 @@
 import "server-only";
 
-import { getAppUrl, getBufferEnv, type BufferPlatform } from "@/lib/env";
+import type { BrandSlug } from "@/lib/content/types";
+import {
+  getAppUrl,
+  getBufferChannelEnvName,
+  getBufferEnv,
+  type BufferPlatform,
+} from "@/lib/env";
 
 const BUFFER_GRAPHQL_ENDPOINT = "https://api.buffer.com";
 const BUFFER_INSTAGRAM_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
@@ -41,6 +47,7 @@ export type BufferPostResult = {
 type CreateBufferPostInput = {
   postId: string;
   platform: BufferPlatform;
+  brandSlug?: BrandSlug;
   text: string;
   imageUrl: string | null;
   scheduledFor: string;
@@ -64,13 +71,16 @@ const createPostMutation = `
   }
 `;
 
-export function getBufferChannelId(platform: BufferPlatform) {
+export function getBufferChannelId(
+  platform: BufferPlatform,
+  brandSlug: BrandSlug = "word_of_ai",
+) {
   const env = getBufferEnv();
-  const channelId = env.channels[platform];
+  const channelId = env.brandChannels[brandSlug]?.[platform];
 
   if (!channelId) {
     throw new Error(
-      `Buffer channel for ${platform} is not configured. Add BUFFER_${platform.toUpperCase()}_CHANNEL_ID in Vercel.`,
+      `Buffer channel for ${formatBrandName(brandSlug)} ${platform} is not configured. Add ${getBufferChannelEnvName(platform, brandSlug)} in Vercel.`,
     );
   }
 
@@ -80,12 +90,13 @@ export function getBufferChannelId(platform: BufferPlatform) {
 export async function createBufferPost({
   postId,
   platform,
+  brandSlug = "word_of_ai",
   text,
   imageUrl,
   scheduledFor,
 }: CreateBufferPostInput): Promise<BufferPostResult> {
   const env = getBufferEnv();
-  const channelId = getBufferChannelId(platform);
+  const channelId = getBufferChannelId(platform, brandSlug);
   const input: Record<string, unknown> = {
     channelId,
     text,
@@ -108,7 +119,10 @@ export async function createBufferPost({
         {
           url: bufferImageUrl,
           metadata: {
-            altText: "Word of AI social post graphic",
+            altText:
+              brandSlug === "rallio"
+                ? "Rallio social post graphic"
+                : "Word of AI social post graphic",
             dimensions: {
               width: 1080,
               height: 1080,
@@ -169,6 +183,10 @@ export async function createBufferPost({
     id: success.post.id,
     dueAt: success.post.dueAt || null,
   };
+}
+
+function formatBrandName(brandSlug: BrandSlug) {
+  return brandSlug === "rallio" ? "Rallio" : "Word of AI";
 }
 
 function getBufferImageUrl({

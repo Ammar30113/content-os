@@ -1,7 +1,7 @@
 import "server-only";
 
-import { isRallioPost } from "@/lib/content/brand";
-import { platforms } from "@/lib/content/types";
+import { formatBrandLabel, getPostBrandSlug } from "@/lib/content/brand";
+import { platforms, type BrandSlug } from "@/lib/content/types";
 import { getConfiguredBufferPlatforms } from "@/lib/env";
 import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database";
@@ -34,17 +34,15 @@ export async function ensurePublishingJobsForPost(
     throw new Error(postError?.message || "Generated post not found.");
   }
 
-  if (isRallioPost(post.template_fields)) {
-    throw new Error(
-      "Rallio posts are manual-only until a Rallio Buffer channel is connected.",
-    );
-  }
-
+  const brandSlug = getPostBrandSlug(post.template_fields);
   const selectedPlatforms = getSelectedPublishingPlatforms(
     post.template_fields,
     post.platform,
   );
-  const effectivePlatforms = getConfiguredPublishingPlatforms(selectedPlatforms);
+  const effectivePlatforms = getConfiguredPublishingPlatforms(
+    selectedPlatforms,
+    brandSlug,
+  );
   const skippedPlatforms = selectedPlatforms.filter(
     (platform) => !effectivePlatforms.includes(platform),
   );
@@ -92,6 +90,7 @@ export async function ensurePublishingJobsForPost(
     userId,
     postId,
     platforms: effectivePlatforms,
+    brandSlug,
   });
 
   const resolvedScheduledFor =
@@ -101,6 +100,7 @@ export async function ensurePublishingJobsForPost(
       userId,
       postId,
       platform: effectivePlatforms[0],
+      brandSlug,
     })).toISOString();
 
   const { data: scheduledPost, error: scheduleError } = await supabase
@@ -207,8 +207,9 @@ export function getSelectedPublishingPlatforms(
 
 export function getConfiguredPublishingPlatforms(
   selectedPlatforms: PublishPlatform[],
+  brandSlug: BrandSlug = "word_of_ai",
 ): PublishPlatform[] {
-  const configured = getConfiguredBufferPlatforms();
+  const configured = getConfiguredBufferPlatforms(brandSlug);
 
   return selectedPlatforms.filter((platform) =>
     configured.includes(platform),
@@ -221,16 +222,18 @@ export async function getNextManualSlotForUser(
     userId,
     postId,
     platform,
+    brandSlug = "word_of_ai",
   }: {
     userId: string;
     postId?: string;
     platform: PublishPlatform;
+    brandSlug?: BrandSlug;
   },
 ) {
   const now = new Date();
   let query = supabase
     .from("publishing_jobs")
-    .select("scheduled_for")
+    .select("post_id, scheduled_for")
     .eq("user_id", userId)
     .eq("platform", platform)
     .in("status", ["queued", "ready", "published"])
@@ -246,9 +249,11 @@ export async function getNextManualSlotForUser(
     throw new Error(error.message);
   }
 
+  const brandJobs = await filterJobsByBrand(supabase, data || [], brandSlug);
+
   return getNextManualSlot(platform, {
     from: now,
-    occupiedSlots: (data || []).map((job) => job.scheduled_for),
+    occupiedSlots: brandJobs.map((job) => job.scheduled_for),
   });
 }
 
@@ -309,18 +314,20 @@ async function assertBufferFreeCapacity(
     userId,
     postId,
     platforms: selectedPlatforms,
+    brandSlug,
   }: {
     userId: string;
     postId: string;
     platforms: PublishPlatform[];
+    brandSlug: BrandSlug;
   },
 ) {
   const now = new Date().toISOString();
 
   for (const platform of selectedPlatforms) {
-    const { count, error } = await supabase
+    const { data, error } = await supabase
       .from("publishing_jobs")
-      .select("id", { count: "exact", head: true })
+      .select("post_id, scheduled_for")
       .eq("user_id", userId)
       .eq("platform", platform)
       .in("status", ["queued", "ready", "published"])
@@ -331,12 +338,51 @@ async function assertBufferFreeCapacity(
       throw new Error(error.message);
     }
 
-    if ((count || 0) >= BUFFER_FREE_CHANNEL_CAP) {
+    const brandJobs = await filterJobsByBrand(supabase, data || [], brandSlug);
+
+    if (brandJobs.length >= BUFFER_FREE_CHANNEL_CAP) {
       throw new Error(
-        `Buffer free cap reached for ${platform}. Keep this post in Content OS until one queued Buffer post clears.`,
+        `Buffer free cap reached for ${formatBrandLabel(brandSlug)} ${platform}. Keep this post in Content OS until one queued Buffer post clears.`,
       );
     }
   }
+}
+
+async function filterJobsByBrand(
+  supabase: ContentOsSupabaseClient,
+  jobs: { post_id: string | null; scheduled_for: string }[],
+  brandSlug: BrandSlug,
+) {
+  const postIds = Array.from(
+    new Set(
+      jobs
+        .map((job) => job.post_id)
+        .filter((postId): postId is string => Boolean(postId)),
+    ),
+  );
+
+  if (!postIds.length) {
+    return [];
+  }
+
+  const { data: posts, error } = await supabase
+    .from("generated_posts")
+    .select("id, template_fields")
+    .in("id", postIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const matchingPostIds = new Set(
+    (posts || [])
+      .filter((post) => getPostBrandSlug(post.template_fields) === brandSlug)
+      .map((post) => post.id),
+  );
+
+  return jobs.filter(
+    (job) => job.post_id !== null && matchingPostIds.has(job.post_id),
+  );
 }
 
 function getFutureIso(value: string | null) {

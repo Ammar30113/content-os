@@ -64,13 +64,6 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
       ),
     [posts, brandFilter],
   );
-  const selectedPosts = useMemo(
-    () => posts.filter((post) => selectedSet.has(post.id)),
-    [posts, selectedSet],
-  );
-  const selectedRallioCount = selectedPosts.filter(
-    (post) => getPostBrandSlug(post.template_fields) === "rallio",
-  ).length;
   const allVisibleSelected =
     visiblePosts.length > 0 && visiblePosts.every((post) => selectedSet.has(post.id));
 
@@ -97,17 +90,6 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
         message: null,
         details: [],
         error: "Select posts first.",
-      });
-      return;
-    }
-
-    if (endpoint.includes("send-to-buffer") && selectedRallioCount > 0) {
-      setState({
-        loading: null,
-        message: null,
-        details: [],
-        error:
-          "Rallio posts are manual-only until a Rallio Buffer channel is connected. Clear those selections before sending to Buffer.",
       });
       return;
     }
@@ -218,9 +200,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
             </button>
             <button
               type="button"
-              disabled={
-                Boolean(state.loading) || !selectedIds.length || selectedRallioCount > 0
-              }
+              disabled={Boolean(state.loading) || !selectedIds.length}
               onClick={() =>
                 runBulkAction(
                   "Sending selected",

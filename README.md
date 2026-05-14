@@ -56,6 +56,7 @@ CRON_SECRET=
 BUFFER_ACCESS_TOKEN=
 BUFFER_ORGANIZATION_ID=
 BUFFER_INSTAGRAM_CHANNEL_ID=
+BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID=
 BUFFER_X_CHANNEL_ID=
 BUFFER_LINKEDIN_CHANNEL_ID=
 ```
@@ -114,6 +115,7 @@ testing.
 - `/auth` - email/password sign in and sign up
 - `/app/dashboard` - metrics and recent posts
 - `/app/ideas` - save ideas and generate packages
+- `/app/rallio` - generate Rallio Instagram packages
 - `/app/posts` - review grid with approve/schedule/regenerate actions
 - `/app/posts/[id]` - editor, image upload/regeneration, scheduling
 - `/app/calendar` - scheduled and published posts
@@ -143,12 +145,14 @@ Buffer environment variables:
 BUFFER_ACCESS_TOKEN=
 BUFFER_ORGANIZATION_ID=
 BUFFER_INSTAGRAM_CHANNEL_ID=
+BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID=
 BUFFER_X_CHANNEL_ID=
 BUFFER_LINKEDIN_CHANNEL_ID=
 ```
 
-`BUFFER_INSTAGRAM_CHANNEL_ID` is enough for the current Instagram-first workflow.
-X and LinkedIn are optional; if those env vars are missing, Content OS skips those
+`BUFFER_INSTAGRAM_CHANNEL_ID` routes Word of AI Instagram posts.
+`BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID` routes Rallio Instagram posts. X and
+LinkedIn are optional; if those env vars are missing, Content OS skips those
 channels during Buffer handoff instead of failing the post.
 
 ## Local Development

@@ -282,16 +282,6 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   }
 
   async function handleSendToBuffer() {
-    if (isRallio) {
-      setState({
-        loading: null,
-        message: null,
-        error:
-          "Rallio posts are manual-only until a Rallio Instagram channel is connected in Buffer.",
-      });
-      return;
-    }
-
     setState({ loading: "Sending to Buffer", message: null, error: null });
 
     try {
@@ -548,10 +538,10 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           </div>
           {isRallio ? (
             <div className="rounded border border-[#c98236]/30 bg-[#c98236]/10 p-3 text-sm">
-              <p className="font-medium text-[#f1c892]">Rallio manual-only</p>
+              <p className="font-medium text-[#f1c892]">Rallio Buffer channel</p>
               <p className="mt-1 leading-5 text-zinc-400">
-                Review and export this package manually. Buffer handoff stays
-                disabled until the Rallio Instagram channel exists.
+                This package routes to the Rallio Instagram Buffer channel when
+                sent.
               </p>
             </div>
           ) : null}
@@ -673,15 +663,13 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           <button
             type="button"
             onClick={handleSendToBuffer}
-            disabled={Boolean(state.loading) || isRallio}
+            disabled={Boolean(state.loading)}
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded bg-[#d4ff00] px-3 text-sm font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68] disabled:opacity-50"
           >
             <Send size={16} />
-            {isRallio
-              ? "Rallio Buffer not connected"
-              : state.loading === "Sending to Buffer"
-                ? "Sending..."
-                : "Save and send to Buffer"}
+            {state.loading === "Sending to Buffer"
+              ? "Sending..."
+              : "Save and send to Buffer"}
           </button>
           <button
             type="button"
