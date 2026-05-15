@@ -25,6 +25,7 @@ export const postQuantities = ["1", "3", "5", "10", "20"] as const;
 export const ctaIntents = ["follow", "rallio", "quotestack"] as const;
 export const rallioCtaDoors = [
   "founding_supporter",
+  "local_guide",
   "ossington_30_guide",
   "claim_your_business",
 ] as const;

@@ -14,7 +14,8 @@ export const RALLIO_BRAND = {
   brand_slug: "rallio",
   name: "Rallio",
   handle: "@rallio",
-  launch_neighborhood: "Ossington",
+  launch_neighborhood: "Toronto + Rajkot",
+  launch_scope: "Toronto + Rajkot now, global later",
   category_focus: "food_drink",
   visual_style: "cream_ink_amber_moss_receipt",
 } as const;
@@ -22,31 +23,32 @@ export const RALLIO_BRAND = {
 export const RALLIO_SYSTEM_PROMPT = `
 You are the Rallio content brain inside Content OS.
 
-Rallio is not selling discounts. Rallio is a taste-first local discovery app for people who want to back the right neighborhood spots before they become obvious.
+Rallio is a taste-first local discovery app for people who want to back the right local spots before they become obvious.
 
 CURRENT LAUNCH CONTEXT
-- Launch neighborhood: Ossington
-- Category focus: food and drink
-- Audience: Toronto locals, neighborhood explorers, regulars, independent owners, taste-led supporters
+- Launch markets: Toronto + Rajkot
+- Expansion path: prove the local loop first, then broaden globally
+- Category focus: food and drink first
+- Audience: Toronto and Rajkot locals, neighborhood explorers, regulars, independent owners, taste-led supporters
 - Product stage: pre-launch / early supporter list
 
 VOICE
 - Warm, local, specific, confident.
-- Taste-first. Neighborhood-first. Owner-aware.
-- Write like someone who actually walks the strip, notices details, and respects operators.
+- Taste-first. City-aware. Owner-aware.
+- Write like someone who actually walks local food streets, notices details, and respects operators.
 - No hype. No "best deals near you". No "download now".
 
 HARD BANS
 - Do not promise instant app access or instant downloads.
-- Do not frame Rallio as a deals, coupons, discounts, cashback, or generic rewards app.
+- Do not frame Rallio as coupons, cashback, price promos, or generic rewards.
 - Do not hype perks. Perks can exist later, but they are not the story.
 - Do not say "save money", "exclusive rewards", "free food", or "limited-time deal".
-- Do not make broad citywide claims. Keep it narrow: Ossington, food/drink, local taste.
+- Do not say it is available everywhere. Write for Toronto + Rajkot now, with global later.
 
 FUNNEL CTA DOORS
 - founding_supporter: invite people to join the founding supporter list.
-- ossington_30_guide: invite people to save or request the Ossington 30 launch guide.
-- claim_your_business: invite Ossington food/drink owners to claim their business profile when the owner door opens.
+- local_guide: invite people to save or request the Toronto + Rajkot local guide.
+- claim_your_business: invite Toronto + Rajkot food/drink owners to claim their business profile when the owner door opens.
 
 OUTPUT STYLE
 - Instagram-first.
@@ -84,10 +86,10 @@ export type RallioTopicSeed = {
 
 export const rallioTopicSeeds: RallioTopicSeed[] = [
   {
-    id: "ossington-taste-manifesto",
-    title: "Ossington deserves a better local discovery loop",
+    id: "local-taste-manifesto",
+    title: "Toronto + Rajkot deserve a better local discovery loop",
     brief:
-      "Create a Rallio manifesto post about why local discovery should start with taste, regulars, and neighborhood trust instead of generic ratings or discount hunting. Keep it Ossington food/drink specific.",
+      "Create a Rallio manifesto post about why local discovery should start with taste, regulars, owner context, and local trust instead of generic ratings or promo chasing. Make it work for Toronto + Rajkot now, with global expansion later.",
     preferredTone: "founder",
     templateHint: "founder_story",
     rallioTemplateType: "rallio_manifesto",
@@ -96,21 +98,21 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     bestPostTypes: ["single", "reel", "carousel"],
     kpiIntent: "follower_growth_shares",
     visualDirection:
-      "Cream/ink manifesto card with one large thesis, tiny Ossington marker, and founding supporter CTA.",
+      "Cream/ink manifesto card with one large thesis, tiny Toronto + Rajkot marker, and founding supporter CTA.",
     captionStructure:
       "One-line local belief, short tension, three specific local-discovery behaviors, one founding supporter CTA.",
     doNotSay:
-      "Do not say download now, deals, rewards, coupons, or citywide discovery.",
+      "Do not say download now, coupons, cashback, reward hype, or available everywhere.",
     angleVariants: [
       {
-        working_title: "Taste Before Discounts",
+        working_title: "Taste Before Promo",
         pillar: "founder_story",
         hook_direction:
-          "Ossington does not need another deals feed. It needs a better taste map.",
+          "Local discovery does not need another promo feed. It needs a better taste map.",
         unique_takeaway:
           "The first Rallio loop is about finding the spots people would defend, not ranking every restaurant.",
         visual_direction: "Manifesto card with one thesis line and small neighborhood badge.",
-        do_not_repeat: "Do not use discount framing.",
+        do_not_repeat: "Do not use promo framing.",
         rallioTemplateType: "rallio_manifesto",
         contentType: "manifesto_reel",
         ctaDoor: "founding_supporter",
@@ -144,36 +146,36 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     ],
   },
   {
-    id: "ossington-30-guide",
-    title: "The Ossington 30 launch guide",
+    id: "local-guide",
+    title: "The Toronto + Rajkot launch guide",
     brief:
-      "Create Rallio content around a curated Ossington 30 food/drink guide. Position it as a taste-led launch map, not a ranking. Focus on why people should save the guide and use it to explore the strip more intentionally.",
+      "Create Rallio content around a curated Toronto + Rajkot food/drink guide. Position it as a taste-led launch map, not a ranking. Focus on why people should save the guide and use it to explore more intentionally.",
     preferredTone: "educational",
     templateHint: "creator_economy",
     rallioTemplateType: "rallio_spot_carousel",
     contentType: "spot_carousel",
-    ctaDoor: "ossington_30_guide",
+    ctaDoor: "local_guide",
     bestPostTypes: ["carousel", "single"],
     kpiIntent: "saves",
     visualDirection:
-      "Spot carousel cover with numbered cards, cream background, amber markers, and Ossington 30 language.",
+      "Spot carousel cover with numbered cards, cream background, amber markers, and Toronto + Rajkot guide language.",
     captionStructure:
       "Local hook, why the guide exists, 3 behaviors it helps with, save/request guide CTA.",
     doNotSay:
       "Do not imply the guide is live if not launched. Do not claim these are objectively the best spots.",
     angleVariants: [
       {
-        working_title: "Ossington Needs A Taste Map",
+        working_title: "Toronto + Rajkot Need A Taste Map",
         pillar: "creator_economy",
         hook_direction:
           "A good local guide should help you choose a night, not just scroll a list.",
         unique_takeaway:
-          "The Ossington 30 is a launch guide for choosing with more context.",
+          "The Toronto + Rajkot guide is a launch map for choosing with more context.",
         visual_direction: "Spot carousel with three numbered taste signals.",
         do_not_repeat: "Do not call it a top 30 ranking.",
         rallioTemplateType: "rallio_spot_carousel",
         contentType: "spot_carousel",
-        ctaDoor: "ossington_30_guide",
+        ctaDoor: "local_guide",
       },
       {
         working_title: "Save The Spots You Would Defend",
@@ -186,28 +188,28 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         do_not_repeat: "Do not promise app access.",
         rallioTemplateType: "rallio_receipt",
         contentType: "receipt_single",
-        ctaDoor: "ossington_30_guide",
+        ctaDoor: "local_guide",
       },
       {
-        working_title: "One Strip, Better Context",
+        working_title: "Two Markets, Better Context",
         pillar: "news_digest",
         hook_direction:
-          "The launch is narrow on purpose: one strip, one category, better signal.",
+          "The launch is focused on purpose: two markets, one category, better signal.",
         unique_takeaway:
-          "Starting with Ossington food/drink keeps the product honest and useful.",
+          "Starting with Toronto + Rajkot food/drink keeps the product honest and useful before going global.",
         visual_direction: "Manifesto card with one strip/one category framing.",
-        do_not_repeat: "Do not broaden to all of Toronto.",
+        do_not_repeat: "Do not claim Rallio is already global.",
         rallioTemplateType: "rallio_manifesto",
         contentType: "manifesto_reel",
-        ctaDoor: "ossington_30_guide",
+        ctaDoor: "local_guide",
       },
     ],
   },
   {
     id: "owner-claim-flow",
-    title: "Ossington owners should control their Rallio profile",
+    title: "Toronto + Rajkot owners should control their Rallio profile",
     brief:
-      "Create Rallio content for Ossington food/drink owners. Explain why claiming a business profile matters before launch: accurate details, better story, owner-approved context. Keep it practical and respectful.",
+      "Create Rallio content for Toronto + Rajkot food/drink owners. Explain why claiming a business profile matters before launch: accurate details, better story, owner-approved context. Keep it practical and respectful.",
     preferredTone: "founder",
     templateHint: "tutorial",
     rallioTemplateType: "rallio_owner_claim",
@@ -243,7 +245,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         unique_takeaway:
           "Rallio owner claims should improve context, not create another listing chore.",
         visual_direction: "Receipt card with owner context fields.",
-        do_not_repeat: "Do not mention discounts or rewards.",
+        do_not_repeat: "Do not mention coupons, perks, or reward hype.",
         rallioTemplateType: "rallio_receipt",
         contentType: "receipt_single",
         ctaDoor: "claim_your_business",
@@ -283,8 +285,9 @@ export function buildRallioRouletteBrief(seed: RallioTopicSeed, quantity: number
   return [
     seed.brief,
     "",
-    `Launch neighborhood: ${RALLIO_BRAND.launch_neighborhood}`,
-    "Category focus: Ossington food/drink.",
+    `Launch scope: ${RALLIO_BRAND.launch_scope}`,
+    `Launch markets: ${RALLIO_BRAND.launch_neighborhood}`,
+    "Category focus: Toronto + Rajkot food/drink.",
     `CTA door: ${seed.ctaDoor}.`,
     `KPI intent: ${seed.kpiIntent}.`,
     `Visual direction: ${seed.visualDirection}`,
@@ -376,8 +379,8 @@ export function templateForContentType(
 }
 
 export function formatRallioDoorLabel(ctaDoor: RallioCtaDoor) {
-  if (ctaDoor === "ossington_30_guide") {
-    return "Ossington 30 guide";
+  if (ctaDoor === "local_guide" || ctaDoor === "ossington_30_guide") {
+    return "Toronto + Rajkot guide";
   }
 
   if (ctaDoor === "claim_your_business") {
@@ -388,7 +391,7 @@ export function formatRallioDoorLabel(ctaDoor: RallioCtaDoor) {
 }
 
 export function bioHintForDoor(ctaDoor: RallioCtaDoor) {
-  if (ctaDoor === "ossington_30_guide") {
+  if (ctaDoor === "local_guide" || ctaDoor === "ossington_30_guide") {
     return "Rotate bio to Door C for 48 hours after this post.";
   }
 
@@ -400,17 +403,20 @@ export function bioHintForDoor(ctaDoor: RallioCtaDoor) {
 }
 
 export function enforceRallioCopySafety(content: GeneratedContent): GeneratedContent {
-  const banned = [
+  const strictBanned = [
     "download now",
     "instant download",
-    "deals",
-    "discount",
-    "discounts",
     "cashback",
     "free food",
     "exclusive rewards",
     "limited-time deal",
+    "limited time deal",
+    "coupon",
+    "coupons",
+    "promo code",
+    "save money",
   ];
+  const contextualBanned = ["deal", "deals", "discount", "discounts", "reward", "rewards"];
   const joined = [
     content.hook,
     content.headline,
@@ -422,11 +428,40 @@ export function enforceRallioCopySafety(content: GeneratedContent): GeneratedCon
   ]
     .join(" ")
     .toLowerCase();
-  const hit = banned.find((phrase) => joined.includes(phrase));
+  const hit =
+    strictBanned.find((phrase) => joined.includes(phrase)) ||
+    findUnsafeContextualTerm(joined, contextualBanned);
 
   if (hit) {
     throw new Error(`Rallio safety gate blocked banned phrasing: "${hit}".`);
   }
 
   return content;
+}
+
+function findUnsafeContextualTerm(text: string, terms: string[]) {
+  for (const term of terms) {
+    const pattern = new RegExp(`\\b${escapeRegExp(term)}\\b`, "g");
+    let match: RegExpExecArray | null;
+
+    while ((match = pattern.exec(text)) !== null) {
+      if (!isRejectingContextUse(text, match.index)) {
+        return term;
+      }
+    }
+  }
+
+  return null;
+}
+
+function isRejectingContextUse(text: string, index: number) {
+  const prefix = text.slice(Math.max(0, index - 120), index).toLowerCase();
+
+  return /(no|not|never|without|avoid|avoids|against|instead of|rather than|do not|don't|isn't|is not|not selling|not another|not about|beyond)\s+[\w\s-]{0,80}$/.test(
+    prefix,
+  );
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

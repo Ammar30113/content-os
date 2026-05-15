@@ -122,7 +122,7 @@ function RallioFrame({
           zIndex: 4,
         }}
       >
-        RALLIO / OSSINGTON
+        RALLIO / TORONTO + RAJKOT
       </div>
       {children}
       <div
@@ -161,7 +161,7 @@ function RallioFrame({
 function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
   const headline = displayHeadline(
     fields.headline,
-    "Ossington deserves a better local signal",
+    "Local discovery needs better signal",
     76,
   );
   const subhead = compactText(
@@ -173,7 +173,7 @@ function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
   return (
     <RallioFrame chip="Launch note" fields={fields} footer="founding supporter">
       <HeroBlock
-        kicker="not another deals app"
+        kicker="not another promo app"
         headline={headline}
         subhead={subhead}
       />
@@ -181,7 +181,7 @@ function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
         lines={[
           "regulars over ratings",
           "owner context over generic cards",
-          "taste over discount hunting",
+          "taste over promo chasing",
         ]}
       />
     </RallioFrame>
@@ -191,7 +191,7 @@ function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
 function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
   const headline = displayHeadline(
     fields.headline,
-    "Three Ossington stops worth remembering",
+    "Three local stops worth remembering",
     70,
   );
   const subhead = compactText(
@@ -208,7 +208,7 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
       ];
 
   return (
-    <RallioFrame chip="Ossington 30" fields={fields} footer="save the route">
+    <RallioFrame chip="Toronto + Rajkot" fields={fields} footer="save the route">
       <HeroBlock kicker="food / drink / regulars" headline={headline} subhead={subhead} />
       <div
         style={{
@@ -266,7 +266,7 @@ function RallioReceiptTemplate({ fields }: { fields: TemplateFields }) {
             textTransform: "uppercase",
           }}
         >
-          Ossington field receipt
+          Local field receipt
         </div>
         <div
           style={{
@@ -324,7 +324,7 @@ function RallioReceiptTemplate({ fields }: { fields: TemplateFields }) {
           }}
         >
           <span>{safeText(fields.cta_door, "founding_supporter").replaceAll("_", " ")}</span>
-          <span>{safeText(fields.subtotal, "No discount needed")}</span>
+          <span>{safeText(fields.subtotal, "Taste-first")}</span>
         </div>
       </div>
     </RallioFrame>
@@ -339,7 +339,7 @@ function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
   );
   const attribution = compactText(
     fields.attribution,
-    "Ossington regular",
+    "Toronto + Rajkot regular",
     54,
   );
 

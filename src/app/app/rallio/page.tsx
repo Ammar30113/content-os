@@ -23,7 +23,7 @@ export default async function RallioPage() {
       <PageHeader
         eyebrow="Rallio"
         title="Rallio Content"
-        description="Generate taste-first Ossington food and drink posts for manual review. Word of AI stays separate."
+        description="Generate taste-first Toronto + Rajkot posts for review. Word of AI stays separate."
       />
       <section className="grid gap-6 p-6 lg:p-8 xl:grid-cols-[1fr_390px]">
         <IdeaGeneratorForm brandSlug="rallio" />
@@ -34,10 +34,11 @@ export default async function RallioPage() {
               Rallio rules
             </h2>
             <div className="mt-4 space-y-3 text-sm leading-6 text-[#d8c9b4]">
-              <p>Launch neighborhood: Ossington.</p>
-              <p>Category focus: food and drink.</p>
+              <p>Launch markets: Toronto + Rajkot now.</p>
+              <p>Expansion path: prove the local loop first, then broaden globally.</p>
+              <p>Category focus: food and drink first.</p>
               <p>Tone: taste-first, local, operator-aware.</p>
-              <p>No deals, discounts, instant-download, or reward hype.</p>
+              <p>Avoid coupons, cashback, instant-download claims, or reward hype.</p>
             </div>
           </section>
 
@@ -49,7 +50,7 @@ export default async function RallioPage() {
                 the early supporter list.
               </p>
               <p>
-                <span className="text-white">Ossington 30 guide:</span> drive
+                <span className="text-white">Toronto + Rajkot guide:</span> drive
                 guide saves and requests.
               </p>
               <p>

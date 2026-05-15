@@ -622,7 +622,7 @@ export function IdeaGeneratorForm({
           </h2>
           <p className="text-sm text-zinc-500">
             {isRallio
-              ? "Generate taste-first Ossington content for manual review."
+              ? "Generate taste-first Toronto + Rajkot content."
               : "Brief it once, generate the package, render or attach the image."}
           </p>
         </div>
@@ -933,8 +933,8 @@ export function IdeaGeneratorForm({
         </div>
         {isRallio ? (
           <div className="rounded border border-[#c8923a]/30 bg-[#c8923a]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
-            Rallio posts are Instagram-only and manual review/export for now.
-            Buffer is disabled until a Rallio channel exists.
+            Rallio posts are Instagram-only. When sent to Buffer, they use the
+            Rallio Instagram channel and stay separate from Word of AI.
           </div>
         ) : null}
         {form.template_hint === "meme" ? (

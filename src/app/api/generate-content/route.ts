@@ -169,7 +169,8 @@ const fallbackHashtags = [
 ];
 
 const rallioFallbackHashtags = [
-  "#ossington",
+  "#toronto",
+  "#rajkot",
   "#torontofood",
   "#torontofoodie",
   "#torontolife",
@@ -426,7 +427,7 @@ function createRallioQualityFallbackContent({
   rallioFallback?: RallioFallbackMetadata;
 }) {
   const hook = scrubGenericCopy(candidate.hook || candidate.headline);
-  const headline = scrubGenericCopy(candidate.headline || "Ossington Needs Better Signal");
+  const headline = scrubGenericCopy(candidate.headline || "Local Discovery Needs Better Signal");
   const subhead = scrubGenericCopy(
     candidate.subhead ||
       "Local discovery should start with taste, regulars, and owner context.",
@@ -435,7 +436,7 @@ function createRallioQualityFallbackContent({
     ...getFallbackActionBullets(candidate, contrast),
     ...rallioFallbackActionBullets,
   ]).slice(0, 4);
-  const finalLine = "This isn't a deals feed. It's a better local signal.";
+  const finalLine = "This isn't a promo feed. It's a better local signal.";
   const hashtags = normalizeFallbackHashtags([
     ...(candidate.hashtags || []),
     ...rallioFallbackHashtags,
@@ -443,9 +444,9 @@ function createRallioQualityFallbackContent({
   const ctaDoor = rallioFallback?.ctaDoor || "founding_supporter";
   const cta =
     ctaDoor === "claim_your_business"
-      ? "Ossington owners: save this for the claim-your-business door."
-      : ctaDoor === "ossington_30_guide"
-        ? "Save this for the Ossington 30 launch guide."
+      ? "Local owners: save this for the claim-your-business door."
+      : ctaDoor === "local_guide" || ctaDoor === "ossington_30_guide"
+        ? "Save this for the Toronto + Rajkot local guide."
         : "Save this if you want the first Rallio supporter drop.";
   const caption = [
     hook,
@@ -804,7 +805,7 @@ export async function POST(request: Request) {
                 ? "Repair pass: keep the planned angle, but rewrite the weak caption, contrast differences, platform variants, and final line so the output passes the quality gate. Do not soften the hook."
                 : "",
               isRallio
-                ? "This is a Rallio package. You may mention Rallio as the local discovery project, but never use download-now, discount, reward-hype, or broad citywide app language."
+                ? "This is a Rallio package. You may mention Rallio as the local discovery project for Toronto + Rajkot now and global later, but never use download-now, coupon, cashback, price-promo, reward-hype, or app-store CTA language."
                 : PRODUCT_MENTION_CONFIG.product_mentions_enabled
                   ? "Product mentions may be used only when explicitly relevant."
                   : "Product mentions are paused. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",
@@ -1000,7 +1001,7 @@ export async function POST(request: Request) {
                 },
                 cta_rotation:
                   isRallio
-                    ? "Use one of the Rallio funnel doors only: founding_supporter, ossington_30_guide, claim_your_business. No download-now CTA."
+                    ? "Use one of the Rallio funnel doors only: founding_supporter, local_guide, claim_your_business. No app-store or download-now CTA."
                     : PRODUCT_MENTION_CONFIG.product_mentions_enabled
                       ? "Use follow most often. Rallio and QuoteStack mentions should be rare and natural. Never hard sell."
                       : "Use follow CTAs only. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",
