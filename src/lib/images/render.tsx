@@ -1,11 +1,42 @@
 import "server-only";
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { ImageResponse } from "next/dist/compiled/@vercel/og/index.node.js";
 import sharp from "sharp";
 
 import type { TemplateFields, TemplateType } from "@/lib/content/types";
 import { TemplateRenderer } from "@/templates";
 import { CANVAS_SIZE } from "@/templates/shared";
+
+const FONTS_DIR = join(process.cwd(), "src", "lib", "fonts");
+
+const fonts = [
+  {
+    name: "Fraunces",
+    data: readFileSync(join(FONTS_DIR, "Fraunces.ttf")),
+    weight: 800 as const,
+    style: "normal" as const,
+  },
+  {
+    name: "Fraunces",
+    data: readFileSync(join(FONTS_DIR, "Fraunces-Italic.ttf")),
+    weight: 600 as const,
+    style: "italic" as const,
+  },
+  {
+    name: "Manrope",
+    data: readFileSync(join(FONTS_DIR, "Manrope.otf")),
+    weight: 700 as const,
+    style: "normal" as const,
+  },
+  {
+    name: "JetBrains Mono",
+    data: readFileSync(join(FONTS_DIR, "JetBrainsMono.ttf")),
+    weight: 700 as const,
+    style: "normal" as const,
+  },
+];
 
 export async function renderTemplatePng(
   templateType: TemplateType,
@@ -16,6 +47,7 @@ export async function renderTemplatePng(
     {
       width: CANVAS_SIZE,
       height: CANVAS_SIZE,
+      fonts,
     },
   );
 

@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./src/lib/fonts/**/*"],
+  },
 };
 
 export default nextConfig;

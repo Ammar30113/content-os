@@ -191,7 +191,7 @@ function RallioReceiptTemplate({ fields }: { fields: TemplateFields }) {
         <div
           style={{
             color: rallio.ink,
-            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            fontFamily: "JetBrains Mono, ui-monospace, monospace",
             fontSize: 26,
             fontWeight: 900,
             letterSpacing: 2,
@@ -221,7 +221,7 @@ function RallioReceiptTemplate({ fields }: { fields: TemplateFields }) {
             borderTop: `1px dashed ${rallio.ink}`,
             display: "flex",
             justifyContent: "space-between",
-            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            fontFamily: "JetBrains Mono, ui-monospace, monospace",
             fontSize: 28,
             fontWeight: 900,
             color: rallio.ink,
@@ -243,7 +243,7 @@ function ReceiptRow({ label, value }: { label: string; value: string }) {
       style={{
         display: "flex",
         justifyContent: "space-between",
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+        fontFamily: "JetBrains Mono, ui-monospace, monospace",
         fontSize: 24,
         fontWeight: 700,
         color: rallio.ink,
