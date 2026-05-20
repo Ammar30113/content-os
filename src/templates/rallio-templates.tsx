@@ -673,9 +673,15 @@ function getReceiptRows(
 }
 
 function parseReceiptLine(line: string): { label: string; value: string } {
-  const match = line.match(/^(.+?)\s*(?:[-—:·|]\s*|\s{2,})(\S+)\s*$/);
-  if (match) {
-    return { label: match[1].trim(), value: match[2].trim() };
+  // Grab the last short token (number or short word) after the last separator
+  const lastSep = line.match(/^(.+)\s*[-—:·|]\s*(\S{1,8})\s*$/);
+  if (lastSep) {
+    return { label: lastSep[1].trim(), value: lastSep[2].trim() };
+  }
+  // Fallback: last token after 2+ spaces
+  const spaceSep = line.match(/^(.+?)\s{2,}(\S+)\s*$/);
+  if (spaceSep) {
+    return { label: spaceSep[1].trim(), value: spaceSep[2].trim() };
   }
   return { label: safeText(line, ""), value: "" };
 }
