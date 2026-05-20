@@ -1,8 +1,7 @@
 import "server-only";
 
 import { createBufferPost } from "@/lib/buffer/client";
-import { getPostBrandSlug } from "@/lib/content/brand";
-import { normalizeHashtags, platforms, type BrandSlug } from "@/lib/content/types";
+import { normalizeHashtags, platforms } from "@/lib/content/types";
 import { getConfiguredBufferPlatforms } from "@/lib/env";
 import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database";
@@ -70,7 +69,6 @@ export async function sendPublishingJobToBuffer(
     throw new Error(`${platform} has already been sent to Buffer.`);
   }
 
-  const brandSlug = getPostBrandSlug(post.template_fields);
   const nextAttempts = job.attempts + 1;
 
   try {
@@ -84,7 +82,6 @@ export async function sendPublishingJobToBuffer(
     const bufferPost = await createBufferPost({
       postId: post.id,
       platform,
-      brandSlug,
       text: buildPlatformText(post, platform),
       imageUrl: post.image_url,
       scheduledFor: new Date(job.scheduled_for).toISOString(),
@@ -92,7 +89,6 @@ export async function sendPublishingJobToBuffer(
     const templateFields = withBufferPostMetadata({
       templateFields: post.template_fields,
       platform,
-      brandSlug,
       bufferPostId: bufferPost.id,
       scheduledFor: bufferPost.dueAt || job.scheduled_for,
     });
@@ -273,13 +269,11 @@ function clampForX(value: string) {
 function withBufferPostMetadata({
   templateFields,
   platform,
-  brandSlug,
   bufferPostId,
   scheduledFor,
 }: {
   templateFields: Json;
   platform: PublishPlatform;
-  brandSlug: BrandSlug;
   bufferPostId: string;
   scheduledFor: string;
 }): Json {
@@ -293,7 +287,6 @@ function withBufferPostMetadata({
     buffer_posts: {
       ...existingBufferPosts,
       [platform]: {
-        brand_slug: brandSlug,
         buffer_post_id: bufferPostId,
         status: "ready",
         sent_at: new Date().toISOString(),

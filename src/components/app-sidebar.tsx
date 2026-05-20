@@ -4,14 +4,12 @@ import {
   FileText,
   LayoutDashboard,
   Lightbulb,
-  MapPin,
   Settings,
 } from "lucide-react";
 
 const navigationItems = [
   { href: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/app/ideas", label: "Ideas", icon: Lightbulb },
-  { href: "/app/rallio", label: "Rallio", icon: MapPin },
   { href: "/app/posts", label: "Posts", icon: FileText },
   { href: "/app/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/app/settings", label: "Settings", icon: Settings },
@@ -22,14 +20,14 @@ export function AppSidebar() {
     <aside className="flex min-h-screen w-full flex-col border-r border-zinc-800 bg-[#0a0a0b] text-zinc-200 md:sticky md:top-0 md:w-64">
       <div className="border-b border-zinc-800 p-5">
         <Link href="/" className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded bg-[#d4ff00] text-sm font-bold text-[#0a0a0b]">
-            CO
+          <span className="grid size-10 place-items-center rounded bg-[#C8923A] text-sm font-bold text-[#0a0a0b]">
+            R
           </span>
           <span>
             <span className="block text-sm font-semibold text-white">
-              Content OS
+              Rallio
             </span>
-            <span className="block text-xs text-zinc-500">@wordofaii</span>
+            <span className="block text-xs text-zinc-500">@rallio</span>
           </span>
         </Link>
       </div>
@@ -57,10 +55,10 @@ export function AppSidebar() {
         <div className="rounded border border-zinc-800 bg-zinc-950 p-3">
           <p className="text-xs font-medium text-zinc-400">Workflow</p>
           <p className="mt-1 text-sm font-semibold text-white">
-            5 posts under 20 min
+            Idea to image to schedule
           </p>
           <p className="mt-2 text-xs leading-5 text-zinc-500">
-            Idea to AI package to branded image to schedule.
+            Build the Rallio taste map one post at a time.
           </p>
         </div>
       </div>

@@ -6,7 +6,6 @@ import {
   assertConfiguredSupabaseProjectUrl,
   checkSupabaseProjectUrl,
 } from "@/lib/supabase-safety";
-import type { BrandSlug } from "@/lib/content/types";
 
 type EnvStatus = {
   ok: boolean;
@@ -26,7 +25,6 @@ type BufferEnvStatus = {
   accessTokenConfigured: boolean;
   organizationIdConfigured: boolean;
   channels: BufferChannelMap;
-  brandChannels: Record<BrandSlug, BufferChannelMap>;
   connectedChannels: BufferPlatform[];
   connectedTargets: string[];
   missing: string[];
@@ -129,35 +127,20 @@ export function getOpenAIEnv() {
 
 export function getBufferEnvStatus(): BufferEnvStatus {
   const channels: BufferChannelMap = {
-    instagram: process.env.BUFFER_INSTAGRAM_CHANNEL_ID || null,
-    x: process.env.BUFFER_X_CHANNEL_ID || null,
-    linkedin: process.env.BUFFER_LINKEDIN_CHANNEL_ID || null,
+    instagram: process.env.BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID || null,
+    x: null,
+    linkedin: null,
   };
-  const brandChannels: Record<BrandSlug, BufferChannelMap> = {
-    word_of_ai: channels,
-    rallio: {
-      instagram: process.env.BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID || null,
-      x: null,
-      linkedin: null,
-    },
-  };
-  const connectedTargets = (Object.entries(brandChannels) as [
-    BrandSlug,
-    BufferChannelMap,
-  ][]).flatMap(([brandSlug, channelMap]) =>
-    (Object.entries(channelMap) as [BufferPlatform, string | null][])
-      .filter(([, value]) => Boolean(value))
-      .map(([platform]) => `${formatBufferBrand(brandSlug)} ${platform}`),
-  );
-  const connectedChannels = Array.from(
-    new Set(
-      (Object.values(brandChannels) as BufferChannelMap[]).flatMap((channelMap) =>
-        (Object.entries(channelMap) as [BufferPlatform, string | null][])
-          .filter(([, value]) => Boolean(value))
-          .map(([platform]) => platform),
-      ),
-    ),
-  );
+  const connectedTargets = (
+    Object.entries(channels) as [BufferPlatform, string | null][]
+  )
+    .filter(([, value]) => Boolean(value))
+    .map(([platform]) => `Rallio ${platform}`);
+  const connectedChannels = (
+    Object.entries(channels) as [BufferPlatform, string | null][]
+  )
+    .filter(([, value]) => Boolean(value))
+    .map(([platform]) => platform);
   const required: [string, string | undefined][] = [
     ["BUFFER_ACCESS_TOKEN", process.env.BUFFER_ACCESS_TOKEN],
     ["BUFFER_ORGANIZATION_ID", process.env.BUFFER_ORGANIZATION_ID],
@@ -167,9 +150,7 @@ export function getBufferEnvStatus(): BufferEnvStatus {
     .map(([name]) => name);
 
   if (!connectedTargets.length) {
-    missing.push(
-      "BUFFER_INSTAGRAM_CHANNEL_ID or BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID or BUFFER_X_CHANNEL_ID or BUFFER_LINKEDIN_CHANNEL_ID",
-    );
+    missing.push("BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID");
   }
 
   const ok =
@@ -182,7 +163,6 @@ export function getBufferEnvStatus(): BufferEnvStatus {
     accessTokenConfigured: Boolean(process.env.BUFFER_ACCESS_TOKEN),
     organizationIdConfigured: Boolean(process.env.BUFFER_ORGANIZATION_ID),
     channels,
-    brandChannels,
     connectedChannels,
     connectedTargets,
     missing,
@@ -192,21 +172,8 @@ export function getBufferEnvStatus(): BufferEnvStatus {
   };
 }
 
-export function getConfiguredBufferPlatforms(
-  brandSlug?: BrandSlug,
-): BufferPlatform[] {
-  const status = getBufferEnvStatus();
-
-  if (!brandSlug) {
-    return status.connectedChannels;
-  }
-
-  return (Object.entries(status.brandChannels[brandSlug]) as [
-    BufferPlatform,
-    string | null,
-  ][])
-    .filter(([, value]) => Boolean(value))
-    .map(([platform]) => platform);
+export function getConfiguredBufferPlatforms(): BufferPlatform[] {
+  return getBufferEnvStatus().connectedChannels;
 }
 
 export function getBufferEnv() {
@@ -226,25 +193,13 @@ export function getBufferEnv() {
     accessToken,
     organizationId,
     channels: status.channels,
-    brandChannels: status.brandChannels,
   };
 }
 
-export function getBufferChannelEnvName(
-  platform: BufferPlatform,
-  brandSlug: BrandSlug = "word_of_ai",
-) {
-  if (brandSlug === "rallio") {
-    return platform === "instagram"
-      ? "BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID"
-      : `BUFFER_RALLIO_${platform.toUpperCase()}_CHANNEL_ID`;
-  }
-
-  return `BUFFER_${platform.toUpperCase()}_CHANNEL_ID`;
-}
-
-function formatBufferBrand(brandSlug: BrandSlug) {
-  return brandSlug === "rallio" ? "Rallio" : "Word of AI";
+export function getBufferChannelEnvName(platform: BufferPlatform) {
+  return platform === "instagram"
+    ? "BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID"
+    : `BUFFER_RALLIO_${platform.toUpperCase()}_CHANNEL_ID`;
 }
 
 export function assertContentOsSupabaseWriteSafety() {

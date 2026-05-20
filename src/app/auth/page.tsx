@@ -12,20 +12,20 @@ export default function AuthPage() {
             href="/"
             className="inline-flex items-center gap-3 text-sm font-semibold text-zinc-300"
           >
-            <span className="grid size-9 place-items-center rounded bg-[#d4ff00] text-[#0a0a0b]">
-              CO
+            <span className="grid size-9 place-items-center rounded bg-[#C8923A] text-[#0a0a0b]">
+              R
             </span>
-            Content OS
+            Rallio Content OS
           </Link>
-          <p className="mt-10 text-sm font-semibold uppercase tracking-[0.18em] text-[#d4ff00]">
+          <p className="mt-10 text-sm font-semibold uppercase tracking-[0.18em] text-[#C8923A]">
             Private workspace
           </p>
           <h1 className="mt-4 max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl">
-            Turn rough AI ideas into a week of Word of AI posts.
+            Turn local taste into a week of Rallio posts.
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-8 text-zinc-400">
-            Sign in to generate content packages, render branded templates, and
-            schedule your weekly publishing queue.
+            Sign in to generate Instagram packages, render branded templates,
+            and schedule your weekly publishing queue.
           </p>
         </section>
         <Suspense

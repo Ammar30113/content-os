@@ -18,12 +18,12 @@ export default function Home() {
       <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-6 sm:px-8 lg:px-10">
         <header className="flex items-center justify-between border-b border-white/10 pb-5">
           <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded bg-[#d4ff00] text-sm font-semibold text-[#0a0a0b]">
-              CO
+            <div className="grid size-10 place-items-center rounded bg-[#C8923A] text-sm font-semibold text-[#0a0a0b]">
+              R
             </div>
             <div>
-              <p className="text-sm font-semibold">Content OS</p>
-              <p className="text-xs text-zinc-500">@wordofaii workspace</p>
+              <p className="text-sm font-semibold">Rallio Content OS</p>
+              <p className="text-xs text-zinc-500">@rallio workspace</p>
             </div>
           </div>
           <Link
@@ -36,15 +36,16 @@ export default function Home() {
 
         <div className="grid flex-1 items-center gap-10 py-12 lg:grid-cols-[0.95fr_1.05fr] lg:py-16">
           <div className="max-w-2xl">
-            <p className="mb-4 text-sm font-medium text-[#d4ff00]">
-              Private AI content operating system
+            <p className="mb-4 text-sm font-medium text-[#C8923A]">
+              Rallio content operating system
             </p>
             <h1 className="text-4xl font-semibold leading-tight text-white sm:text-6xl">
-              Content OS
+              Rallio Content OS
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-8 text-zinc-400">
-              A focused internal tool for turning ideas, briefs, and URLs into
-              complete Word of AI post packages with branded 1080x1080 images.
+              Build the Rallio taste map one post at a time. Turn ideas,
+              briefs, and source links into Instagram-ready post packages with
+              branded 1080x1080 images.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link

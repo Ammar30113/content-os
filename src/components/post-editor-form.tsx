@@ -21,7 +21,6 @@ import {
   postStatuses,
   templateTypes,
 } from "@/lib/content/types";
-import { isRallioPost } from "@/lib/content/brand";
 import type { Database, Json } from "@/types/database";
 
 const MANUAL_SLOT_WINDOW_DAYS = 7;
@@ -85,28 +84,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     () => parseJsonField<Record<string, unknown>>(form.template_fields, {}),
     [form.template_fields],
   );
-  const isRallio = isRallioPost(parsedTemplateFields);
-  const selectedChannels = useMemo(() => {
-    if (isRallio) {
-      return ["instagram"];
-    }
-
-    const stored = parsedTemplateFields.selected_platforms;
-
-    if (Array.isArray(stored)) {
-      const validChannels = stored.filter(
-        (item): item is (typeof platforms)[number] =>
-          typeof item === "string" &&
-          platforms.includes(item as (typeof platforms)[number]),
-      );
-
-      if (validChannels.length) {
-        return validChannels;
-      }
-    }
-
-    return [post.platform];
-  }, [isRallio, parsedTemplateFields, post.platform]);
+  const selectedChannels = useMemo(() => ["instagram"], []);
   const hashtagsText = normalizeHashtags(form.hashtags).join(" ");
   const instagramPackage = [form.caption.trim(), hashtagsText]
     .filter(Boolean)
@@ -362,7 +340,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   }
 
   function applyNextSlot() {
-    const nextSlot = getNextManualSlot(isRallio ? "instagram" : post.platform);
+    const nextSlot = getNextManualSlot("instagram");
     updateField("scheduled_for", formatDateTimeLocal(nextSlot));
     setState({
       loading: null,
@@ -536,15 +514,13 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <p className="font-medium text-white">Prepared channels</p>
             <p className="mt-1 text-zinc-500">{selectedChannels.join(", ")}</p>
           </div>
-          {isRallio ? (
-            <div className="rounded border border-[#c98236]/30 bg-[#c98236]/10 p-3 text-sm">
-              <p className="font-medium text-[#f1c892]">Rallio Buffer channel</p>
-              <p className="mt-1 leading-5 text-zinc-400">
-                This package routes to the Rallio Instagram Buffer channel when
-                sent.
-              </p>
-            </div>
-          ) : null}
+          <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm">
+            <p className="font-medium text-[#f5ebdc]">Rallio Buffer channel</p>
+            <p className="mt-1 leading-5 text-zinc-400">
+              This package routes to the Rallio Instagram Buffer channel when
+              sent.
+            </p>
+          </div>
           {bufferPosts.length ? (
             <div className="space-y-2 rounded border border-[#b8c28a]/30 bg-[#b8c28a]/10 p-3 text-sm">
               <p className="font-medium text-[#eef7c5]">Buffer handoff</p>

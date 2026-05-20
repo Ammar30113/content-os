@@ -1,15 +1,11 @@
 import { z } from "zod";
 
 export const platforms = ["instagram", "x", "linkedin"] as const;
-export const brandSlugs = ["word_of_ai", "rallio"] as const;
 export const postTypes = ["single", "carousel", "reel", "thread"] as const;
-export const contentModes = ["standard", "authority_pov"] as const;
 export const tones = [
   "educational",
-  "viral",
   "founder",
   "contrarian",
-  "news",
   "tutorial",
 ] as const;
 export const templateTypes = [
@@ -22,7 +18,6 @@ export const templateTypes = [
 ] as const;
 export const templateHints = ["auto", ...templateTypes] as const;
 export const postQuantities = ["1", "3", "5", "10", "20"] as const;
-export const ctaIntents = ["follow", "rallio", "quotestack"] as const;
 export const rallioCtaDoors = [
   "founding_supporter",
   "local_guide",
@@ -64,17 +59,7 @@ export const batchAngleSchema = z.object({
   audience_pain_point: z.string(),
   unique_takeaway: z.string(),
   caption_structure: z.string(),
-  cta_intent: z.enum(ctaIntents),
   do_not_repeat: z.string(),
-  authority_figure: z.string().nullable(),
-  topical_event: z.string().nullable(),
-  contrarian_take: z.string().nullable(),
-  builder_lesson: z.string().nullable(),
-  meme_trend_title: z.string().nullable(),
-  meme_trend_source: z.string().nullable(),
-  meme_format: z.string().nullable(),
-  meme_adaptation: z.string().nullable(),
-  brand_slug: z.enum(brandSlugs).nullable(),
   rallio_template_type: z.enum(rallioTemplateTypes).nullable(),
   rallio_content_type: z.enum(rallioContentTypes).nullable(),
   rallio_cta_door: z.enum(rallioCtaDoors).nullable(),
@@ -98,7 +83,6 @@ export const recentContextSchema = z.object({
 export const ideaInputSchema = z
   .object({
     idea_id: z.string().uuid().optional(),
-    brand_slug: z.enum(brandSlugs).optional().default("word_of_ai"),
     title: z.string().trim().min(3, "Add a sharper idea title."),
     brief: z.string().trim().default(""),
     source_url: z.string().trim().url().optional().or(z.literal("")),
@@ -108,11 +92,6 @@ export const ideaInputSchema = z
       .min(1)
       .optional()
       .default(["instagram"]),
-    content_mode: z.enum(contentModes).optional().default("standard"),
-    recognizable_figure: z.string().trim().optional().or(z.literal("")),
-    current_event: z.string().trim().optional().or(z.literal("")),
-    contrarian_take: z.string().trim().optional().or(z.literal("")),
-    builder_lesson: z.string().trim().optional().or(z.literal("")),
     post_type: z.enum(postTypes),
     tone: z.enum(tones),
     template_hint: z.enum(templateHints),
@@ -132,27 +111,7 @@ export const ideaInputSchema = z
     recent_context: recentContextSchema.optional(),
   })
   .superRefine((input, ctx) => {
-    const hasBrief = input.brief.trim().length >= 10;
-    const hasAuthorityContext = [
-      input.recognizable_figure,
-      input.current_event,
-      input.contrarian_take,
-      input.builder_lesson,
-    ].some((value) => (value || "").trim().length >= 3);
-
-    if (input.content_mode === "authority_pov") {
-      if (!hasBrief && !hasAuthorityContext) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["brief"],
-          message: "Add a brief or fill in the Authority POV fields.",
-        });
-      }
-
-      return;
-    }
-
-    if (!hasBrief) {
+    if (input.brief.trim().length < 10) {
       ctx.addIssue({
         code: "custom",
         path: ["brief"],
@@ -165,15 +124,9 @@ export const templateFieldsSchema = z
   .object({
     headline: z.string().optional(),
     subhead: z.string().optional(),
-    source_name: z.string().optional(),
-    source_logo: z.string().optional(),
-    source_logo_url: z.string().optional(),
-    date: z.string().optional(),
-    hero_image_url: z.string().optional(),
     reference_image_url: z.string().optional(),
     reference_image_asset_id: z.string().optional(),
     selected_platforms: z.array(z.enum(platforms)).optional(),
-    brand_slug: z.enum(brandSlugs).optional(),
     brand_handle: z.string().optional(),
     launch_neighborhood: z.string().optional(),
     category_focus: z.string().optional(),
@@ -185,7 +138,6 @@ export const templateFieldsSchema = z
     bio_rotation_hint: z.string().optional(),
     kpi_intent: z.string().optional(),
     business_name: z.string().optional(),
-    spot_number: z.string().optional(),
     spot_category: z.string().optional(),
     spot_address: z.string().optional(),
     spot_list_name: z.string().optional(),
@@ -203,30 +155,12 @@ export const templateFieldsSchema = z
     receipt_lines: z.array(z.string()).optional(),
     subtotal: z.string().optional(),
     owner_steps: z.array(z.string()).optional(),
-    image_mode: z.enum(imageModes).optional(),
-    content_mode: z.enum(contentModes).optional(),
-    product_logo: z.string().optional(),
-    visual_subject: z.string().optional(),
-    swipe_hint: z.string().optional(),
-    bottom_label: z.string().optional(),
     info_rows: z.array(z.string()).optional(),
-    tools: z.array(z.string()).optional(),
-    tool_logos: z.array(z.string()).optional(),
-    step_number: z.string().optional(),
-    code_snippet: z.string().optional(),
-    stat: z.string().optional(),
     quote: z.string().optional(),
     attribution: z.string().optional(),
-    pull_quote: z.string().optional(),
-    meme_setup: z.string().optional(),
-    meme_punchline: z.string().optional(),
-    authority_figure: z.string().optional(),
-    topical_event: z.string().optional(),
-    contrarian_take: z.string().optional(),
-    builder_lesson: z.string().optional(),
-    text_overlay_hook: z.string().optional(),
+    bottom_label: z.string().optional(),
     review_notes: z.string().optional(),
-    portrait_url: z.string().optional(),
+    image_mode: z.enum(imageModes).optional(),
   })
   .passthrough();
 
@@ -280,7 +214,6 @@ export type BatchAngle = z.infer<typeof batchAngleSchema>;
 export type GeneratedContent = z.infer<typeof generatedContentSchema>;
 export type TemplateFields = z.infer<typeof templateFieldsSchema>;
 export type Platform = (typeof platforms)[number];
-export type BrandSlug = (typeof brandSlugs)[number];
 export type PostType = (typeof postTypes)[number];
 export type Tone = (typeof tones)[number];
 export type TemplateType = (typeof templateTypes)[number];

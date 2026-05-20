@@ -7,8 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { PostCardActions } from "@/components/post-card-actions";
 import { StatusBadge } from "@/components/status-badge";
-import { formatBrandLabel, getPostBrandSlug } from "@/lib/content/brand";
-import { type BrandSlug, formatTemplateName } from "@/lib/content/types";
+import { formatTemplateName } from "@/lib/content/types";
 import { readApiJson } from "@/lib/http/read-api-json";
 import type { Json } from "@/types/database";
 
@@ -42,11 +41,8 @@ type BulkSummary = {
   details?: string[];
 };
 
-type BrandFilter = "all" | BrandSlug;
-
 export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [brandFilter, setBrandFilter] = useState<BrandFilter>("all");
   const [state, setState] = useState<BulkState>({
     loading: null,
     message: null,
@@ -55,15 +51,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   });
   const router = useRouter();
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const visiblePosts = useMemo(
-    () =>
-      posts.filter(
-        (post) =>
-          brandFilter === "all" ||
-          getPostBrandSlug(post.template_fields) === brandFilter,
-      ),
-    [posts, brandFilter],
-  );
+  const visiblePosts = posts;
   const allVisibleSelected =
     visiblePosts.length > 0 && visiblePosts.every((post) => selectedSet.has(post.id));
 
@@ -142,23 +130,6 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
               configured Buffer channels, then keeps the Content OS post
               scheduled until Instagram confirms it went live.
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <BrandFilterButton
-                label="All"
-                active={brandFilter === "all"}
-                onClick={() => setBrandFilter("all")}
-              />
-              <BrandFilterButton
-                label="Word of AI"
-                active={brandFilter === "word_of_ai"}
-                onClick={() => setBrandFilter("word_of_ai")}
-              />
-              <BrandFilterButton
-                label="Rallio"
-                active={brandFilter === "rallio"}
-                onClick={() => setBrandFilter("rallio")}
-              />
-            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -219,7 +190,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                   },
                 )
               }
-              className="inline-flex h-9 items-center justify-center gap-2 rounded bg-[#d4ff00] px-3 text-xs font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68] disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded bg-[#C8923A] px-3 text-xs font-semibold text-[#0a0a0b] transition hover:bg-[#d9a85a] disabled:opacity-50"
             >
               <Send size={15} />
               {state.loading === "Sending selected"
@@ -262,10 +233,10 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
           </div>
         </div>
         {state.message ? (
-          <div className="mt-3 rounded border border-[#d4ff00]/30 bg-[#d4ff00]/10 p-3 text-sm text-[#ecff8a]">
+          <div className="mt-3 rounded border border-[#d4ff00]/30 bg-[#C8923A]/10 p-3 text-sm text-[#ecff8a]">
             <p>{state.message}</p>
             {state.details.length ? (
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-[#f2ffb8]">
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-[#f5ebdc]">
                 {state.details.map((detail) => (
                   <li key={detail}>{detail}</li>
                 ))}
@@ -282,8 +253,6 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
 
       <div className="grid gap-5 xl:grid-cols-2">
         {visiblePosts.map((post) => {
-          const brandSlug = getPostBrandSlug(post.template_fields);
-
           return (
             <article
               key={post.id}
@@ -295,7 +264,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                     type="checkbox"
                     checked={selectedSet.has(post.id)}
                     onChange={() => togglePost(post.id)}
-                    className="h-4 w-4 accent-[#d4ff00]"
+                    className="h-4 w-4 accent-[#C8923A]"
                   />
                   Select
                 </label>
@@ -323,15 +292,6 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                   </div>
                   <div className="p-5">
                     <div className="flex flex-wrap gap-2">
-                      <span
-                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                          brandSlug === "rallio"
-                            ? "border-[#c98236]/40 bg-[#c98236]/10 text-[#f1c892]"
-                            : "border-[#b8c28a]/30 bg-[#b8c28a]/10 text-[#edf5c0]"
-                        }`}
-                      >
-                        {formatBrandLabel(brandSlug)}
-                      </span>
                       <StatusBadge status={post.status} />
                       <StatusBadge status={post.image_status} />
                     </div>
@@ -390,9 +350,9 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
       </div>
       {!visiblePosts.length ? (
         <div className="rounded border border-zinc-800 bg-zinc-950 p-8 text-center">
-          <p className="font-semibold text-white">No posts for this brand yet.</p>
+          <p className="font-semibold text-white">No posts yet.</p>
           <p className="mt-2 text-sm text-zinc-500">
-            Switch the filter or create a new package from Ideas or Rallio.
+            Create a new package from Ideas.
           </p>
         </div>
       ) : null}
@@ -400,29 +360,6 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   );
 }
 
-function BrandFilterButton({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`h-8 rounded border px-3 text-xs font-semibold transition ${
-        active
-          ? "border-[#d4ff00]/40 bg-[#d4ff00]/10 text-[#ecff8a]"
-          : "border-zinc-800 text-zinc-400 hover:bg-zinc-900"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
 function normalizeBulkSummary(result: string | BulkSummary): BulkSummary {
   if (typeof result === "string") {
     return { message: result };
