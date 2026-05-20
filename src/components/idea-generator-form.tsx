@@ -1,8 +1,8 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, ReactNode, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FilePlus2, ImageUp, Save, Sparkles } from "lucide-react";
+import { Check, FilePlus2, ImageUp, Save, Shuffle, Sparkles } from "lucide-react";
 
 import {
   type BatchAngle,
@@ -17,6 +17,7 @@ import { readApiJson } from "@/lib/http/read-api-json";
 type ImageMode = (typeof imageModes)[number];
 
 type FormState = {
+  auto_topic: boolean;
   title: string;
   brief: string;
   source_url: string;
@@ -26,10 +27,16 @@ type FormState = {
   quantity: string;
   image_mode: ImageMode;
   roulette_seed_id: string;
+  rallio_content_type?: string;
+  rallio_cta_door?: string;
+  rallio_template_type?: string;
+  rallio_visual_style?: string;
+  rallio_kpi_intent?: string;
 };
 
 function createDefaultForm(): FormState {
   return {
+    auto_topic: false,
     title: "",
     brief: "",
     source_url: "",
@@ -41,6 +48,27 @@ function createDefaultForm(): FormState {
     roulette_seed_id: "",
   };
 }
+
+type TopicRoulettePayload = {
+  title: string;
+  brief: string;
+  source_url: string;
+  tone: string;
+  template_hint: string;
+  selected_platforms: string[];
+  rallio_content_type?: string;
+  rallio_cta_door?: string;
+  rallio_template_type?: string;
+  rallio_visual_style?: string;
+  rallio_kpi_intent?: string;
+  roulette: {
+    seed_id: string;
+    source: "rallio_bank";
+    visual_direction: string;
+    contrast_setup: string;
+    anti_generic_notes: string;
+  };
+};
 
 type ActionState = {
   loading: boolean;
@@ -121,9 +149,10 @@ export function IdeaGeneratorForm() {
   function buildRequestPayload(
     reference: ReferenceImage | null,
     quantity?: number,
+    targetForm = form,
   ) {
     return {
-      ...form,
+      ...targetForm,
       platform: "instagram" as const,
       selected_platforms: ["instagram" as const],
       reference_image_url: reference?.image_url || "",
@@ -131,6 +160,57 @@ export function IdeaGeneratorForm() {
       quantity: quantity || getQuantity(),
       generation_count: quantity || getQuantity(),
     };
+  }
+
+  async function pickAutoTopic(quantity: number): Promise<TopicRoulettePayload> {
+    const response = await fetch("/api/generate-rallio-topic", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        post_type: form.post_type,
+        quantity,
+      }),
+    });
+    const payload = await readApiJson<TopicRoulettePayload & { error?: string }>(
+      response,
+    );
+
+    if (!response.ok) {
+      throw new Error(payload.error || "Could not pick a Rallio topic.");
+    }
+
+    return payload as TopicRoulettePayload;
+  }
+
+  async function resolveGenerationForm(quantity: number): Promise<FormState> {
+    if (!form.auto_topic) {
+      return form;
+    }
+
+    setState({
+      loading: true,
+      message: "Picking a Rallio community topic...",
+      error: null,
+    });
+
+    const roulette = await pickAutoTopic(quantity);
+    const nextForm: FormState = {
+      ...form,
+      title: roulette.title,
+      brief: roulette.brief,
+      source_url: roulette.source_url || "",
+      tone: roulette.tone,
+      template_hint: roulette.template_hint,
+      roulette_seed_id: roulette.roulette.seed_id,
+      rallio_content_type: roulette.rallio_content_type,
+      rallio_cta_door: roulette.rallio_cta_door,
+      rallio_template_type: roulette.rallio_template_type,
+      rallio_visual_style: roulette.rallio_visual_style,
+      rallio_kpi_intent: roulette.rallio_kpi_intent,
+    };
+
+    setForm(nextForm);
+    return nextForm;
   }
 
   async function uploadReferenceImage() {
@@ -179,11 +259,12 @@ export function IdeaGeneratorForm() {
     setState({ loading: true, message: "Saving idea...", error: null });
 
     try {
+      const activeForm = await resolveGenerationForm(getQuantity());
       const reference = await uploadReferenceImage();
       const response = await fetch("/api/ideas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildRequestPayload(reference)),
+        body: JSON.stringify(buildRequestPayload(reference, undefined, activeForm)),
       });
       const payload = await readApiJson<{ error?: string }>(response);
 
@@ -205,11 +286,12 @@ export function IdeaGeneratorForm() {
   async function createBatchPlan(
     quantity: number,
     reference: ReferenceImage | null,
+    activeForm: FormState,
   ) {
     const response = await fetch("/api/generate-batch-plan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildRequestPayload(reference, quantity)),
+      body: JSON.stringify(buildRequestPayload(reference, quantity, activeForm)),
     });
     const payload = await readApiJson<BatchPlanPayload & { error?: string }>(
       response,
@@ -229,6 +311,7 @@ export function IdeaGeneratorForm() {
     batchAngle,
     generatedSoFar,
     reference,
+    activeForm,
   }: {
     index: number;
     quantity: number;
@@ -236,12 +319,13 @@ export function IdeaGeneratorForm() {
     batchAngle?: BatchAngle;
     generatedSoFar?: GeneratedPostSummary[];
     reference: ReferenceImage | null;
+    activeForm: FormState;
   }) {
     const response = await fetch("/api/generate-content", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...buildRequestPayload(reference, quantity),
+        ...buildRequestPayload(reference, quantity, activeForm),
         idea_id: ideaId,
         batch_angle: batchAngle,
         recent_context: {
@@ -302,9 +386,10 @@ export function IdeaGeneratorForm() {
     });
 
     try {
+      const activeForm = await resolveGenerationForm(quantity);
       const reference = await uploadReferenceImage();
 
-      if (form.image_mode === "uploaded" && !reference) {
+      if (activeForm.image_mode === "uploaded" && !reference) {
         throw new Error("Choose a reference image before using it as the final image.");
       }
 
@@ -319,10 +404,11 @@ export function IdeaGeneratorForm() {
           index: 1,
           quantity,
           reference,
+          activeForm,
         });
         createdPostIds.push(payload.post.id);
 
-        if (form.image_mode === "template") {
+        if (activeForm.image_mode === "template") {
           setState({
             loading: true,
             message: "Rendering branded template image...",
@@ -342,7 +428,7 @@ export function IdeaGeneratorForm() {
           error: null,
         });
 
-        const batchPlan = await createBatchPlan(quantity, reference);
+        const batchPlan = await createBatchPlan(quantity, reference, activeForm);
         const angles = batchPlan.plan.angles;
 
         for (const angle of angles) {
@@ -359,6 +445,7 @@ export function IdeaGeneratorForm() {
             batchAngle: angle,
             generatedSoFar,
             reference,
+            activeForm,
           });
           createdPostIds.push(payload.post.id);
           generatedSoFar.push({
@@ -367,7 +454,7 @@ export function IdeaGeneratorForm() {
             pillar: payload.content.pillar || payload.post.pillar,
           });
 
-          if (form.image_mode === "template") {
+          if (activeForm.image_mode === "template") {
             setState({
               loading: true,
               message: `Rendering ${angle.index}/${quantity}: ${angle.working_title}`,
@@ -441,40 +528,70 @@ export function IdeaGeneratorForm() {
       </div>
 
       <div className="mt-6 grid gap-4">
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-300">Topic / niche</span>
-          <input
-            required
-            value={form.title}
-            onChange={(event) => updateField("title", event.target.value)}
-            className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#C8923A]"
-            placeholder="Bang Bang Ice Cream, Ossington 30, Tuesday regular at Bar Isabel"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-300">
-            Brief / constraints
-          </span>
-          <textarea
-            required
-            value={form.brief}
-            onChange={(event) => updateField("brief", event.target.value)}
-            className="mt-2 min-h-32 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 py-3 text-sm leading-6 text-white outline-none focus:border-[#C8923A]"
-            placeholder="What's the angle? Who's the regular? Why does this spot belong on the taste map?"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-300">
-            Source URL optional
-          </span>
-          <input
-            type="url"
-            value={form.source_url}
-            onChange={(event) => updateField("source_url", event.target.value)}
-            className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#C8923A]"
-            placeholder="https://..."
-          />
-        </label>
+        <section className="rounded border border-zinc-800 bg-[#0a0a0b] p-4">
+          <p className="text-sm font-medium text-zinc-300">Topic source</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <TopicSourceButton
+              active={form.auto_topic}
+              title="Auto-pick from Rallio bank"
+              description="Draws a community-first taste-map topic from the Rallio seed bank."
+              icon={<Shuffle size={15} className="text-[#f5ebdc]" />}
+              onClick={() => updateField("auto_topic", true)}
+            />
+            <TopicSourceButton
+              active={!form.auto_topic}
+              title="Write my own"
+              description="Provide your own topic, brief, and optional source URL."
+              icon={<Check size={15} className="text-[#f5ebdc]" />}
+              onClick={() => updateField("auto_topic", false)}
+            />
+          </div>
+        </section>
+
+        {!form.auto_topic ? (
+          <>
+            <label className="block">
+              <span className="text-sm font-medium text-zinc-300">Topic / niche</span>
+              <input
+                required
+                value={form.title}
+                onChange={(event) => updateField("title", event.target.value)}
+                className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#C8923A]"
+                placeholder="Bang Bang Ice Cream, Ossington 30, Tuesday regular at Bar Isabel"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-zinc-300">
+                Brief / constraints
+              </span>
+              <textarea
+                required
+                value={form.brief}
+                onChange={(event) => updateField("brief", event.target.value)}
+                className="mt-2 min-h-32 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 py-3 text-sm leading-6 text-white outline-none focus:border-[#C8923A]"
+                placeholder="What's the angle? Who's the regular? Why does this spot belong on the taste map?"
+              />
+            </label>
+          </>
+        ) : (
+          <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
+            Auto-pick fills the topic, brief, tone, template type, CTA door, and visual direction from the Rallio seed bank (regulars, spot cards, receipts, manifesto, owner-claim). Choose post type and quantity below.
+          </div>
+        )}
+        {!form.auto_topic ? (
+          <label className="block">
+            <span className="text-sm font-medium text-zinc-300">
+              Source URL optional
+            </span>
+            <input
+              type="url"
+              value={form.source_url}
+              onChange={(event) => updateField("source_url", event.target.value)}
+              className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#C8923A]"
+              placeholder="https://..."
+            />
+          </label>
+        ) : null}
 
         <section className="rounded border border-zinc-800 bg-[#0a0a0b] p-4">
           <p className="text-sm font-medium text-zinc-300">
@@ -630,6 +747,40 @@ function ImageModeButton({
     >
       <span className="flex items-center gap-2 text-sm font-semibold text-white">
         {active ? <ImageUp size={15} className="text-[#f5ebdc]" /> : null}
+        {title}
+      </span>
+      <span className="mt-1 block text-xs leading-5 text-zinc-500">
+        {description}
+      </span>
+    </button>
+  );
+}
+
+function TopicSourceButton({
+  active,
+  title,
+  description,
+  icon,
+  onClick,
+}: {
+  active: boolean;
+  title: string;
+  description: string;
+  icon: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded border p-3 text-left transition ${
+        active
+          ? "border-[#C8923A]/60 bg-[#C8923A]/10"
+          : "border-zinc-800 hover:border-zinc-600"
+      }`}
+    >
+      <span className="flex items-center gap-2 text-sm font-semibold text-white">
+        {active ? icon : null}
         {title}
       </span>
       <span className="mt-1 block text-xs leading-5 text-zinc-500">
