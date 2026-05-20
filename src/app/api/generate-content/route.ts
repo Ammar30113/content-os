@@ -1093,9 +1093,26 @@ export async function POST(request: Request) {
         template_type: forcedTemplateType,
         template_fields: templateFieldsWithWorkflow,
       });
-      const candidate = isRallio
-        ? enforceRallioCopySafety(parsedContent)
-        : enforceProductMentionGate(parsedContent);
+      let candidate: GeneratedContentPackage;
+      try {
+        candidate = isRallio
+          ? enforceRallioCopySafety(parsedContent)
+          : enforceProductMentionGate(parsedContent);
+      } catch (safetyError) {
+        const message =
+          safetyError instanceof Error
+            ? safetyError.message
+            : "Rallio safety gate rejected the generated copy.";
+        qualityFailures = [message];
+        fallbackCandidate = parsedContent;
+        fallbackQualityContext = {
+          contrast: parsed.contrast,
+          viralityScore: parsed.virality_score,
+          visualAlignmentNote: parsed.visual_alignment_note,
+          attempt,
+        };
+        continue;
+      }
       fallbackCandidate = candidate;
       fallbackQualityContext = {
         contrast: parsed.contrast,
