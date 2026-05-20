@@ -10,17 +10,13 @@ import {
 
 const rallio = {
   ink: "#0C0A08",
-  deepInk: "#080604",
   cream: "#F5EBDC",
-  amber: "#C8923A",
   wheat: "#EDD9B4",
   moss: "#5F8A6E",
+  mossSoft: "rgba(95,138,110,0.18)",
+  amber: "#C8923A",
   muted: "#71685F",
-  line: "rgba(12,10,8,0.22)",
-  inkLine: "rgba(245,235,220,0.18)",
 };
-
-type FrameTone = "cream" | "ink";
 
 export function RallioTemplate({ fields }: { fields: TemplateFields }) {
   const template = fields.rallio_template_type || fields.content_type;
@@ -44,604 +40,61 @@ export function RallioTemplate({ fields }: { fields: TemplateFields }) {
   return <RallioManifestoTemplate fields={fields} />;
 }
 
-function RallioFrame({
-  chip,
-  fields,
+function Canvas({
+  background,
   children,
-  footer,
-  tone = "cream",
 }: {
-  chip: string;
-  fields: TemplateFields;
+  background: string;
   children: React.ReactNode;
-  footer?: string;
-  tone?: FrameTone;
 }) {
-  const isInk = tone === "ink";
-  const foreground = isInk ? rallio.cream : rallio.ink;
-  const quiet = isInk ? "rgba(245,235,220,0.68)" : rallio.muted;
-  const frameLine = isInk ? rallio.inkLine : rallio.line;
-  const location = compactText(
-    fields.launch_neighborhood,
-    "taste map",
-    34,
-  ).toUpperCase();
-
   return (
     <div
       style={{
         width: CANVAS_SIZE,
         height: CANVAS_SIZE,
-        backgroundColor: isInk ? rallio.ink : rallio.cream,
-        color: foreground,
+        backgroundColor: background,
         display: "flex",
         fontFamily: "Manrope, Inter, Arial, sans-serif",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: isInk
-            ? "linear-gradient(145deg, rgba(12,10,8,1) 0%, rgba(18,15,12,1) 58%, rgba(35,29,21,1) 100%)"
-            : "radial-gradient(circle at 48% 18%, rgba(255,248,235,0.9) 0%, rgba(245,235,220,0.98) 42%, rgba(237,217,180,0.96) 100%)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: isInk
-            ? "linear-gradient(90deg, rgba(200,146,58,0.13) 0%, rgba(200,146,58,0) 32%, rgba(95,138,110,0.18) 100%)"
-            : "linear-gradient(135deg, rgba(12,10,8,0.05) 0%, rgba(12,10,8,0) 48%, rgba(95,138,110,0.12) 100%)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: 66,
-          top: 66,
-          right: 66,
-          bottom: 66,
-          border: `1px solid ${frameLine}`,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          top: 50,
-          left: 88,
-          padding: "13px 18px",
-          border: `1px solid ${isInk ? rallio.amber : rallio.ink}`,
-          backgroundColor: isInk ? "rgba(12,10,8,0.9)" : rallio.cream,
-          color: isInk ? rallio.amber : rallio.ink,
-          fontSize: 17,
-          fontWeight: 900,
-          letterSpacing: 2.4,
-          textTransform: "uppercase",
-          zIndex: 4,
-        }}
-      >
-        {chip}
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          top: 66,
-          right: 88,
-          color: quiet,
-          fontSize: 17,
-          fontWeight: 900,
-          letterSpacing: 2.4,
-          textTransform: "uppercase",
-          zIndex: 4,
-        }}
-      >
-        {`RALLIO / ${location}`}
-      </div>
       {children}
-      <div
-        style={{
-          position: "absolute",
-          left: 88,
-          bottom: 50,
-          color: isInk ? rallio.amber : rallio.moss,
-          fontSize: 17,
-          fontWeight: 900,
-          letterSpacing: 2.4,
-          textTransform: "uppercase",
-          zIndex: 4,
-        }}
-      >
-        {footer || "taste first"}
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          right: 88,
-          bottom: 46,
-          color: quiet,
-          fontFamily: "Fraunces, Georgia, serif",
-          fontSize: 28,
-          fontStyle: "italic",
-          fontWeight: 900,
-          zIndex: 4,
-        }}
-      >
-        {safeText(fields.brand_handle, "@rallio").replace("@", "")}
-      </div>
     </div>
-  );
-}
-
-function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
-  const headline = displayHeadline(
-    fields.headline,
-    "Regulars over ratings",
-    82,
-  );
-  const subhead = compactText(
-    fields.subhead,
-    "A taste map should start with the places people would recommend twice.",
-    118,
-  );
-  const principles = getLines(fields, [
-    "community recommendations",
-    "local taste before launch noise",
-    "link in bio to join the waitlist",
-  ]);
-
-  return (
-    <RallioFrame chip="Manifesto" fields={fields} footer="link in bio waitlist" tone="ink">
-      <div
-        style={{
-          position: "absolute",
-          left: 118,
-          top: 172,
-          width: 844,
-          display: "flex",
-          flexDirection: "column",
-          gap: 30,
-          zIndex: 4,
-        }}
-      >
-        <div
-          style={{
-            color: rallio.amber,
-            fontSize: 19,
-            fontWeight: 900,
-            letterSpacing: 3.2,
-            textTransform: "uppercase",
-          }}
-        >
-          The rhythm rule
-        </div>
-        <div
-          style={{
-            color: rallio.cream,
-            fontFamily: "Fraunces, Georgia, serif",
-            fontSize: headline.length > 48 ? 72 : 94,
-            lineHeight: 0.94,
-            fontWeight: 900,
-          }}
-        >
-          {headline}
-        </div>
-        <div
-          style={{
-            color: "rgba(245,235,220,0.76)",
-            fontSize: 31,
-            lineHeight: 1.18,
-            fontWeight: 800,
-            maxWidth: 735,
-          }}
-        >
-          {subhead}
-        </div>
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: 118,
-          right: 118,
-          bottom: 168,
-          borderTop: `1px solid ${rallio.inkLine}`,
-          paddingTop: 28,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-          zIndex: 4,
-        }}
-      >
-        {principles.slice(0, 3).map((line, index) => (
-          <div
-            key={`${line}-${index}`}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 18,
-              color: rallio.cream,
-              fontSize: 26,
-              fontWeight: 900,
-            }}
-          >
-            <span
-              style={{
-                width: 16,
-                height: 16,
-                backgroundColor: index === 1 ? rallio.amber : rallio.moss,
-                borderRadius: 99,
-              }}
-            />
-            <span>{compactText(line, "", 68)}</span>
-          </div>
-        ))}
-      </div>
-    </RallioFrame>
   );
 }
 
 function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
   const business = displayHeadline(
     fields.business_name || fields.headline,
-    "Bang Bang Ice Cream & Bakery",
-    48,
+    "Bang Bang",
+    40,
   );
-  const category = compactText(fields.spot_category, "dessert", 28);
-  const spotNumber = compactText(fields.spot_number, "04 of 30", 18).toUpperCase();
-  const address = compactText(fields.bottom_label || fields.subhead, "93 Ossington Ave", 48);
-  const quote = compactText(
-    fields.regular_quote || fields.quote,
-    "dessert lines that still feel worth joining.",
-    88,
-  );
-  const attribution = compactText(
-    fields.attribution,
-    "recommended by a local regular",
-    74,
-  );
+  const category = compactText(fields.spot_category, "dessert", 24).toUpperCase();
+  const area = compactText(
+    fields.launch_neighborhood || fields.bottom_label,
+    "ossington",
+    32,
+  ).toUpperCase();
+  const fontSize = business.length > 22 ? 132 : business.length > 14 ? 168 : 196;
 
   return (
-    <RallioFrame chip="Spot card" fields={fields} footer="swipe the route">
-      <div
-        style={{
-          position: "absolute",
-          left: 82,
-          top: 132,
-          right: 82,
-          bottom: 124,
-          border: `1px solid ${rallio.line}`,
-          backgroundColor: "rgba(237,217,180,0.42)",
-          display: "flex",
-          flexDirection: "column",
-          padding: "58px 50px",
-          zIndex: 3,
-        }}
-      >
-        <div
-          style={{
-            color: rallio.amber,
-            fontSize: 22,
-            fontWeight: 900,
-            letterSpacing: 3.6,
-            textTransform: "uppercase",
-          }}
-        >
-          {`The taste map - ${spotNumber}`}
-        </div>
-        <div
-          style={{
-            marginTop: 28,
-            color: rallio.ink,
-            fontSize: 30,
-            lineHeight: 1.05,
-            fontWeight: 900,
-          }}
-        >
-          {`${category} - ${address}`}
-        </div>
-        <div
-          style={{
-            marginTop: 54,
-            color: rallio.deepInk,
-            fontFamily: "Fraunces, Georgia, serif",
-            fontSize: business.length > 30 ? 86 : 118,
-            lineHeight: 0.92,
-            fontWeight: 900,
-          }}
-        >
-          {business}
-        </div>
-        <div
-          style={{
-            marginTop: "auto",
-            color: rallio.ink,
-            fontSize: 30,
-            lineHeight: 1.18,
-            fontStyle: "italic",
-            fontWeight: 600,
-            maxWidth: 720,
-          }}
-        >
-          {`“${quote}”`}
-        </div>
-        <div
-          style={{
-            marginTop: 18,
-            color: rallio.muted,
-            fontSize: 25,
-            lineHeight: 1.2,
-            fontWeight: 800,
-          }}
-        >
-          {`- ${attribution}`}
-        </div>
-      </div>
-      <CountBadge label="1/6" />
-    </RallioFrame>
-  );
-}
-
-function RallioReceiptTemplate({ fields }: { fields: TemplateFields }) {
-  const headline = displayHeadline(fields.headline, "A receipt for better taste", 64);
-  const lines = getLines(fields, [
-    "ask what regulars order twice",
-    "save the line worth joining",
-    "notice the owner detail",
-    "join the taste-map waitlist",
-  ]);
-  const subtotal = compactText(fields.subtotal, "taste map", 34).toUpperCase();
-
-  return (
-    <RallioFrame chip="Receipt" fields={fields} footer="save the signal">
-      <div
-        style={{
-          position: "absolute",
-          left: 176,
-          right: 176,
-          top: 146,
-          bottom: 124,
-          backgroundColor: rallio.cream,
-          border: `1px solid ${rallio.line}`,
-          boxShadow: "0 22px 70px rgba(12,10,8,0.18)",
-          display: "flex",
-          flexDirection: "column",
-          padding: "52px 50px",
-          zIndex: 3,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            color: rallio.moss,
-            fontSize: 17,
-            fontWeight: 900,
-            letterSpacing: 2.7,
-            textTransform: "uppercase",
-          }}
-        >
-          <span>Rallio taste receipt</span>
-          <span>{safeText(fields.date, "today")}</span>
-        </div>
-        <div
-          style={{
-            marginTop: 34,
-            color: rallio.ink,
-            fontFamily: "Fraunces, Georgia, serif",
-            fontSize: headline.length > 42 ? 54 : 66,
-            lineHeight: 0.96,
-            fontWeight: 900,
-          }}
-        >
-          {headline}
-        </div>
-        <div
-          style={{
-            marginTop: 40,
-            borderTop: `1px dashed ${rallio.line}`,
-            borderBottom: `1px dashed ${rallio.line}`,
-            padding: "24px 0",
-            display: "flex",
-            flexDirection: "column",
-            gap: 17,
-          }}
-        >
-          {lines.slice(0, 4).map((line, index) => (
-            <ReceiptLine key={`${line}-${index}`} index={index + 1} label={line} />
-          ))}
-        </div>
-        <div
-          style={{
-            marginTop: "auto",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            color: rallio.muted,
-            fontSize: 18,
-            fontWeight: 900,
-            letterSpacing: 2,
-            textTransform: "uppercase",
-          }}
-        >
-          <span>{safeText(fields.door_label, "Waitlist")}</span>
-          <span style={{ color: rallio.amber }}>{subtotal}</span>
-        </div>
-      </div>
-    </RallioFrame>
-  );
-}
-
-function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
-  const quote = displayHeadline(
-    fields.regular_quote || fields.quote || fields.headline,
-    "I go on Tuesdays because the octopus is on Tuesdays and I'm not above scheduling around it.",
-    154,
-  );
-  const business = compactText(
-    fields.business_name || fields.bottom_label,
-    "Bar Isabel",
-    28,
-  );
-  const area = compactText(fields.launch_neighborhood, "Little Italy", 32);
-  const attribution = compactText(
-    fields.attribution,
-    "Priya, local regular since 2019",
-    78,
-  );
-
-  return (
-    <RallioFrame chip="Regulars quote" fields={fields} footer="taste-map waitlist">
-      <div
-        style={{
-          position: "absolute",
-          left: 80,
-          top: 142,
-          padding: "18px 28px",
-          border: `2px solid ${rallio.ink}`,
-          display: "flex",
-          alignItems: "center",
-          gap: 18,
-          color: rallio.ink,
-          fontSize: 22,
-          fontWeight: 900,
-          letterSpacing: 2.6,
-          textTransform: "uppercase",
-          zIndex: 4,
-        }}
-      >
-        <span
-          style={{
-            width: 20,
-            height: 20,
-            backgroundColor: rallio.amber,
-            borderRadius: 99,
-          }}
-        />
-        <span>{`${business} - ${area}`}</span>
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: 122,
-          right: 112,
-          top: 292,
-          color: rallio.ink,
-          fontFamily: "Fraunces, Georgia, serif",
-          fontSize: quote.length > 118 ? 60 : 74,
-          lineHeight: 1.08,
-          fontStyle: "italic",
-          fontWeight: 900,
-          zIndex: 4,
-        }}
-      >
-        {`“${quote}”`}
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: 122,
-          right: 122,
-          bottom: 178,
-          height: 2,
-          backgroundColor: rallio.ink,
-          zIndex: 4,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: 122,
-          bottom: 124,
-          color: rallio.muted,
-          fontSize: 28,
-          fontWeight: 800,
-          zIndex: 4,
-        }}
-      >
-        {`- ${attribution}`}
-      </div>
-    </RallioFrame>
-  );
-}
-
-function RallioOwnerClaimTemplate({ fields }: { fields: TemplateFields }) {
-  const business = displayHeadline(
-    fields.business_name || fields.headline,
-    "Sunline Cafe",
-    42,
-  );
-  const category = compactText(fields.spot_category, "cafe", 22);
-  const address = compactText(fields.bottom_label || fields.subhead, "626 Dundas St W", 36);
-  const steps = safeArray(fields.owner_steps).length
-    ? safeArray(fields.owner_steps)
-    : [
-        "correct the profile details",
-        "add the story regulars already know",
-        "tell people what to order first",
-      ];
-
-  return (
-    <RallioFrame chip="Owner utility" fields={fields} footer="owner profile door">
-      <CountBadge label="1/5 - owners" color={rallio.moss} />
-      <div
-        style={{
-          position: "absolute",
-          left: 126,
-          top: 228,
-          width: 890,
-          height: 660,
-          backgroundColor: rallio.moss,
-          zIndex: 2,
-        }}
-      />
+    <Canvas background={rallio.wheat}>
       <div
         style={{
           position: "absolute",
           left: 96,
-          top: 188,
-          width: 890,
-          minHeight: 660,
-          backgroundColor: rallio.ink,
-          color: rallio.cream,
+          right: 96,
+          bottom: 132,
           display: "flex",
           flexDirection: "column",
-          padding: "58px 58px",
-          zIndex: 3,
         }}
       >
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            width: 360,
-            padding: "13px 18px",
-            backgroundColor: "rgba(95,138,110,0.18)",
-            color: rallio.cream,
-            fontSize: 22,
-            fontWeight: 900,
-            letterSpacing: 2.8,
-            textTransform: "uppercase",
-          }}
-        >
-          <span
-            style={{
-              width: 16,
-              height: 16,
-              borderRadius: 99,
-              backgroundColor: rallio.moss,
-            }}
-          />
-          Community-added
-        </div>
-        <div
-          style={{
-            marginTop: 48,
+            color: rallio.ink,
             fontFamily: "Fraunces, Georgia, serif",
-            fontSize: business.length > 24 ? 70 : 88,
+            fontSize,
             lineHeight: 0.95,
             fontWeight: 900,
           }}
@@ -650,178 +103,273 @@ function RallioOwnerClaimTemplate({ fields }: { fields: TemplateFields }) {
         </div>
         <div
           style={{
-            marginTop: 18,
-            color: "rgba(245,235,220,0.64)",
+            marginTop: 26,
+            color: rallio.ink,
             fontSize: 30,
             fontWeight: 800,
+            letterSpacing: 4,
           }}
         >
-          {`local - ${category} - ${address}`}
+          {`${category} · ${area}`}
         </div>
+      </div>
+    </Canvas>
+  );
+}
+
+function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
+  const quote = displayHeadline(
+    fields.regular_quote || fields.quote || fields.headline,
+    "i'd queue for the morning bun",
+    200,
+  );
+  const attribution = compactText(
+    fields.attribution || fields.business_name,
+    "Mara",
+    36,
+  );
+  const fontSize =
+    quote.length > 140 ? 68 : quote.length > 80 ? 88 : quote.length > 40 ? 110 : 132;
+
+  return (
+    <Canvas background={rallio.cream}>
+      <div
+        style={{
+          position: "absolute",
+          left: 96,
+          right: 96,
+          top: 150,
+          color: rallio.ink,
+          fontFamily: "Fraunces, Georgia, serif",
+          fontSize,
+          lineHeight: 1.05,
+          fontStyle: "italic",
+          fontWeight: 600,
+        }}
+      >
+        {`“${quote}”`}
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: 96,
+          bottom: 132,
+          color: rallio.ink,
+          fontSize: 38,
+          fontWeight: 600,
+        }}
+      >
+        {`— ${attribution}`}
+      </div>
+    </Canvas>
+  );
+}
+
+function RallioReceiptTemplate({ fields }: { fields: TemplateFields }) {
+  const rows = getReceiptRows(fields, [
+    { label: "Bang Bang", value: "14" },
+    { label: "Bar Isabel", value: "9" },
+    { label: "Sunline", value: "6" },
+  ]).slice(0, 5);
+  const total = compactText(fields.subtotal, "29", 8);
+
+  return (
+    <Canvas background={rallio.cream}>
+      <div
+        style={{
+          position: "absolute",
+          left: 132,
+          top: 168,
+          width: 596,
+          padding: "30px 38px 30px 38px",
+          border: `2px solid ${rallio.ink}`,
+          backgroundColor: rallio.cream,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <div
           style={{
-            marginTop: 42,
-            borderTop: `1px solid ${rallio.inkLine}`,
-            paddingTop: 32,
-            display: "flex",
-            gap: 58,
-          }}
-        >
-          <OwnerStat value="14" label="posts" />
-          <OwnerStat value="42" label="regulars" />
-          <OwnerStat value="218" label="visits" />
-        </div>
-        <div
-          style={{
-            marginTop: 36,
-            backgroundColor: rallio.amber,
             color: rallio.ink,
-            minHeight: 86,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 38px",
-            fontSize: 34,
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            fontSize: 26,
             fontWeight: 900,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+            paddingBottom: 18,
+            borderBottom: `1px dashed ${rallio.ink}`,
           }}
         >
-          <span>Takes about a minute</span>
-          <span style={{ fontSize: 42 }}>{"->"}</span>
+          Rallio Receipt
         </div>
+        <div
+          style={{
+            marginTop: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+          }}
+        >
+          {rows.map((row, idx) => (
+            <ReceiptRow key={`${row.label}-${idx}`} label={row.label} value={row.value} />
+          ))}
+        </div>
+        <div
+          style={{
+            marginTop: 16,
+            paddingTop: 18,
+            borderTop: `1px dashed ${rallio.ink}`,
+            display: "flex",
+            justifyContent: "space-between",
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            fontSize: 28,
+            fontWeight: 900,
+            color: rallio.ink,
+            letterSpacing: 1.8,
+            textTransform: "uppercase",
+          }}
+        >
+          <span>Total</span>
+          <span>{total}</span>
+        </div>
+      </div>
+    </Canvas>
+  );
+}
+
+function ReceiptRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+        fontSize: 24,
+        fontWeight: 700,
+        color: rallio.ink,
+      }}
+    >
+      <span>{compactText(label, "", 28)}</span>
+      <span>{compactText(value, "", 6)}</span>
+    </div>
+  );
+}
+
+function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
+  const headline = displayHeadline(
+    fields.headline,
+    "you've been doing rallio's job for free.",
+    96,
+  );
+  const fontSize = headline.length > 70 ? 88 : headline.length > 40 ? 108 : 132;
+
+  return (
+    <Canvas background={rallio.ink}>
+      <div
+        style={{
+          position: "absolute",
+          left: 96,
+          right: 96,
+          bottom: 132,
+          color: rallio.cream,
+          fontFamily: "Fraunces, Georgia, serif",
+          fontSize,
+          lineHeight: 1.02,
+          fontStyle: "italic",
+          fontWeight: 600,
+        }}
+      >
+        {headline}
+      </div>
+    </Canvas>
+  );
+}
+
+function RallioOwnerClaimTemplate({ fields }: { fields: TemplateFields }) {
+  const business = displayHeadline(
+    fields.business_name || fields.headline,
+    "Sunline Cafe",
+    40,
+  );
+  const note = compactText(
+    fields.subhead || fields.bottom_label,
+    "unclaimed · claim takes about a min",
+    72,
+  );
+  const fontSize = business.length > 22 ? 132 : business.length > 14 ? 168 : 196;
+
+  return (
+    <Canvas background={rallio.cream}>
+      <div
+        style={{
+          position: "absolute",
+          left: 96,
+          top: 140,
+          padding: "16px 28px",
+          backgroundColor: rallio.mossSoft,
+          color: rallio.moss,
+          fontSize: 24,
+          fontWeight: 900,
+          letterSpacing: 3.4,
+          textTransform: "uppercase",
+          display: "flex",
+        }}
+      >
+        Community-added
       </div>
       <div
         style={{
           position: "absolute",
           left: 96,
           right: 96,
-          bottom: 106,
+          bottom: 174,
           color: rallio.ink,
-          fontSize: 33,
-          lineHeight: 1.16,
+          fontFamily: "Fraunces, Georgia, serif",
+          fontSize,
+          lineHeight: 0.95,
           fontWeight: 900,
-          zIndex: 4,
-          display: "flex",
-          flexWrap: "wrap",
         }}
       >
-        <span>your customers are already&nbsp;</span>
-        <span style={{ fontStyle: "italic" }}>building</span>
-        <span>&nbsp;your profile.</span>
+        {business}
       </div>
       <div
         style={{
           position: "absolute",
-          left: 98,
-          bottom: 78,
+          left: 96,
+          right: 96,
+          bottom: 124,
           color: rallio.muted,
-          fontSize: 16,
-          fontWeight: 800,
-          zIndex: 4,
+          fontSize: 30,
+          fontWeight: 600,
         }}
       >
-        {compactText(steps[0], "", 76)}
+        {note}
       </div>
-    </RallioFrame>
+    </Canvas>
   );
 }
 
-function CountBadge({
-  label,
-  color = "rgba(12,10,8,0.72)",
-}: {
-  label: string;
-  color?: string;
-}) {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        right: 76,
-        top: 108,
-        minWidth: 92,
-        height: 58,
-        padding: "0 22px",
-        borderRadius: 30,
-        backgroundColor: color,
-        color: rallio.cream,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 28,
-        fontWeight: 900,
-        zIndex: 5,
-      }}
-    >
-      {label}
-    </div>
-  );
-}
-
-function ReceiptLine({ index, label }: { index: number; label: string }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        gap: 24,
-        color: rallio.deepInk,
-        fontSize: 25,
-        lineHeight: 1.12,
-        fontWeight: 800,
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-      }}
-    >
-      <span>{compactText(label, "", 48)}</span>
-      <span>{String(index).padStart(2, "0")}</span>
-    </div>
-  );
-}
-
-function OwnerStat({ value, label }: { value: string; label: string }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-      }}
-    >
-      <span
-        style={{
-          color: rallio.amber,
-          fontFamily: "Fraunces, Georgia, serif",
-          fontSize: 58,
-          lineHeight: 0.9,
-          fontWeight: 900,
-        }}
-      >
-        {value}
-      </span>
-      <span
-        style={{
-          color: "rgba(245,235,220,0.58)",
-          fontSize: 20,
-          fontWeight: 900,
-          letterSpacing: 2.4,
-          textTransform: "uppercase",
-        }}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function getLines(fields: TemplateFields, fallback: string[]) {
+function getReceiptRows(
+  fields: TemplateFields,
+  fallback: { label: string; value: string }[],
+) {
   const fromReceipt = safeArray(fields.receipt_lines);
   if (fromReceipt.length) {
-    return fromReceipt;
+    return fromReceipt.map(parseReceiptLine);
   }
 
   const fromInfoRows = safeArray(fields.info_rows);
   if (fromInfoRows.length) {
-    return fromInfoRows;
+    return fromInfoRows.map(parseReceiptLine);
   }
 
   return fallback;
+}
+
+function parseReceiptLine(line: string): { label: string; value: string } {
+  const match = line.match(/^(.+?)\s*(?:[-—:·|]\s*|\s{2,})(\S+)\s*$/);
+  if (match) {
+    return { label: match[1].trim(), value: match[2].trim() };
+  }
+  return { label: safeText(line, ""), value: "" };
 }
