@@ -139,7 +139,7 @@ function RallioFrame({
           zIndex: 4,
         }}
       >
-        RALLIO / {location}
+        {`RALLIO / ${location}`}
       </div>
       {children}
       <div
@@ -329,7 +329,7 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
             textTransform: "uppercase",
           }}
         >
-          The taste map - {spotNumber}
+          {`The taste map - ${spotNumber}`}
         </div>
         <div
           style={{
@@ -340,7 +340,7 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
             fontWeight: 900,
           }}
         >
-          {category} - {address}
+          {`${category} - ${address}`}
         </div>
         <div
           style={{
@@ -365,7 +365,7 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
             maxWidth: 720,
           }}
         >
-          &quot;{quote}&quot;
+          {`“${quote}”`}
         </div>
         <div
           style={{
@@ -376,7 +376,7 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
             fontWeight: 800,
           }}
         >
-          - {attribution}
+          {`- ${attribution}`}
         </div>
       </div>
       <CountBadge label="1/6" />
@@ -520,9 +520,7 @@ function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
             borderRadius: 99,
           }}
         />
-        <span>
-          {business} - {area}
-        </span>
+        <span>{`${business} - ${area}`}</span>
       </div>
       <div
         style={{
@@ -539,7 +537,7 @@ function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
           zIndex: 4,
         }}
       >
-        &quot;{quote}&quot;
+        {`“${quote}”`}
       </div>
       <div
         style={{
@@ -563,7 +561,7 @@ function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
           zIndex: 4,
         }}
       >
-        - {attribution}
+        {`- ${attribution}`}
       </div>
     </RallioFrame>
   );
@@ -658,7 +656,7 @@ function RallioOwnerClaimTemplate({ fields }: { fields: TemplateFields }) {
             fontWeight: 800,
           }}
         >
-          local - {category} - {address}
+          {`local - ${category} - ${address}`}
         </div>
         <div
           style={{
@@ -702,10 +700,13 @@ function RallioOwnerClaimTemplate({ fields }: { fields: TemplateFields }) {
           lineHeight: 1.16,
           fontWeight: 900,
           zIndex: 4,
+          display: "flex",
+          flexWrap: "wrap",
         }}
       >
-        your customers are already <span style={{ fontStyle: "italic" }}>building</span>{" "}
-        your profile.
+        <span>your customers are already&nbsp;</span>
+        <span style={{ fontStyle: "italic" }}>building</span>
+        <span>&nbsp;your profile.</span>
       </div>
       <div
         style={{
