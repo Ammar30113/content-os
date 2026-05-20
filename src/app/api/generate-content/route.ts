@@ -998,12 +998,15 @@ export async function POST(request: Request) {
                       }
                     : null,
                 caption_rules: {
-                  instagram:
-                    "Strong first line, 1-2 line tension, 3-5 action bullets, strong final reframe/filter/insight, then 15-25 varied hashtags. 1-3 emojis max.",
-                  x:
-                    "Under 280 characters, sharper than Instagram, 0-1 hashtag, no thread unless post_type is thread.",
-                  linkedin:
-                    "Slightly expanded, still structured, no corporate tone, no long paragraphs.",
+                  instagram: isRallio
+                    ? "Strong first line. 1-2 sentences about the vibe, the regulars, or the specific detail that makes the spot worth saving. NO bulleted lists. NO action bullets. NO meta-commentary about apps or AI. Strong closing sentence pointing to the community taste map, then 10-15 localized food/drink hashtags. 1-3 emojis max."
+                    : "Strong first line, 1-2 line tension, 3-5 action bullets, strong final reframe/filter/insight, then 15-25 varied hashtags. 1-3 emojis max.",
+                  x: isRallio
+                    ? "Under 280 characters, localized and sharp, 0-1 hashtag, no thread unless post_type is thread."
+                    : "Under 280 characters, sharper than Instagram, 0-1 hashtag, no thread unless post_type is thread.",
+                  linkedin: isRallio
+                    ? "Professional but local and community-focused. No corporate tone, no long paragraphs."
+                    : "Slightly expanded, still structured, no corporate tone, no long paragraphs.",
                 },
                 visual_system: {
 	                  style:
