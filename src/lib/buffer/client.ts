@@ -114,9 +114,9 @@ export async function createBufferPost({
   if (bufferImageUrl) {
     await assertBufferMediaUrlReady(bufferImageUrl, platform);
 
-    input.assets = {
-      images: [
-        {
+    input.assets = [
+      {
+        image: {
           url: bufferImageUrl,
           metadata: {
             altText:
@@ -129,8 +129,8 @@ export async function createBufferPost({
             },
           },
         },
-      ],
-    };
+      },
+    ];
   }
 
   if (platform === "instagram") {
@@ -208,7 +208,10 @@ function getBufferImageUrl({
 
   const appUrl = getAppUrl();
 
-  if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?/i.test(appUrl)) {
+  if (
+    /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?/i.test(appUrl) ||
+    appUrl.includes("ngrok")
+  ) {
     return imageUrl;
   }
 
