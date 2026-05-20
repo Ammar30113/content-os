@@ -8,6 +8,7 @@ import { summarizeSourceUrl } from "@/lib/content/source";
 import {
   enforceRallioCopySafety,
   mapRallioTemplateToCoreType,
+  normalizeRallioCtaDoor,
   normalizeRallioMetadata,
   RALLIO_BRAND,
   RALLIO_SYSTEM_PROMPT,
@@ -217,7 +218,10 @@ function createQualityFallbackContent({
     ...(candidate.hashtags || []),
     ...rallioFallbackHashtags,
   ]).slice(0, 16);
-  const ctaDoor = rallioFallback?.ctaDoor || "founding_supporter";
+  const ctaDoor = normalizeRallioCtaDoor(
+    rallioFallback?.contentType || candidate.template_fields.content_type,
+    rallioFallback?.ctaDoor || candidate.template_fields.cta_door,
+  );
   const cta =
     ctaDoor === "claim_your_business"
       ? "Local owners: use the link in bio when the owner profile door is open."
@@ -456,6 +460,8 @@ export async function POST(request: Request) {
                     input.batch_angle?.rallio_kpi_intent ||
                     input.rallio_kpi_intent ||
                     null,
+                  instruction:
+                    "Return Instagram-ready Rallio content only. Set selected_platforms to instagram. Use exactly one funnel CTA door. Default to community/feed-growth posts for regulars, spot recommendations, receipts, and taste-map waitlist growth. Use claim_your_business only when the requested content type is owner_claim_carousel. Store Rallio metadata in template_fields.",
                 },
                 reference_image: referenceImageUrl
                   ? {
@@ -505,7 +511,7 @@ export async function POST(request: Request) {
                   ].join(" "),
                 },
                 cta_rotation:
-                  "Use one Rallio funnel door only. Prefer founding_supporter for link-in-bio waitlist growth and local_guide for taste-map saves/requests. Use claim_your_business only for owner_claim_carousel.",
+                  "Use one Rallio funnel door only. Prefer founding_supporter for link-in-bio waitlist growth and local_guide for taste-map saves/requests. Use claim_your_business only for owner_claim_carousel. No app-store, download-now, instant-access, perks, or rewards CTA.",
                 planned_output_contract: input.batch_angle
                   ? {
                       pillar_must_equal: input.batch_angle.pillar,

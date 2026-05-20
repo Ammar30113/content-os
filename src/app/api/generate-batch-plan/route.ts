@@ -7,6 +7,7 @@ import {
   RALLIO_BRAND,
   RALLIO_SYSTEM_PROMPT,
   mapRallioTemplateToCoreType,
+  normalizeRallioCtaDoor,
   templateForContentType,
 } from "@/lib/content/rallio";
 import {
@@ -139,6 +140,7 @@ export async function POST(request: Request) {
               output_requirements: [
                 "Return exactly the requested number of angles.",
                 "Every angle must be about Rallio as a community taste map for food/drink discovery.",
+                "Every angle must include brand_slug = rallio.",
                 "Every angle must include rallio_template_type, rallio_content_type, rallio_cta_door, rallio_visual_style, and rallio_kpi_intent.",
                 "Set pillar/template_type to the closest core Content OS template type even though rendering uses the Rallio template metadata.",
                 "Do not mention coupons, cashback, price-promo framing, perks, reward hype, instant access, instant downloads, app-store CTAs, or exclamation-point promo copy.",
@@ -164,30 +166,37 @@ export async function POST(request: Request) {
       throw new Error("OpenAI did not return a structured batch plan.");
     }
 
-    const angles = normalizePlanAngles(parsed.angles, quantity).map((angle) => ({
-      ...angle,
-      pillar: angle.rallio_template_type
-        ? mapRallioTemplateToCoreType(angle.rallio_template_type)
-        : angle.pillar,
-      template_type: angle.rallio_template_type
-        ? mapRallioTemplateToCoreType(angle.rallio_template_type)
-        : angle.template_type,
-      rallio_template_type:
-        angle.rallio_template_type ||
-        templateForContentType(
-          angle.rallio_content_type || input.rallio_content_type,
+    const angles = normalizePlanAngles(parsed.angles, quantity).map((angle) => {
+      const rallioContentType =
+        angle.rallio_content_type || input.rallio_content_type || "regular_quote";
+
+      return {
+        ...angle,
+        brand_slug: "rallio",
+        pillar: angle.rallio_template_type
+          ? mapRallioTemplateToCoreType(angle.rallio_template_type)
+          : angle.pillar,
+        template_type: angle.rallio_template_type
+          ? mapRallioTemplateToCoreType(angle.rallio_template_type)
+          : angle.template_type,
+        rallio_template_type:
+          angle.rallio_template_type ||
+          templateForContentType(
+            angle.rallio_content_type || input.rallio_content_type,
+          ),
+        rallio_content_type: rallioContentType,
+        rallio_cta_door: normalizeRallioCtaDoor(
+          rallioContentType,
+          angle.rallio_cta_door || input.rallio_cta_door,
         ),
-      rallio_content_type:
-        angle.rallio_content_type || input.rallio_content_type || "regular_quote",
-      rallio_cta_door:
-        angle.rallio_cta_door || input.rallio_cta_door || "founding_supporter",
-      rallio_visual_style:
-        angle.rallio_visual_style ||
-        input.rallio_visual_style ||
-        RALLIO_BRAND.visual_style,
-      rallio_kpi_intent:
-        angle.rallio_kpi_intent || input.rallio_kpi_intent || "manual_review",
-    }));
+        rallio_visual_style:
+          angle.rallio_visual_style ||
+          input.rallio_visual_style ||
+          RALLIO_BRAND.visual_style,
+        rallio_kpi_intent:
+          angle.rallio_kpi_intent || input.rallio_kpi_intent || "manual_review",
+      };
+    });
 
     if (angles.length !== quantity) {
       throw new Error(

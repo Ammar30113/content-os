@@ -575,7 +575,7 @@ export function IdeaGeneratorForm() {
           </>
         ) : (
           <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
-            Auto-pick fills the topic, brief, tone, template type, CTA door, and visual direction from the Rallio seed bank (regulars, spot cards, receipts, manifesto, owner-claim). Choose post type and quantity below.
+            Auto-pick fills a feed-growth topic, funnel door, tone, template type, and visual direction from the Rallio seed bank. Owner utility stays occasional in batch planning.
           </div>
         )}
         {!form.auto_topic ? (
@@ -653,7 +653,8 @@ export function IdeaGeneratorForm() {
           />
         </div>
         <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
-          Rallio posts are Instagram-only and route to the Rallio Buffer channel.
+          Rallio posts are Instagram-only. They route to the Rallio Buffer
+          channel for taste-map and waitlist growth, separate from Word of AI.
         </div>
       </div>
 

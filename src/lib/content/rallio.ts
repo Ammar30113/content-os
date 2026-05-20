@@ -390,10 +390,13 @@ export function selectRallioSeed({
   quantity: number;
   recentText: string;
 }) {
-  const preferred = rallioTopicSeeds.filter((seed) =>
+  const defaultSeeds = rallioTopicSeeds.filter(
+    (seed) => seed.contentType !== "owner_claim_carousel",
+  );
+  const preferred = defaultSeeds.filter((seed) =>
     seed.bestPostTypes.includes(postType),
   );
-  const pool = preferred.length ? preferred : rallioTopicSeeds;
+  const pool = preferred.length ? preferred : defaultSeeds;
   const fresh = pool.filter(
     (seed) => !recentText.toLowerCase().includes(seed.title.toLowerCase().slice(0, 16)),
   );
@@ -461,8 +464,10 @@ export function normalizeRallioMetadata(
 ): TemplateFields {
   const contentType: RallioContentType =
     fields.content_type || fallback?.contentType || "regular_quote";
-  const ctaDoor: RallioCtaDoor =
-    fields.cta_door || fallback?.ctaDoor || "founding_supporter";
+  const ctaDoor = normalizeRallioCtaDoor(
+    contentType,
+    fields.cta_door || fallback?.ctaDoor || "founding_supporter",
+  );
   const rallioTemplateType: RallioTemplateType =
     fields.rallio_template_type ||
     fallback?.templateType ||
@@ -482,6 +487,21 @@ export function normalizeRallioMetadata(
     door_label: fields.door_label || formatRallioDoorLabel(ctaDoor),
     bio_rotation_hint: fields.bio_rotation_hint || bioHintForDoor(ctaDoor),
   };
+}
+
+export function normalizeRallioCtaDoor(
+  contentType: RallioContentType | null | undefined,
+  ctaDoor: RallioCtaDoor | null | undefined,
+): RallioCtaDoor {
+  if (contentType === "owner_claim_carousel") {
+    return "claim_your_business";
+  }
+
+  if (ctaDoor === "claim_your_business") {
+    return "founding_supporter";
+  }
+
+  return ctaDoor || "founding_supporter";
 }
 
 const NEIGHBORHOOD_PLACEHOLDERS = new Set([
@@ -609,6 +629,13 @@ export function enforceRallioCopySafety(content: GeneratedContent): GeneratedCon
   }
 
   const ctaDoor = content.template_fields.cta_door;
+  const contentType = content.template_fields.content_type;
+  if (ctaDoor === "claim_your_business" && contentType !== "owner_claim_carousel") {
+    throw new Error(
+      "Rallio safety gate blocked claim_your_business on non-owner content.",
+    );
+  }
+
   if (
     ctaDoor !== "claim_your_business" &&
     /\b(claim your business|owner claim|claim the profile|claim it)\b/.test(joined)
