@@ -272,8 +272,8 @@ export function IdeaGeneratorForm({
     setState({
       loading: true,
       message:
-        isRallio
-          ? "Picking a Rallio launch topic..."
+	        isRallio
+	          ? "Picking a Rallio community topic..."
           : form.topic_source === "live"
           ? "Looking for a live AI topic..."
           : form.topic_source === "evergreen"
@@ -616,16 +616,16 @@ export function IdeaGeneratorForm({
         <span className="grid size-10 place-items-center rounded border border-[#b8c28a]/40 bg-[#b8c28a]/10 text-[#d7ddb8]">
           <FilePlus2 size={18} />
         </span>
-        <div>
-          <h2 className="text-lg font-semibold text-white">
-            {isRallio ? "New Rallio post" : "New content idea"}
-          </h2>
-          <p className="text-sm text-zinc-500">
-            {isRallio
-              ? "Generate taste-first Toronto + Rajkot content."
-              : "Brief it once, generate the package, render or attach the image."}
-          </p>
-        </div>
+	        <div>
+	          <h2 className="text-lg font-semibold text-white">
+	            {isRallio ? "New Rallio post" : "New content idea"}
+	          </h2>
+	          <p className="text-sm text-zinc-500">
+	            {isRallio
+	              ? "Generate community-first taste-map content."
+	              : "Brief it once, generate the package, render or attach the image."}
+	          </p>
+	        </div>
       </div>
 
       <div className="mt-6 grid gap-4">
@@ -635,11 +635,11 @@ export function IdeaGeneratorForm({
             <TopicSourceButton
               active={form.auto_topic}
               title="Auto-pick topic"
-              description={
-                isRallio
-                  ? "Use the Rallio launch content bank."
-                  : "Use hybrid, live, or evergreen topic sourcing."
-              }
+	              description={
+	                isRallio
+	                  ? "Use the Rallio community content bank."
+	                  : "Use hybrid, live, or evergreen topic sourcing."
+	              }
               icon={<Shuffle size={15} className="text-[#d7ddb8]" />}
               onClick={() =>
                 setForm((current) => ({
@@ -689,11 +689,11 @@ export function IdeaGeneratorForm({
                 />
               </div>
               ) : null}
-              <div className="rounded border border-[#b8c28a]/30 bg-[#b8c28a]/10 p-3 text-sm leading-6 text-[#eef4cc]">
-                {isRallio
-                  ? "Auto-pick fills a Rallio launch topic, funnel CTA door, tone, and visual direction. Choose only post type and count, or open advanced controls to attach a reference image."
-                  : "Auto-pick fills the topic, brief, tone, and template. Choose only post type and count, or open advanced controls to override channels and image handling."}
-              </div>
+	              <div className="rounded border border-[#b8c28a]/30 bg-[#b8c28a]/10 p-3 text-sm leading-6 text-[#eef4cc]">
+	                {isRallio
+	                  ? "Auto-pick fills a Rallio feed-growth topic, funnel door, tone, and visual direction. Choose post type and count, or open advanced controls to attach a reference image."
+	                  : "Auto-pick fills the topic, brief, tone, and template. Choose only post type and count, or open advanced controls to override channels and image handling."}
+	              </div>
             </div>
           ) : null}
         </section>
@@ -931,12 +931,12 @@ export function IdeaGeneratorForm({
             onChange={(value) => updateField("quantity", value)}
           />
         </div>
-        {isRallio ? (
-          <div className="rounded border border-[#c8923a]/30 bg-[#c8923a]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
-            Rallio posts are Instagram-only. When sent to Buffer, they use the
-            Rallio Instagram channel and stay separate from Word of AI.
-          </div>
-        ) : null}
+	        {isRallio ? (
+	          <div className="rounded border border-[#c8923a]/30 bg-[#c8923a]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
+	            Rallio posts are Instagram-only. They route to the Rallio Buffer
+	            channel for taste-map and waitlist growth, separate from Word of AI.
+	          </div>
+	        ) : null}
         {form.template_hint === "meme" ? (
           <div className="rounded border border-[#c98270]/30 bg-[#c98270]/10 p-3 text-sm leading-6 text-[#f0c9bf]">
             Meme mode uses weekly public trend context when generating. For

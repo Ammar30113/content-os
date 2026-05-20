@@ -144,16 +144,20 @@ export async function POST(request: Request) {
                     "claim_your_business",
                   ],
                   funnel_cta_policy:
-                    "Pick exactly one cta door per angle: founding_supporter, local_guide, or claim_your_business. Use cta_intent = follow in the required schema because product CTAs are not for Word of AI.",
+                    "Pick exactly one cta door per angle. Prefer founding_supporter for link-in-bio waitlist growth and local_guide for taste-map saves. Use claim_your_business only for an explicitly owner-facing utility angle. Use cta_intent = follow in the required schema because product CTAs are not for Word of AI.",
+                  feed_rhythm:
+                    "Default campaign rhythm: regular_quote, spot_carousel, receipt_single, manifesto_reel or bts_story_sequence, then occasional owner_claim_carousel. For quantity 5+, include at least 3 community/feed-growth angles before any owner-claim angle.",
                   output_requirements: [
                     "Return exactly the requested number of angles.",
-                    "Every angle must be about Rallio, Toronto + Rajkot, and taste-first food/drink local discovery.",
+                    "Every angle must be about Rallio as a community taste map for food/drink discovery.",
                     "Every angle must include brand_slug = rallio.",
                     "Every angle must include rallio_template_type, rallio_content_type, rallio_cta_door, rallio_visual_style, and rallio_kpi_intent.",
                     "Set pillar/template_type to the closest core Content OS template type even though rendering will use the Rallio template metadata.",
                     "Set cta_intent to follow for every angle.",
-                    "Do not mention Word of AI, QuoteStack, coupons, cashback, price-promo framing, reward hype, instant downloads, or app-store CTAs.",
-                    "Do not make Ossington-only claims. Write for Toronto + Rajkot now, with a global expansion path later.",
+                    "Do not mention Word of AI, QuoteStack, coupons, cashback, price-promo framing, perks, reward hype, instant access, instant downloads, app-store CTAs, or exclamation-point promo copy.",
+                    "Do not use Toronto + Rajkot as repeated headline copy. Mention seed markets only when the exact scope matters.",
+                    "Do not write generic launch/product angles. Rallio is the taste map being built, not a fully launched product to promote.",
+                    "Do not assign claim_your_business unless rallio_content_type is owner_claim_carousel and the angle is explicitly for food/drink owners.",
                     "Always include authority_figure, topical_event, contrarian_take, builder_lesson, meme_trend_title, meme_trend_source, meme_format, and meme_adaptation. Use null unless truly relevant.",
                     "Vary the angle, CTA door, and visual treatment across the batch where possible.",
                   ],
@@ -259,7 +263,7 @@ export async function POST(request: Request) {
             templateForContentType(angle.rallio_content_type || input.rallio_content_type)
           : null,
       rallio_content_type: isRallio
-        ? angle.rallio_content_type || input.rallio_content_type || "manifesto_reel"
+        ? angle.rallio_content_type || input.rallio_content_type || "regular_quote"
         : null,
       rallio_cta_door: isRallio
         ? angle.rallio_cta_door || input.rallio_cta_door || "founding_supporter"

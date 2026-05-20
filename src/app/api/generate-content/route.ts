@@ -170,24 +170,27 @@ const fallbackHashtags = [
 
 const rallioFallbackHashtags = [
   "#toronto",
-  "#rajkot",
   "#torontofood",
   "#torontofoodie",
   "#torontolife",
   "#torontorestaurants",
+  "#ossington",
+  "#littleitaly",
   "#localbusiness",
   "#supportlocal",
   "#neighbourhood",
   "#foodguide",
+  "#tastemap",
+  "#regulars",
   "#rallio",
 ];
 
 const rallioFallbackActionBullets = [
   "saves spots worth revisiting, not just spots worth scrolling past",
-  "notices owner details that generic listings flatten",
+  "notices the details regulars repeat out loud",
   "asks regulars what they would recommend twice",
-  "keeps the launch narrow enough to stay useful",
-  "turns neighborhood taste into a clearer map",
+  "keeps the map narrow enough to stay useful",
+  "turns neighborhood recommendations into a clearer map",
 ];
 
 const TEMPLATE_DATE_MAX_AGE_DAYS = 45;
@@ -436,7 +439,7 @@ function createRallioQualityFallbackContent({
     ...getFallbackActionBullets(candidate, contrast),
     ...rallioFallbackActionBullets,
   ]).slice(0, 4);
-  const finalLine = "This isn't a promo feed. It's a better local signal.";
+  const finalLine = "This isn't a promo feed. It's a taste map people can help build.";
   const hashtags = normalizeFallbackHashtags([
     ...(candidate.hashtags || []),
     ...rallioFallbackHashtags,
@@ -444,10 +447,10 @@ function createRallioQualityFallbackContent({
   const ctaDoor = rallioFallback?.ctaDoor || "founding_supporter";
   const cta =
     ctaDoor === "claim_your_business"
-      ? "Local owners: save this for the claim-your-business door."
+      ? "Local owners: use the link in bio when the owner profile door is open."
       : ctaDoor === "local_guide" || ctaDoor === "ossington_30_guide"
-        ? "Save this for the Toronto + Rajkot local guide."
-        : "Save this if you want the first Rallio supporter drop.";
+        ? "Save this and use the link in bio to request the taste map."
+        : "Link in bio to join the Rallio taste-map waitlist.";
   const caption = [
     hook,
     "",
@@ -804,8 +807,8 @@ export async function POST(request: Request) {
               isRepairPass
                 ? "Repair pass: keep the planned angle, but rewrite the weak caption, contrast differences, platform variants, and final line so the output passes the quality gate. Do not soften the hook."
                 : "",
-              isRallio
-                ? "This is a Rallio package. You may mention Rallio as the local discovery project for Toronto + Rajkot now and global later, but never use download-now, coupon, cashback, price-promo, reward-hype, or app-store CTA language."
+	              isRallio
+	                ? "This is a Rallio package. Treat Rallio as a community taste map being built through regulars, spot recommendations, receipts, and waitlist demand. Mention seed markets only when needed; do not force Toronto + Rajkot into headlines. Never use download-now, instant-access, coupon, cashback, price-promo, perks, reward-hype, exclamation-point promo copy, or app-store CTA language."
                 : PRODUCT_MENTION_CONFIG.product_mentions_enabled
                   ? "Product mentions may be used only when explicitly relevant."
                   : "Product mentions are paused. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",
@@ -883,8 +886,8 @@ export async function POST(request: Request) {
                         input.batch_angle?.rallio_kpi_intent ||
                         input.rallio_kpi_intent ||
                         null,
-                      instruction:
-                        "Return Instagram-ready Rallio content only. Set selected_platforms to instagram. Use exactly one funnel CTA door. Store Rallio metadata in template_fields.",
+	                      instruction:
+	                        "Return Instagram-ready Rallio content only. Set selected_platforms to instagram. Use exactly one funnel CTA door. Default to community/feed-growth posts for regulars, spot recommendations, receipts, and taste-map waitlist growth. Use claim_your_business only when the requested content type is owner_claim_carousel. Store Rallio metadata in template_fields.",
                     }
                   : null,
                 template_hint: input.template_hint,
@@ -979,13 +982,13 @@ export async function POST(request: Request) {
                     "Slightly expanded, still structured, no corporate tone, no long paragraphs.",
                 },
                 visual_system: {
-                  style:
-                    isRallio
-                      ? "Rallio local editorial system. Cream/ink/amber/moss, receipt details, subtle grain, warm neighborhood taste. No generic tech visuals."
-                      : "AI Newsroom / Builder Desk. Dark, high-contrast, text-first, sharp, and readable. Do not make fake hero visuals when no real image URL is provided.",
-                  template_fields:
-                    isRallio
-                      ? "Use headline, subhead, brand_slug, brand_handle, launch_neighborhood, category_focus, cta_door, content_type, visual_style, rallio_template_type, door_label, bio_rotation_hint, kpi_intent, business_name, spot_number, spot_category, regular_quote, receipt_lines, subtotal, owner_steps, bottom_label, and review_notes. Return every template field; use null when unavailable."
+	                  style:
+	                    isRallio
+	                      ? "Rallio local editorial system. Cream/ink/amber/wheat/moss, Fraunces-style quote cards, spot carousel cards, receipt details, black manifesto tiles, dark owner-utility phone/profile cards. No generic tech visuals."
+	                      : "AI Newsroom / Builder Desk. Dark, high-contrast, text-first, sharp, and readable. Do not make fake hero visuals when no real image URL is provided.",
+	                  template_fields:
+	                    isRallio
+	                      ? "Use headline, subhead, brand_slug, brand_handle, launch_neighborhood, category_focus, cta_door, content_type, visual_style, rallio_template_type, door_label, bio_rotation_hint, kpi_intent, business_name, spot_number, spot_category, regular_quote, quote, attribution, info_rows, receipt_lines, subtotal, owner_steps, bottom_label, and review_notes. Return every template field; use null when unavailable."
                       : "Use headline, subhead, visual_subject, swipe_hint, bottom_label, info_rows, source_name, date, tools, stat, quote, pull_quote, code_snippet, meme_setup, meme_punchline, authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes to direct the image and review flow. Add 2-3 short info_rows when the visual would benefit from concrete proof, contrast, or checklist detail. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null. Also return Rallio-only template fields as null.",
                   date_rule: `Current date is ${formatTemplateDate()}. If the image shows a date, use the current date or the live discussion date. Never copy stale dates from GitHub repos, docs, changelogs, or archive pages unless the user explicitly asks for a historical post.`,
                   thumbnail_rule:
@@ -994,14 +997,17 @@ export async function POST(request: Request) {
                     "Never output placeholder labels like Tool A, Tool B, Product X, or Founder Y. Use specific real names from the input or role labels like Research agent, Drafting agent, Review agent.",
                   uploaded_image_rule:
                     "If a real reference image URL is supplied, do not invent fake screenshots, logos, portraits, or product images. Use the supplied URL only when it makes the visual more concrete.",
-                  meme_rule:
-                    "For meme template, return short meme_setup and meme_punchline fields. The joke should be dry AI-builder humor with a useful point, not offensive, not mean, and not dependent on a copyrighted meme image.",
-                  authority_pov_rule:
-                    "For authority_pov mode, return authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes. Make the reel_script a short talking-head script with a hook, the authority/current-event setup, the sharp take, and one practical builder takeaway.",
-                },
-                cta_rotation:
-                  isRallio
-                    ? "Use one of the Rallio funnel doors only: founding_supporter, local_guide, claim_your_business. No app-store or download-now CTA."
+	                  meme_rule:
+	                    "For meme template, return short meme_setup and meme_punchline fields. The joke should be dry AI-builder humor with a useful point, not offensive, not mean, and not dependent on a copyrighted meme image.",
+	                  authority_pov_rule:
+	                    "For authority_pov mode, return authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes. Make the reel_script a short talking-head script with a hook, the authority/current-event setup, the sharp take, and one practical builder takeaway.",
+	                  rallio_copy_rule: isRallio
+	                    ? "No exclamation points. Do not use instant, perks, rewards, discounts, tag-a-friend bait, app-store CTAs, or generic launch/product hooks. Do not repeat Toronto + Rajkot in the same package. Headlines should default to local taste, regulars, recommendations, receipts, and waitlist/taste-map language."
+	                    : null,
+	                },
+	                cta_rotation:
+	                  isRallio
+	                    ? "Use one Rallio funnel door only. Prefer founding_supporter for link-in-bio waitlist growth and local_guide for taste-map saves/requests. Use claim_your_business only for owner_claim_carousel. No app-store, download-now, instant-access, perks, or rewards CTA."
                     : PRODUCT_MENTION_CONFIG.product_mentions_enabled
                       ? "Use follow most often. Rallio and QuoteStack mentions should be rare and natural. Never hard sell."
                       : "Use follow CTAs only. Do not mention Rallio, Raillio, QuoteStack, downloads, app signups, or link-in-bio product asks.",

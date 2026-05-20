@@ -23,7 +23,7 @@ export default async function RallioPage() {
       <PageHeader
         eyebrow="Rallio"
         title="Rallio Content"
-        description="Generate taste-first Toronto + Rajkot posts for review. Word of AI stays separate."
+        description="Generate community-first Instagram posts for the Rallio taste map. Word of AI stays separate."
       />
       <section className="grid gap-6 p-6 lg:p-8 xl:grid-cols-[1fr_390px]">
         <IdeaGeneratorForm brandSlug="rallio" />
@@ -34,11 +34,11 @@ export default async function RallioPage() {
               Rallio rules
             </h2>
             <div className="mt-4 space-y-3 text-sm leading-6 text-[#d8c9b4]">
-              <p>Launch markets: Toronto + Rajkot now.</p>
-              <p>Expansion path: prove the local loop first, then broaden globally.</p>
-              <p>Category focus: food and drink first.</p>
-              <p>Tone: taste-first, local, operator-aware.</p>
-              <p>Avoid coupons, cashback, instant-download claims, or reward hype.</p>
+              <p>Feed goal: grow community demand before product launch.</p>
+              <p>Default rhythm: regular quote, spot card, receipt, manifesto/BTS.</p>
+              <p>Category focus: food and drink spots people recommend twice.</p>
+              <p>Tone: local, taste-first, regular-aware.</p>
+              <p>Avoid generic launch copy, exclamation points, perks, rewards, and instant-access claims.</p>
             </div>
           </section>
 
@@ -50,12 +50,12 @@ export default async function RallioPage() {
                 the early supporter list.
               </p>
               <p>
-                <span className="text-white">Toronto + Rajkot guide:</span> drive
-                guide saves and requests.
+                <span className="text-white">Taste map:</span> drive saves,
+                guide requests, and link-in-bio waitlist joins.
               </p>
               <p>
-                <span className="text-white">Claim your business:</span> owner
-                profile claim interest.
+                <span className="text-white">Owner profile:</span> occasional
+                owner-utility posts for community-added spots.
               </p>
             </div>
           </section>

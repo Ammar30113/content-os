@@ -14,47 +14,54 @@ export const RALLIO_BRAND = {
   brand_slug: "rallio",
   name: "Rallio",
   handle: "@rallio",
-  launch_neighborhood: "Toronto + Rajkot",
-  launch_scope: "Toronto + Rajkot now, global later",
+  launch_neighborhood: "local taste map",
+  launch_scope: "community waitlist first; Toronto and Rajkot are seed markets, not headline defaults",
   category_focus: "food_drink",
-  visual_style: "cream_ink_amber_moss_receipt",
+  visual_style: "cream_ink_amber_wheat_moss_editorial",
 } as const;
 
 export const RALLIO_SYSTEM_PROMPT = `
 You are the Rallio content brain inside Content OS.
 
-Rallio is a taste-first local discovery app for people who want to back the right local spots before they become obvious.
+Rallio is a community-built taste map for people who trust regulars, local recommendations, and repeat-worthy spots more than generic rankings.
 
 CURRENT LAUNCH CONTEXT
-- Launch markets: Toronto + Rajkot
-- Expansion path: prove the local loop first, then broaden globally
-- Category focus: food and drink first
-- Audience: Toronto and Rajkot locals, neighborhood explorers, regulars, independent owners, taste-led supporters
-- Product stage: pre-launch / early supporter list
+- Product stage: pre-launch / waitlist growth.
+- The feed should grow community demand first, then convert through link-in-bio waitlist and taste-map asks.
+- Toronto and Rajkot are seed markets, but do not use "Toronto + Rajkot" as repeated headline copy.
+- Category focus: food and drink first.
+- Audience: neighborhood regulars, food/drink explorers, people who recommend local spots, and independent owners.
 
 VOICE
 - Warm, local, specific, confident.
-- Taste-first. City-aware. Owner-aware.
-- Write like someone who actually walks local food streets, notices details, and respects operators.
-- No hype. No "best deals near you". No "download now".
+- Taste-first. Regular-aware. Operator-aware only when the post is explicitly for owners.
+- Write like someone who notices what regulars order, what lines are worth joining, and which spots people recommend twice.
+- No hype. No exclamation points. No "best deals near you". No "download now".
+- Rallio is the taste map being built, not a fully launched product to promote.
 
 HARD BANS
 - Do not promise instant app access or instant downloads.
 - Do not frame Rallio as coupons, cashback, price promos, or generic rewards.
 - Do not hype perks. Perks can exist later, but they are not the story.
 - Do not say "save money", "exclusive rewards", "free food", or "limited-time deal".
-- Do not say it is available everywhere. Write for Toronto + Rajkot now, with global later.
+- Do not say it is available everywhere. Toronto and Rajkot are seed-market context, not the default headline.
+- Do not use "TAG A FRIEND WHO..." engagement bait.
+- Do not use "claim your business" unless the post is explicitly owner-facing.
+- Do not make owner-claim posts the default feed rhythm.
+- Do not write generic launch/product copy such as "Rallio is launching soon" as the hook.
+- Do not use "Toronto + Rajkot" in headlines unless the exact market scope is the point.
 
 FUNNEL CTA DOORS
-- founding_supporter: invite people to join the founding supporter list.
-- local_guide: invite people to save or request the Toronto + Rajkot local guide.
-- claim_your_business: invite Toronto + Rajkot food/drink owners to claim their business profile when the owner door opens.
+- founding_supporter: invite people to join the link-in-bio waitlist for the taste map.
+- local_guide: invite people to save/request the neighborhood taste map or guide.
+- claim_your_business: owner-only utility; invite food/drink owners to claim a community-added profile when that owner door is intentionally selected.
 
 OUTPUT STYLE
 - Instagram-first.
 - Keep captions scannable and grounded.
-- Every post should make one concrete local behavior feel worth doing: save a spot, notice a detail, back a local operator, build a taste profile, claim a profile.
-- Rallio can be named, but do not hard-sell the app.
+- Default rhythm: regular quote, spot card, receipt, manifesto/BTS, then occasional owner utility.
+- Every post should make one concrete local behavior feel worth doing: save a spot, notice a detail, quote a regular, request the taste map, or join the waitlist.
+- Rallio can be named, but do not hard-sell the app or claim the product is already launched.
 `.trim();
 
 export type RallioTopicSeed = {
@@ -86,70 +93,70 @@ export type RallioTopicSeed = {
 
 export const rallioTopicSeeds: RallioTopicSeed[] = [
   {
-    id: "local-taste-manifesto",
-    title: "Toronto + Rajkot deserve a better local discovery loop",
+    id: "regulars-quote-feed",
+    title: "Regulars make the local taste map",
     brief:
-      "Create a Rallio manifesto post about why local discovery should start with taste, regulars, owner context, and local trust instead of generic ratings or promo chasing. Make it work for Toronto + Rajkot now, with global expansion later.",
+      "Create Rallio content built around a believable quote from a local regular. Make the post feel like community taste, not product marketing. The goal is saves, shares, and link-in-bio waitlist interest for the taste map.",
     preferredTone: "founder",
-    templateHint: "founder_story",
-    rallioTemplateType: "rallio_manifesto",
-    contentType: "manifesto_reel",
+    templateHint: "creator_economy",
+    rallioTemplateType: "rallio_regular_quote",
+    contentType: "regular_quote",
     ctaDoor: "founding_supporter",
-    bestPostTypes: ["single", "reel", "carousel"],
-    kpiIntent: "follower_growth_shares",
+    bestPostTypes: ["single", "carousel", "reel"],
+    kpiIntent: "follower_growth_saves_shares",
     visualDirection:
-      "Cream/ink manifesto card with one large thesis, tiny Toronto + Rajkot marker, and founding supporter CTA.",
+      "Cream editorial quote card with Fraunces-style italic pull quote, amber dot, local spot label, and small Rallio mark.",
     captionStructure:
-      "One-line local belief, short tension, three specific local-discovery behaviors, one founding supporter CTA.",
+      "Regular quote as hook, short observation, 3 community taste signals, link-in-bio waitlist or taste-map CTA.",
     doNotSay:
-      "Do not say download now, coupons, cashback, reward hype, or available everywhere.",
+      "Do not say download now, launching soon, claim your business, coupons, cashback, reward hype, or tag a friend.",
     angleVariants: [
       {
-        working_title: "Taste Before Promo",
-        pillar: "founder_story",
-        hook_direction:
-          "Local discovery does not need another promo feed. It needs a better taste map.",
-        unique_takeaway:
-          "The first Rallio loop is about finding the spots people would defend, not ranking every restaurant.",
-        visual_direction: "Manifesto card with one thesis line and small neighborhood badge.",
-        do_not_repeat: "Do not use promo framing.",
-        rallioTemplateType: "rallio_manifesto",
-        contentType: "manifesto_reel",
-        ctaDoor: "founding_supporter",
-      },
-      {
-        working_title: "The Regulars Know First",
+        working_title: "The Tuesday Regular",
         pillar: "creator_economy",
         hook_direction:
-          "The most useful local signal is not a star rating. It is who keeps coming back.",
+          "A regular's weekly habit says more than a five-star average.",
         unique_takeaway:
-          "Rallio should turn regular behavior into a stronger discovery signal.",
-        visual_direction: "Regular quote card with a warm pull quote.",
-        do_not_repeat: "Do not use app-store language.",
+          "The Rallio feed should make repeat behavior feel like the local signal worth saving.",
+        visual_direction: "Regular quote card with one specific habit and local attribution.",
+        do_not_repeat: "Do not turn the quote into food critic language.",
         rallioTemplateType: "rallio_regular_quote",
         contentType: "regular_quote",
         ctaDoor: "founding_supporter",
       },
       {
-        working_title: "The Strip Has Memory",
+        working_title: "The Recommendation You Trust",
+        pillar: "creator_economy",
+        hook_direction:
+          "People trust the friend who knows the room, not the ranking that flattens every room.",
+        unique_takeaway:
+          "Community recommendations are the first layer of a better taste map.",
+        visual_direction: "Cream pull-quote tile with spot and regular context.",
+        do_not_repeat: "Do not mention launch markets in the headline.",
+        rallioTemplateType: "rallio_regular_quote",
+        contentType: "regular_quote",
+        ctaDoor: "founding_supporter",
+      },
+      {
+        working_title: "Not A Critic Line",
         pillar: "founder_story",
         hook_direction:
-          "A good neighborhood app should remember what people actually return to.",
+          "Regulars do not talk like critics. That is why their lines are useful.",
         unique_takeaway:
-          "Discovery gets better when it captures taste patterns, not one-off likes.",
-        visual_direction: "Receipt-style card with taste notes.",
-        do_not_repeat: "Do not mention generic rewards.",
-        rallioTemplateType: "rallio_receipt",
-        contentType: "receipt_single",
+          "Rallio should preserve everyday taste language before it becomes generic content.",
+        visual_direction: "Regular quote card with oversized italic sentence.",
+        do_not_repeat: "Do not use restaurant-review cliches.",
+        rallioTemplateType: "rallio_regular_quote",
+        contentType: "regular_quote",
         ctaDoor: "founding_supporter",
       },
     ],
   },
   {
-    id: "local-guide",
-    title: "The Toronto + Rajkot launch guide",
+    id: "spot-card-carousel",
+    title: "Community-added spot cards",
     brief:
-      "Create Rallio content around a curated Toronto + Rajkot food/drink guide. Position it as a taste-led launch map, not a ranking. Focus on why people should save the guide and use it to explore more intentionally.",
+      "Create Rallio spot-card content that makes one local food/drink place feel worth saving. Treat the post like a taste-map card: category, street, regular quote, and why the spot belongs in the community map.",
     preferredTone: "educational",
     templateHint: "creator_economy",
     rallioTemplateType: "rallio_spot_carousel",
@@ -158,80 +165,200 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     bestPostTypes: ["carousel", "single"],
     kpiIntent: "saves",
     visualDirection:
-      "Spot carousel cover with numbered cards, cream background, amber markers, and Toronto + Rajkot guide language.",
+      "Cream spot carousel cover with numbered card, amber meta line, large serif business name, quote, and regular attribution.",
     captionStructure:
-      "Local hook, why the guide exists, 3 behaviors it helps with, save/request guide CTA.",
+      "Spot name as hook, one taste reason, 3 save-worthy signals, save/request taste-map CTA.",
     doNotSay:
-      "Do not imply the guide is live if not launched. Do not claim these are objectively the best spots.",
+      "Do not imply the full guide is live. Do not claim these are objectively the best spots. Do not use Toronto + Rajkot as the headline.",
     angleVariants: [
       {
-        working_title: "Toronto + Rajkot Need A Taste Map",
+        working_title: "One Spot Worth Saving",
         pillar: "creator_economy",
         hook_direction:
-          "A good local guide should help you choose a night, not just scroll a list.",
+          "A good spot card should tell you why regulars keep returning.",
         unique_takeaway:
-          "The Toronto + Rajkot guide is a launch map for choosing with more context.",
-        visual_direction: "Spot carousel with three numbered taste signals.",
-        do_not_repeat: "Do not call it a top 30 ranking.",
+          "A taste map is built one specific recommendation at a time.",
+        visual_direction: "Spot carousel cover with business name, category, street, and regular quote.",
+        do_not_repeat: "Do not call it a ranking or top list.",
         rallioTemplateType: "rallio_spot_carousel",
         contentType: "spot_carousel",
         ctaDoor: "local_guide",
       },
       {
-        working_title: "Save The Spots You Would Defend",
+        working_title: "The Saveable Detail",
         pillar: "tutorial",
         hook_direction:
-          "The best guide starts with the places people would recommend twice.",
+          "The useful local detail is the thing a regular tells you before you order.",
         unique_takeaway:
-          "Rallio should help people build a local taste profile from repeat-worthy spots.",
-        visual_direction: "Receipt card with three save-worthy signals.",
-        do_not_repeat: "Do not promise app access.",
-        rallioTemplateType: "rallio_receipt",
-        contentType: "receipt_single",
+          "Spot cards should carry one detail people can actually use tonight.",
+        visual_direction: "Spot carousel slide with one large detail and amber marker.",
+        do_not_repeat: "Do not promise app access or live availability.",
+        rallioTemplateType: "rallio_spot_carousel",
+        contentType: "spot_carousel",
         ctaDoor: "local_guide",
       },
       {
-        working_title: "Two Markets, Better Context",
-        pillar: "news_digest",
+        working_title: "Recommended Twice",
+        pillar: "creator_economy",
         hook_direction:
-          "The launch is focused on purpose: two markets, one category, better signal.",
+          "The strongest local spots are the ones people recommend twice without being asked.",
         unique_takeaway:
-          "Starting with Toronto + Rajkot food/drink keeps the product honest and useful before going global.",
-        visual_direction: "Manifesto card with one strip/one category framing.",
-        do_not_repeat: "Do not claim Rallio is already global.",
-        rallioTemplateType: "rallio_manifesto",
-        contentType: "manifesto_reel",
+          "Rallio's feed should turn repeat recommendations into a map people want to save.",
+        visual_direction: "Cream card with three spot signals and small carousel count marker.",
+        do_not_repeat: "Do not write broad market-positioning copy.",
+        rallioTemplateType: "rallio_spot_carousel",
+        contentType: "spot_carousel",
         ctaDoor: "local_guide",
       },
     ],
   },
   {
-    id: "owner-claim-flow",
-    title: "Toronto + Rajkot owners should control their Rallio profile",
+    id: "taste-receipt",
+    title: "Receipts for local taste",
     brief:
-      "Create Rallio content for Toronto + Rajkot food/drink owners. Explain why claiming a business profile matters before launch: accurate details, better story, owner-approved context. Keep it practical and respectful.",
+      "Create a Rallio receipt-style post that turns local taste into a short, saveable checklist. Focus on regulars, repeat visits, specific orders, and the kind of detail that belongs in a taste map.",
+    preferredTone: "tutorial",
+    templateHint: "tutorial",
+    rallioTemplateType: "rallio_receipt",
+    contentType: "receipt_single",
+    ctaDoor: "founding_supporter",
+    bestPostTypes: ["single", "carousel"],
+    kpiIntent: "saves_waitlist",
+    visualDirection:
+      "Receipt graphic with cream paper, dashed dividers, mono line items, amber subtotal, and small link-in-bio waitlist cue.",
+    captionStructure:
+      "Receipt metaphor hook, short local tension, 3-4 taste-map line items, link-in-bio waitlist CTA.",
+    doNotSay:
+      "Do not mention perks, rewards, discounts, instant access, or claim-your-business copy.",
+    angleVariants: [
+      {
+        working_title: "Taste Receipt",
+        pillar: "tutorial",
+        hook_direction:
+          "If a spot is worth saving, there is usually a receipt of tiny reasons.",
+        unique_takeaway:
+          "Rallio should make local taste easier to remember than a generic rating.",
+        visual_direction: "Receipt card with four local signal line items.",
+        do_not_repeat: "Do not make this a product feature list.",
+        rallioTemplateType: "rallio_receipt",
+        contentType: "receipt_single",
+        ctaDoor: "founding_supporter",
+      },
+      {
+        working_title: "What Regulars Notice",
+        pillar: "tutorial",
+        hook_direction:
+          "Regulars notice details that listing pages usually miss.",
+        unique_takeaway:
+          "The taste map should capture details like order rituals, owner habits, and repeat-worthy timing.",
+        visual_direction: "Receipt card with regular-noted line items.",
+        do_not_repeat: "Do not use generic checklist language.",
+        rallioTemplateType: "rallio_receipt",
+        contentType: "receipt_single",
+        ctaDoor: "founding_supporter",
+      },
+      {
+        working_title: "Save Before You Forget",
+        pillar: "creator_economy",
+        hook_direction:
+          "The best local recommendations disappear if nobody writes down the reason.",
+        unique_takeaway:
+          "Rallio can make taste memory visible before the app becomes a broad product.",
+        visual_direction: "Receipt graphic with subtotal labelled taste map.",
+        do_not_repeat: "Do not say the app is live everywhere.",
+        rallioTemplateType: "rallio_receipt",
+        contentType: "receipt_single",
+        ctaDoor: "local_guide",
+      },
+    ],
+  },
+  {
+    id: "manifesto-bts",
+    title: "The taste map is being built in public",
+    brief:
+      "Create a black manifesto or BTS-style Rallio post about why the feed is community-first. Make it feel like a motion tile: one sharp line, local taste over product launch, and a waitlist/taste-map CTA.",
+    preferredTone: "contrarian",
+    templateHint: "founder_story",
+    rallioTemplateType: "rallio_manifesto",
+    contentType: "manifesto_reel",
+    ctaDoor: "founding_supporter",
+    bestPostTypes: ["single", "reel"],
+    kpiIntent: "shares_waitlist",
+    visualDirection:
+      "Ink-black manifesto tile with cream serif headline, amber marker, and minimal community-first taste-map copy.",
+    captionStructure:
+      "One-line belief, short tension, 3 feed principles, link-in-bio waitlist CTA.",
+    doNotSay:
+      "Do not write generic launch copy. Do not overuse Toronto + Rajkot. Do not mention rewards or owner claims.",
+    angleVariants: [
+      {
+        working_title: "Regulars Over Ratings",
+        pillar: "founder_story",
+        hook_direction:
+          "The local feed gets better when regulars become the signal.",
+        unique_takeaway:
+          "Rallio is building toward a taste map, not another generic discovery feed.",
+        visual_direction: "Black manifesto tile with one large thesis.",
+        do_not_repeat: "Do not use app-launch language.",
+        rallioTemplateType: "rallio_manifesto",
+        contentType: "manifesto_reel",
+        ctaDoor: "founding_supporter",
+      },
+      {
+        working_title: "Not A Promo Feed",
+        pillar: "founder_story",
+        hook_direction:
+          "Local discovery does not need louder promos. It needs better memory.",
+        unique_takeaway:
+          "The first Rallio loop should collect what people would actually recommend.",
+        visual_direction: "Ink tile with three small feed principles.",
+        do_not_repeat: "Do not use coupon or deal framing.",
+        rallioTemplateType: "rallio_manifesto",
+        contentType: "manifesto_reel",
+        ctaDoor: "founding_supporter",
+      },
+      {
+        working_title: "Build The Map Quietly",
+        pillar: "founder_story",
+        hook_direction:
+          "The best local maps are built from patient recommendations, not launch noise.",
+        unique_takeaway:
+          "Waitlist growth should feel like helping shape the map before it opens wider.",
+        visual_direction: "BTS manifesto tile with link-in-bio waitlist cue.",
+        do_not_repeat: "Do not make a city-versus-city point.",
+        rallioTemplateType: "rallio_manifesto",
+        contentType: "bts_story_sequence",
+        ctaDoor: "founding_supporter",
+      },
+    ],
+  },
+  {
+    id: "owner-claim-flow",
+    title: "Owner utility for community-added profiles",
+    brief:
+      "Create occasional Rallio owner-utility content for food/drink operators whose spots were community-added. Explain the profile claim as a practical way to correct details and add context. Keep it respectful and secondary to the community feed.",
     preferredTone: "founder",
     templateHint: "tutorial",
     rallioTemplateType: "rallio_owner_claim",
     contentType: "owner_claim_carousel",
     ctaDoor: "claim_your_business",
-    bestPostTypes: ["carousel", "single"],
+    bestPostTypes: ["carousel"],
     kpiIntent: "business_waitlist",
     visualDirection:
-      "Owner claim carousel with three calm steps and an amber owner marker.",
+      "Dark owner-claim phone/profile card with moss owner marker, community-added badge, small stats, and takes-about-a-minute CTA.",
     captionStructure:
-      "Owner-aware hook, why claim exists, 3 practical steps, claim-your-business CTA.",
+      "Owner-aware hook, why the community-added profile exists, 3 practical owner steps, link-in-bio owner CTA.",
     doNotSay:
-      "Do not sound like sales outreach. Do not promise paid traffic or revenue.",
+      "Do not sound like sales outreach. Do not promise paid traffic, revenue, perks, rewards, or instant setup.",
     angleVariants: [
       {
         working_title: "Claim The Story Before Launch",
         pillar: "founder_story",
         hook_direction:
-          "If your spot is on the strip, your profile should not be guessed by an app.",
+          "If regulars added your spot, the profile should still be easy for the owner to correct.",
         unique_takeaway:
-          "Claiming gives owners control over details before supporters see the launch guide.",
-        visual_direction: "Owner claim card with three steps.",
+          "Claiming is a lightweight owner utility, not the main community-feed story.",
+        visual_direction: "Dark phone/profile card with community-added badge and owner CTA.",
         do_not_repeat: "Do not pitch ads.",
         rallioTemplateType: "rallio_owner_claim",
         contentType: "owner_claim_carousel",
@@ -241,13 +368,13 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         working_title: "Better Local Context",
         pillar: "tutorial",
         hook_direction:
-          "A local profile should explain what makes a spot worth remembering.",
+          "A local profile should carry owner context without replacing regular recommendations.",
         unique_takeaway:
-          "Rallio owner claims should improve context, not create another listing chore.",
-        visual_direction: "Receipt card with owner context fields.",
+          "Owner claim posts should help operators add missing context while keeping the feed community-led.",
+        visual_direction: "Dark owner utility card with three calm steps.",
         do_not_repeat: "Do not mention coupons, perks, or reward hype.",
-        rallioTemplateType: "rallio_receipt",
-        contentType: "receipt_single",
+        rallioTemplateType: "rallio_owner_claim",
+        contentType: "owner_claim_carousel",
         ctaDoor: "claim_your_business",
       },
     ],
@@ -286,8 +413,9 @@ export function buildRallioRouletteBrief(seed: RallioTopicSeed, quantity: number
     seed.brief,
     "",
     `Launch scope: ${RALLIO_BRAND.launch_scope}`,
-    `Launch markets: ${RALLIO_BRAND.launch_neighborhood}`,
-    "Category focus: Toronto + Rajkot food/drink.",
+    "Seed markets can be mentioned as context, but headlines should default to neighborhood taste, regulars, and community recommendations.",
+    "Category focus: food/drink spots people would recommend twice.",
+    "Default feed rhythm: quote, spot card, receipt, manifesto/BTS, then occasional owner utility.",
     `CTA door: ${seed.ctaDoor}.`,
     `KPI intent: ${seed.kpiIntent}.`,
     `Visual direction: ${seed.visualDirection}`,
@@ -332,7 +460,7 @@ export function normalizeRallioMetadata(
   },
 ): TemplateFields {
   const contentType: RallioContentType =
-    fields.content_type || fallback?.contentType || "manifesto_reel";
+    fields.content_type || fallback?.contentType || "regular_quote";
   const ctaDoor: RallioCtaDoor =
     fields.cta_door || fallback?.ctaDoor || "founding_supporter";
   const rallioTemplateType: RallioTemplateType =
@@ -363,7 +491,7 @@ export function templateForContentType(
     return "rallio_spot_carousel";
   }
 
-  if (contentType === "receipt_single" || contentType === "bts_story_sequence") {
+  if (contentType === "receipt_single") {
     return "rallio_receipt";
   }
 
@@ -380,26 +508,26 @@ export function templateForContentType(
 
 export function formatRallioDoorLabel(ctaDoor: RallioCtaDoor) {
   if (ctaDoor === "local_guide" || ctaDoor === "ossington_30_guide") {
-    return "Toronto + Rajkot guide";
+    return "Taste map";
   }
 
   if (ctaDoor === "claim_your_business") {
-    return "Claim your business";
+    return "Owner profile";
   }
 
-  return "Founding supporter";
+  return "Waitlist";
 }
 
 export function bioHintForDoor(ctaDoor: RallioCtaDoor) {
   if (ctaDoor === "local_guide" || ctaDoor === "ossington_30_guide") {
-    return "Rotate bio to Door C for 48 hours after this post.";
+    return "Rotate bio to the taste-map guide door for 48 hours after this post.";
   }
 
   if (ctaDoor === "claim_your_business") {
-    return "Rotate bio to Door B for 48 hours after owner-facing posts.";
+    return "Rotate bio to the owner profile door only for owner-facing posts.";
   }
 
-  return "Default Door A founding supporter list.";
+  return "Default link-in-bio waitlist door.";
 }
 
 export function enforceRallioCopySafety(content: GeneratedContent): GeneratedContent {
@@ -415,8 +543,24 @@ export function enforceRallioCopySafety(content: GeneratedContent): GeneratedCon
     "coupons",
     "promo code",
     "save money",
+    "instant",
+    "download the app",
+    "app store",
+    "available now",
+    "now live",
+    "tag a friend who",
+    "launching soon",
   ];
-  const contextualBanned = ["deal", "deals", "discount", "discounts", "reward", "rewards"];
+  const contextualBanned = [
+    "deal",
+    "deals",
+    "discount",
+    "discounts",
+    "perk",
+    "perks",
+    "reward",
+    "rewards",
+  ];
   const joined = [
     content.hook,
     content.headline,
@@ -434,6 +578,27 @@ export function enforceRallioCopySafety(content: GeneratedContent): GeneratedCon
 
   if (hit) {
     throw new Error(`Rallio safety gate blocked banned phrasing: "${hit}".`);
+  }
+
+  if (joined.includes("!")) {
+    throw new Error("Rallio safety gate blocked exclamation-point feed copy.");
+  }
+
+  const marketMentions = joined.match(/toronto\s*\+\s*rajkot/g)?.length || 0;
+  if (marketMentions > 1) {
+    throw new Error(
+      'Rallio safety gate blocked repeated "Toronto + Rajkot" phrasing.',
+    );
+  }
+
+  const ctaDoor = content.template_fields.cta_door;
+  if (
+    ctaDoor !== "claim_your_business" &&
+    /\b(claim your business|owner claim|claim the profile|claim it)\b/.test(joined)
+  ) {
+    throw new Error(
+      "Rallio safety gate blocked owner-claim copy on a non-owner post.",
+    );
   }
 
   return content;
