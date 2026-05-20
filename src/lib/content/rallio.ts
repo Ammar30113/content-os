@@ -472,8 +472,8 @@ export function normalizeRallioMetadata(
     ...fields,
     brand_slug: "rallio",
     brand_handle: RALLIO_BRAND.handle,
-    launch_neighborhood: RALLIO_BRAND.launch_neighborhood,
-    category_focus: RALLIO_BRAND.category_focus,
+    launch_neighborhood: cleanNeighborhood(fields.launch_neighborhood),
+    category_focus: fields.category_focus || RALLIO_BRAND.category_focus,
     content_type: contentType,
     cta_door: ctaDoor,
     rallio_template_type: rallioTemplateType,
@@ -482,6 +482,23 @@ export function normalizeRallioMetadata(
     door_label: fields.door_label || formatRallioDoorLabel(ctaDoor),
     bio_rotation_hint: fields.bio_rotation_hint || bioHintForDoor(ctaDoor),
   };
+}
+
+const NEIGHBORHOOD_PLACEHOLDERS = new Set([
+  "local taste map",
+  "taste map",
+  "local",
+  "neighborhood",
+  "city",
+  "n/a",
+]);
+
+function cleanNeighborhood(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (NEIGHBORHOOD_PLACEHOLDERS.has(trimmed.toLowerCase())) return undefined;
+  return trimmed;
 }
 
 export function templateForContentType(

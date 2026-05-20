@@ -1004,6 +1004,9 @@ export async function POST(request: Request) {
 	                  rallio_copy_rule: isRallio
 	                    ? "No exclamation points. Do not use instant, perks, rewards, discounts, tag-a-friend bait, app-store CTAs, or generic launch/product hooks. Do not repeat Toronto + Rajkot in the same package. Headlines should default to local taste, regulars, recommendations, receipts, and waitlist/taste-map language."
 	                    : null,
+	                  rallio_field_specificity: isRallio
+	                    ? "spot_category must be specific cuisine or shop type (pizza, ramen, natural wine bar, third-wave coffee, biryani, dive bar). Never return generic words like food, drink, restaurant, place, spot, or eatery. launch_neighborhood must be a real neighborhood, intersection, or street name where the place actually sits (Ossington, Little Italy, Yonge & Davenport, Bloordale, College West). Never put brand catchphrases like 'taste map', 'local taste map', 'local', or 'community' into launch_neighborhood — that field is a real location only. If you do not know the neighborhood, return null for launch_neighborhood rather than guessing or filling with marketing phrases."
+	                    : null,
 	                },
 	                cta_rotation:
 	                  isRallio
