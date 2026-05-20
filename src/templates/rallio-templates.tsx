@@ -64,19 +64,183 @@ function Canvas({
   );
 }
 
+function SpotTagPill({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 96,
+        top: 96,
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+        padding: "16px 28px",
+        borderRadius: 999,
+        backgroundColor: rallio.ink,
+        color: rallio.cream,
+        fontFamily: "Manrope, Inter, Arial, sans-serif",
+        fontSize: 22,
+        fontWeight: 800,
+        letterSpacing: 3.4,
+        textTransform: "uppercase",
+      }}
+    >
+      <div
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: 14,
+          backgroundColor: rallio.amber,
+          display: "flex",
+        }}
+      />
+      <span style={{ display: "flex" }}>{label}</span>
+    </div>
+  );
+}
+
+function RallioWatermark({ color = rallio.muted }: { color?: string }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        right: 60,
+        bottom: 56,
+        color,
+        fontFamily: "Fraunces, Georgia, serif",
+        fontSize: 28,
+        fontStyle: "italic",
+        fontWeight: 600,
+        letterSpacing: 0.6,
+        display: "flex",
+      }}
+    >
+      rallio
+    </div>
+  );
+}
+
+function PageBadge({
+  page,
+  total,
+  color = rallio.ink,
+}: {
+  page: string;
+  total: string;
+  color?: string;
+}) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        right: 60,
+        bottom: 132,
+        display: "flex",
+        alignItems: "center",
+        padding: "10px 20px",
+        border: `1.5px solid ${color}`,
+        color,
+        fontFamily: "Manrope, Inter, Arial, sans-serif",
+        fontSize: 24,
+        fontWeight: 900,
+        letterSpacing: 1.6,
+      }}
+    >
+      {`${page}/${total}`}
+    </div>
+  );
+}
+
+function stripLeadingDash(value: string) {
+  return value.replace(/^\s*[—–-]\s*/, "").trim();
+}
+
+function buildSpotAttribution({
+  name,
+  neighborhood,
+  since,
+}: {
+  name: string;
+  neighborhood: string;
+  since: string;
+}) {
+  if (!name && !neighborhood && !since) return "";
+  const nbsp = " ";
+  const parts: string[] = [];
+  if (name) parts.push(`recommended${nbsp}by${nbsp}${stripLeadingDash(name)}`);
+  if (neighborhood) parts.push(neighborhood.toLowerCase());
+  if (since) parts.push(`regular${nbsp}since${nbsp}${since}`);
+  return `—${nbsp}${parts.join(" / ")}`;
+}
+
+function buildQuoteAttribution({
+  name,
+  neighborhood,
+  sinceYear,
+}: {
+  name: string;
+  neighborhood: string;
+  sinceYear: string;
+}) {
+  if (!name && !neighborhood && !sinceYear) return "";
+  const cleanName = stripLeadingDash(name);
+  const parts: string[] = [];
+  if (cleanName) parts.push(cleanName);
+  if (neighborhood && sinceYear) {
+    parts.push(`${neighborhood} regular since ${sinceYear}`);
+  } else if (neighborhood) {
+    parts.push(`${neighborhood} regular`);
+  } else if (sinceYear) {
+    parts.push(`regular since ${sinceYear}`);
+  }
+  return `— ${parts.join(", ")}`;
+}
+
 function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
   const business = displayHeadline(
     fields.business_name || fields.headline,
     "Bang Bang",
     40,
   );
-  const category = compactText(fields.spot_category, "dessert", 24).toUpperCase();
-  const area = compactText(
-    fields.launch_neighborhood || fields.bottom_label,
-    "ossington",
+  const category = compactText(fields.spot_category, "dessert", 24).toLowerCase();
+  const address = compactText(
+    fields.spot_address || fields.launch_neighborhood,
+    "Ossington Ave",
+    40,
+  );
+  const listName = compactText(
+    fields.spot_list_name,
+    "THE OSSINGTON 30",
     32,
   ).toUpperCase();
-  const fontSize = business.length > 22 ? 132 : business.length > 14 ? 168 : 196;
+  const listPosition = compactText(fields.spot_list_position, "", 3);
+  const listTotal = compactText(fields.spot_list_total, "", 3);
+  const headerLine =
+    listPosition && listTotal
+      ? `${listName} · ${listPosition} OF ${listTotal}`
+      : listName;
+  const recommenderQuote = displayHeadline(
+    fields.recommender_quote || fields.regular_quote || fields.quote,
+    "",
+    140,
+  );
+  const recommenderName = compactText(fields.recommender_name, "", 32);
+  const recommenderNeighborhood = compactText(
+    fields.recommender_neighborhood,
+    "",
+    32,
+  );
+  const recommenderSince = compactText(fields.recommender_since, "", 8);
+  const attribution = buildSpotAttribution({
+    name: recommenderName,
+    neighborhood: recommenderNeighborhood,
+    since: recommenderSince,
+  });
+  const page = compactText(fields.carousel_page, "", 3);
+  const total = compactText(fields.carousel_total, "", 3);
+  const nameFontSize = business.length > 22 ? 138 : business.length > 14 ? 172 : 198;
+  const quoteFontSize =
+    recommenderQuote.length > 90 ? 40 : recommenderQuote.length > 60 ? 48 : 56;
 
   return (
     <Canvas background={rallio.wheat}>
@@ -84,35 +248,93 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
         style={{
           position: "absolute",
           left: 96,
-          right: 96,
-          bottom: 132,
+          top: 96,
+          color: rallio.amber,
+          fontFamily: "Manrope, Inter, Arial, sans-serif",
+          fontSize: 26,
+          fontWeight: 900,
+          letterSpacing: 3.8,
+          textTransform: "uppercase",
           display: "flex",
-          flexDirection: "column",
         }}
       >
+        {headerLine}
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          left: 96,
+          top: 156,
+          color: rallio.ink,
+          fontFamily: "Manrope, Inter, Arial, sans-serif",
+          fontSize: 28,
+          fontWeight: 700,
+          opacity: 0.78,
+          display: "flex",
+        }}
+      >
+        {`${category} · ${address}`}
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          left: 96,
+          right: 96,
+          top: 244,
+          color: rallio.ink,
+          fontFamily: "Fraunces, Georgia, serif",
+          fontSize: nameFontSize,
+          lineHeight: 0.94,
+          fontWeight: 900,
+          display: "flex",
+        }}
+      >
+        {business}
+      </div>
+
+      {recommenderQuote ? (
         <div
           style={{
+            position: "absolute",
+            left: 96,
+            right: 96,
+            bottom: 232,
             color: rallio.ink,
             fontFamily: "Fraunces, Georgia, serif",
-            fontSize,
-            lineHeight: 0.95,
-            fontWeight: 900,
+            fontSize: quoteFontSize,
+            lineHeight: 1.2,
+            fontStyle: "italic",
+            fontWeight: 600,
+            display: "flex",
           }}
         >
-          {business}
+          {`“${recommenderQuote}”`}
         </div>
+      ) : null}
+
+      {attribution ? (
         <div
           style={{
-            marginTop: 26,
-            color: rallio.ink,
-            fontSize: 30,
-            fontWeight: 800,
-            letterSpacing: 4,
+            position: "absolute",
+            left: 96,
+            right: 220,
+            bottom: 146,
+            color: rallio.muted,
+            fontFamily: "Manrope, Inter, Arial, sans-serif",
+            fontSize: 24,
+            fontWeight: 700,
+            letterSpacing: 0.4,
+            display: "flex",
           }}
         >
-          {`${category} · ${area}`}
+          {attribution}
         </div>
-      </div>
+      ) : null}
+
+      {page && total ? <PageBadge page={page} total={total} /> : null}
+      <RallioWatermark />
     </Canvas>
   );
 }
@@ -123,44 +345,87 @@ function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
     "i'd queue for the morning bun",
     200,
   );
-  const attribution = compactText(
-    fields.attribution || fields.business_name,
+  const name = compactText(
+    fields.attribution || fields.recommender_name,
     "Mara",
     36,
   );
+  const neighborhood = compactText(
+    fields.regular_neighborhood || fields.launch_neighborhood,
+    "",
+    32,
+  );
+  const sinceYear = compactText(
+    fields.regular_since_year || fields.recommender_since,
+    "",
+    8,
+  );
+  const business = compactText(fields.business_name, "", 28);
+  const pillLabel = [business, neighborhood]
+    .filter(Boolean)
+    .map((part) => part.toUpperCase())
+    .join(" · ");
+  const attributionLine = buildQuoteAttribution({
+    name,
+    neighborhood,
+    sinceYear,
+  });
   const fontSize =
-    quote.length > 140 ? 68 : quote.length > 80 ? 88 : quote.length > 40 ? 110 : 132;
+    quote.length > 140 ? 74 : quote.length > 80 ? 96 : quote.length > 40 ? 118 : 138;
 
   return (
     <Canvas background={rallio.cream}>
+      {pillLabel ? <SpotTagPill label={pillLabel} /> : null}
+
       <div
         style={{
           position: "absolute",
           left: 96,
           right: 96,
-          top: 150,
+          top: pillLabel ? 232 : 160,
           color: rallio.ink,
           fontFamily: "Fraunces, Georgia, serif",
           fontSize,
-          lineHeight: 1.05,
+          lineHeight: 1.08,
           fontStyle: "italic",
           fontWeight: 600,
+          display: "flex",
         }}
       >
         {`“${quote}”`}
       </div>
+
       <div
         style={{
           position: "absolute",
           left: 96,
+          right: 96,
+          bottom: 196,
+          height: 1.5,
+          backgroundColor: rallio.ink,
+          opacity: 0.32,
+          display: "flex",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          left: 96,
+          right: 220,
           bottom: 132,
           color: rallio.ink,
-          fontSize: 38,
-          fontWeight: 600,
+          fontFamily: "Manrope, Inter, Arial, sans-serif",
+          fontSize: 30,
+          fontWeight: 700,
+          letterSpacing: 0.4,
+          display: "flex",
         }}
       >
-        {`— ${attribution}`}
+        {attributionLine || `— ${name}`}
       </div>
+
+      <RallioWatermark />
     </Canvas>
   );
 }
@@ -172,6 +437,7 @@ function RallioReceiptTemplate({ fields }: { fields: TemplateFields }) {
     { label: "Sunline", value: "6" },
   ]).slice(0, 5);
   const total = compactText(fields.subtotal, "29", 8);
+  const neighborhood = compactText(fields.launch_neighborhood, "", 32);
 
   return (
     <Canvas background={rallio.cream}>
@@ -190,17 +456,41 @@ function RallioReceiptTemplate({ fields }: { fields: TemplateFields }) {
       >
         <div
           style={{
-            color: rallio.ink,
-            fontFamily: "JetBrains Mono, ui-monospace, monospace",
-            fontSize: 26,
-            fontWeight: 900,
-            letterSpacing: 2,
-            textTransform: "uppercase",
+            display: "flex",
+            flexDirection: "column",
             paddingBottom: 18,
             borderBottom: `1px dashed ${rallio.ink}`,
           }}
         >
-          Rallio Receipt
+          <div
+            style={{
+              color: rallio.ink,
+              fontFamily: "JetBrains Mono, ui-monospace, monospace",
+              fontSize: 26,
+              fontWeight: 900,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              display: "flex",
+            }}
+          >
+            Rallio Receipt
+          </div>
+          {neighborhood ? (
+            <div
+              style={{
+                marginTop: 6,
+                color: rallio.muted,
+                fontFamily: "JetBrains Mono, ui-monospace, monospace",
+                fontSize: 18,
+                fontWeight: 700,
+                letterSpacing: 1.2,
+                textTransform: "uppercase",
+                display: "flex",
+              }}
+            >
+              {neighborhood}
+            </div>
+          ) : null}
         </div>
         <div
           style={{
@@ -233,6 +523,7 @@ function RallioReceiptTemplate({ fields }: { fields: TemplateFields }) {
           <span>{total}</span>
         </div>
       </div>
+      <RallioWatermark color={rallio.muted} />
     </Canvas>
   );
 }
@@ -281,6 +572,7 @@ function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
       >
         {headline}
       </div>
+      <RallioWatermark color="rgba(245,235,220,0.55)" />
     </Canvas>
   );
 }
@@ -304,18 +596,31 @@ function RallioOwnerClaimTemplate({ fields }: { fields: TemplateFields }) {
         style={{
           position: "absolute",
           left: 96,
-          top: 140,
-          padding: "16px 28px",
+          top: 96,
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          padding: "14px 24px",
+          borderRadius: 999,
           backgroundColor: rallio.mossSoft,
           color: rallio.moss,
-          fontSize: 24,
+          fontFamily: "Manrope, Inter, Arial, sans-serif",
+          fontSize: 22,
           fontWeight: 900,
-          letterSpacing: 3.4,
+          letterSpacing: 3.2,
           textTransform: "uppercase",
-          display: "flex",
         }}
       >
-        Community-added
+        <div
+          style={{
+            width: 12,
+            height: 12,
+            borderRadius: 12,
+            backgroundColor: rallio.moss,
+            display: "flex",
+          }}
+        />
+        <span style={{ display: "flex" }}>Community-added</span>
       </div>
       <div
         style={{
@@ -345,6 +650,7 @@ function RallioOwnerClaimTemplate({ fields }: { fields: TemplateFields }) {
       >
         {note}
       </div>
+      <RallioWatermark color={rallio.muted} />
     </Canvas>
   );
 }

@@ -89,7 +89,19 @@ const openAITemplateFieldsSchema = z.object({
   business_name: z.string().nullable(),
   spot_number: z.string().nullable(),
   spot_category: z.string().nullable(),
+  spot_address: z.string().nullable(),
+  spot_list_name: z.string().nullable(),
+  spot_list_position: z.string().nullable(),
+  spot_list_total: z.string().nullable(),
+  recommender_quote: z.string().nullable(),
+  recommender_name: z.string().nullable(),
+  recommender_neighborhood: z.string().nullable(),
+  recommender_since: z.string().nullable(),
   regular_quote: z.string().nullable(),
+  regular_neighborhood: z.string().nullable(),
+  regular_since_year: z.string().nullable(),
+  carousel_page: z.string().nullable(),
+  carousel_total: z.string().nullable(),
   receipt_lines: z.array(z.string()).nullable(),
   subtotal: z.string().nullable(),
   owner_steps: z.array(z.string()).nullable(),
@@ -275,7 +287,19 @@ function normalizeTemplateFields(
     business_name: fields.business_name || undefined,
     spot_number: fields.spot_number || undefined,
     spot_category: fields.spot_category || undefined,
+    spot_address: fields.spot_address || undefined,
+    spot_list_name: fields.spot_list_name || undefined,
+    spot_list_position: fields.spot_list_position || undefined,
+    spot_list_total: fields.spot_list_total || undefined,
+    recommender_quote: fields.recommender_quote || undefined,
+    recommender_name: fields.recommender_name || undefined,
+    recommender_neighborhood: fields.recommender_neighborhood || undefined,
+    recommender_since: fields.recommender_since || undefined,
     regular_quote: fields.regular_quote || undefined,
+    regular_neighborhood: fields.regular_neighborhood || undefined,
+    regular_since_year: fields.regular_since_year || undefined,
+    carousel_page: fields.carousel_page || undefined,
+    carousel_total: fields.carousel_total || undefined,
     receipt_lines: fields.receipt_lines || undefined,
     subtotal: fields.subtotal || undefined,
     owner_steps: fields.owner_steps || undefined,
@@ -988,7 +1012,7 @@ export async function POST(request: Request) {
 	                      : "AI Newsroom / Builder Desk. Dark, high-contrast, text-first, sharp, and readable. Do not make fake hero visuals when no real image URL is provided.",
 	                  template_fields:
 	                    isRallio
-	                      ? "Use headline, subhead, brand_slug, brand_handle, launch_neighborhood, category_focus, cta_door, content_type, visual_style, rallio_template_type, door_label, bio_rotation_hint, kpi_intent, business_name, spot_number, spot_category, regular_quote, quote, attribution, info_rows, receipt_lines, subtotal, owner_steps, bottom_label, and review_notes. Return every template field; use null when unavailable."
+	                      ? "Use headline, subhead, brand_slug, brand_handle, launch_neighborhood, category_focus, cta_door, content_type, visual_style, rallio_template_type, door_label, bio_rotation_hint, kpi_intent, business_name, spot_number, spot_category, spot_address, spot_list_name, spot_list_position, spot_list_total, recommender_quote, recommender_name, recommender_neighborhood, recommender_since, regular_quote, regular_neighborhood, regular_since_year, carousel_page, carousel_total, quote, attribution, info_rows, receipt_lines, subtotal, owner_steps, bottom_label, and review_notes. Return every template field; use null when unavailable."
                       : "Use headline, subhead, visual_subject, swipe_hint, bottom_label, info_rows, source_name, date, tools, stat, quote, pull_quote, code_snippet, meme_setup, meme_punchline, authority_figure, topical_event, contrarian_take, builder_lesson, text_overlay_hook, and review_notes to direct the image and review flow. Add 2-3 short info_rows when the visual would benefit from concrete proof, contrast, or checklist detail. Only include URL fields like hero_image_url, source_logo, source_logo_url, product_logo, and portrait_url when the input/source provides a real URL; otherwise return null. Also return Rallio-only template fields as null.",
                   date_rule: `Current date is ${formatTemplateDate()}. If the image shows a date, use the current date or the live discussion date. Never copy stale dates from GitHub repos, docs, changelogs, or archive pages unless the user explicitly asks for a historical post.`,
                   thumbnail_rule:
@@ -1006,6 +1030,14 @@ export async function POST(request: Request) {
 	                    : null,
 	                  rallio_field_specificity: isRallio
 	                    ? "spot_category must be specific cuisine or shop type (pizza, ramen, natural wine bar, third-wave coffee, biryani, dive bar). Never return generic words like food, drink, restaurant, place, spot, or eatery. launch_neighborhood must be a real neighborhood, intersection, or street name where the place actually sits (Ossington, Little Italy, Yonge & Davenport, Bloordale, College West). Never put brand catchphrases like 'taste map', 'local taste map', 'local', or 'community' into launch_neighborhood — that field is a real location only. If you do not know the neighborhood, return null for launch_neighborhood rather than guessing or filling with marketing phrases."
+	                    : null,
+	                  rallio_rich_field_guide: isRallio
+	                    ? [
+	                        "For rallio_spot_carousel: set business_name to the place name; spot_category to specific cuisine; spot_address to street/intersection (e.g. '93 Ossington Ave'); spot_list_name to the collection title in uppercase (e.g. 'THE OSSINGTON 30'); spot_list_position and spot_list_total as zero-padded strings (e.g. '04', '30'); recommender_quote to one short italic line from a believable regular; recommender_name to a first-name handle (e.g. '@mayachen' or 'Maya'); recommender_neighborhood to a lowercase short area label (e.g. 'ossington'); recommender_since to a two-digit year like \"'22\"; carousel_page and carousel_total to numeric strings like '1' and '6'.",
+	                        "For rallio_regular_quote: set regular_quote to the full quote; attribution to the regular's first name; regular_neighborhood to the neighborhood they regular at (e.g. 'Little Italy'); regular_since_year to a four-digit year (e.g. '2019'); business_name to the spot they're a regular of (used for the spot-tag pill at the top).",
+	                        "For rallio_receipt: set receipt_lines as 'label · value' rows; subtotal to the final number; launch_neighborhood to the neighborhood context for the receipt.",
+	                        "Return null for any rich field you cannot fill with a concrete, believable value. Never invent stock placeholder addresses, fake handles ending in numbers like @user123, or generic neighborhoods.",
+	                      ].join(" ")
 	                    : null,
 	                },
 	                cta_rotation:
