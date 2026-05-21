@@ -18,6 +18,9 @@ const rallio = {
   muted: "#71685F",
 };
 
+const GRID_SAFE_INSET = 168;
+const GRID_SAFE_WIDTH = CANVAS_SIZE - GRID_SAFE_INSET * 2;
+
 export function RallioTemplate({ fields }: { fields: TemplateFields }) {
   const template = fields.rallio_template_type || fields.content_type;
 
@@ -69,8 +72,9 @@ function SpotTagPill({ label }: { label: string }) {
     <div
       style={{
         position: "absolute",
-        left: 96,
+        left: GRID_SAFE_INSET,
         top: 96,
+        maxWidth: GRID_SAFE_WIDTH,
         display: "flex",
         alignItems: "center",
         gap: 16,
@@ -94,7 +98,7 @@ function SpotTagPill({ label }: { label: string }) {
           display: "flex",
         }}
       />
-      <span style={{ display: "flex" }}>{label}</span>
+      <span style={{ display: "flex" }}>{compactText(label, "", 34)}</span>
     </div>
   );
 }
@@ -104,7 +108,7 @@ function RallioWatermark({ color = rallio.muted }: { color?: string }) {
     <div
       style={{
         position: "absolute",
-        right: 60,
+        right: GRID_SAFE_INSET,
         bottom: 56,
         color,
         fontFamily: "Fraunces, Georgia, serif",
@@ -133,7 +137,7 @@ function PageBadge({
     <div
       style={{
         position: "absolute",
-        right: 60,
+        right: GRID_SAFE_INSET,
         bottom: 132,
         display: "flex",
         alignItems: "center",
@@ -238,17 +242,18 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
   });
   const page = compactText(fields.carousel_page, "", 3);
   const total = compactText(fields.carousel_total, "", 3);
-  const nameFontSize = business.length > 22 ? 138 : business.length > 14 ? 172 : 198;
+  const nameFontSize = business.length > 22 ? 118 : business.length > 14 ? 148 : 174;
   const quoteFontSize =
-    recommenderQuote.length > 90 ? 40 : recommenderQuote.length > 60 ? 48 : 56;
+    recommenderQuote.length > 90 ? 34 : recommenderQuote.length > 60 ? 42 : 50;
 
   return (
     <Canvas background={rallio.wheat}>
       <div
         style={{
           position: "absolute",
-          left: 96,
+          left: GRID_SAFE_INSET,
           top: 96,
+          maxWidth: GRID_SAFE_WIDTH,
           color: rallio.amber,
           fontFamily: "Manrope, Inter, Arial, sans-serif",
           fontSize: 26,
@@ -264,8 +269,9 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
       <div
         style={{
           position: "absolute",
-          left: 96,
+          left: GRID_SAFE_INSET,
           top: 156,
+          maxWidth: GRID_SAFE_WIDTH,
           color: rallio.ink,
           fontFamily: "Manrope, Inter, Arial, sans-serif",
           fontSize: 28,
@@ -280,8 +286,8 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
       <div
         style={{
           position: "absolute",
-          left: 96,
-          right: 96,
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
           top: 244,
           color: rallio.ink,
           fontFamily: "Fraunces, Georgia, serif",
@@ -298,8 +304,8 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
         <div
           style={{
             position: "absolute",
-            left: 96,
-            right: 96,
+            left: GRID_SAFE_INSET,
+            right: GRID_SAFE_INSET,
             bottom: 232,
             color: rallio.ink,
             fontFamily: "Fraunces, Georgia, serif",
@@ -318,8 +324,8 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
         <div
           style={{
             position: "absolute",
-            left: 96,
-            right: 220,
+            left: GRID_SAFE_INSET,
+            right: GRID_SAFE_INSET,
             bottom: 146,
             color: rallio.muted,
             fontFamily: "Manrope, Inter, Arial, sans-serif",
@@ -371,7 +377,15 @@ function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
     sinceYear,
   });
   const fontSize =
-    quote.length > 140 ? 74 : quote.length > 80 ? 96 : quote.length > 40 ? 118 : 138;
+    quote.length > 160
+      ? 60
+      : quote.length > 120
+        ? 70
+        : quote.length > 80
+          ? 82
+          : quote.length > 40
+            ? 98
+            : 118;
 
   return (
     <Canvas background={rallio.cream}>
@@ -380,8 +394,8 @@ function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
       <div
         style={{
           position: "absolute",
-          left: 96,
-          right: 96,
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
           top: pillLabel ? 232 : 160,
           color: rallio.ink,
           fontFamily: "Fraunces, Georgia, serif",
@@ -398,8 +412,8 @@ function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
       <div
         style={{
           position: "absolute",
-          left: 96,
-          right: 96,
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
           bottom: 196,
           height: 1.5,
           backgroundColor: rallio.ink,
@@ -411,8 +425,8 @@ function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
       <div
         style={{
           position: "absolute",
-          left: 96,
-          right: 220,
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
           bottom: 132,
           color: rallio.ink,
           fontFamily: "Manrope, Inter, Arial, sans-serif",
@@ -444,9 +458,9 @@ function RallioReceiptTemplate({ fields }: { fields: TemplateFields }) {
       <div
         style={{
           position: "absolute",
-          left: 132,
+          left: GRID_SAFE_INSET,
           top: 168,
-          width: 596,
+          width: 584,
           padding: "30px 38px 30px 38px",
           border: `2px solid ${rallio.ink}`,
           backgroundColor: rallio.cream,
@@ -552,15 +566,15 @@ function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
     "you've been doing rallio's job for free.",
     96,
   );
-  const fontSize = headline.length > 70 ? 88 : headline.length > 40 ? 108 : 132;
+  const fontSize = headline.length > 70 ? 78 : headline.length > 40 ? 96 : 118;
 
   return (
     <Canvas background={rallio.ink}>
       <div
         style={{
           position: "absolute",
-          left: 96,
-          right: 96,
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
           bottom: 132,
           color: rallio.cream,
           fontFamily: "Fraunces, Georgia, serif",
@@ -588,15 +602,16 @@ function RallioOwnerClaimTemplate({ fields }: { fields: TemplateFields }) {
     "unclaimed · claim takes about a min",
     72,
   );
-  const fontSize = business.length > 22 ? 132 : business.length > 14 ? 168 : 196;
+  const fontSize = business.length > 22 ? 112 : business.length > 14 ? 142 : 168;
 
   return (
     <Canvas background={rallio.cream}>
       <div
         style={{
           position: "absolute",
-          left: 96,
+          left: GRID_SAFE_INSET,
           top: 96,
+          maxWidth: GRID_SAFE_WIDTH,
           display: "flex",
           alignItems: "center",
           gap: 14,
@@ -625,8 +640,8 @@ function RallioOwnerClaimTemplate({ fields }: { fields: TemplateFields }) {
       <div
         style={{
           position: "absolute",
-          left: 96,
-          right: 96,
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
           bottom: 174,
           color: rallio.ink,
           fontFamily: "Fraunces, Georgia, serif",
@@ -640,8 +655,8 @@ function RallioOwnerClaimTemplate({ fields }: { fields: TemplateFields }) {
       <div
         style={{
           position: "absolute",
-          left: 96,
-          right: 96,
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
           bottom: 124,
           color: rallio.muted,
           fontSize: 30,

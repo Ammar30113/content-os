@@ -17,7 +17,6 @@ import {
 import {
   normalizeHashtags,
   parseJsonField,
-  platforms,
   postStatuses,
   templateTypes,
 } from "@/lib/content/types";
