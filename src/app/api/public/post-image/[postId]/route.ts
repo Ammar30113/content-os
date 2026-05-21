@@ -87,7 +87,7 @@ async function imageResponse(
 
   return new Response(new Uint8Array(body), {
     headers: {
-      "Cache-Control": "public, max-age=31536000, immutable",
+      "Cache-Control": "no-store",
       "Content-Disposition": `inline; filename="rallio-post.${extension}"`,
       "Content-Length": String(body.byteLength),
       "Content-Type": resolvedContentType,

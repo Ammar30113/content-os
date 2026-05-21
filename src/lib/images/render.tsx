@@ -65,12 +65,14 @@ export async function renderTemplateJpeg(
 
 export async function convertImageToInstagramJpeg(input: Buffer) {
   return sharp(input)
-    .flatten({ background: "#0a0a0b" })
+    .rotate()
     .resize(CANVAS_SIZE, CANVAS_SIZE, { fit: "cover" })
+    .flatten({ background: "#0a0a0b" })
+    .toColorspace("srgb")
     .jpeg({
-      quality: 92,
-      mozjpeg: true,
-      chromaSubsampling: "4:4:4",
+      quality: 90,
+      progressive: false,
+      chromaSubsampling: "4:2:0",
     })
     .toBuffer();
 }

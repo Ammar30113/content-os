@@ -1,5 +1,7 @@
 import "server-only";
 
+import sharp from "sharp";
+
 import {
   getAppUrl,
   getBufferChannelEnvName,
@@ -10,6 +12,10 @@ import {
 const BUFFER_GRAPHQL_ENDPOINT = "https://api.buffer.com";
 const BUFFER_INSTAGRAM_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 const BUFFER_IMAGE_MIN_BYTES = 1024;
+const INSTAGRAM_IMAGE_MIN_WIDTH = 320;
+const INSTAGRAM_IMAGE_MAX_WIDTH = 1440;
+const INSTAGRAM_IMAGE_MIN_ASPECT_RATIO = 0.8;
+const INSTAGRAM_IMAGE_MAX_ASPECT_RATIO = 1.91;
 
 type BufferGraphQLError = {
   message?: string;
@@ -202,6 +208,10 @@ function getBufferImageUrl({
     return imageUrl;
   }
 
+  if (isGeneratedTemplateJpegUrl(imageUrl)) {
+    return imageUrl;
+  }
+
   return `${appUrl}/api/public/post-image/${postId}.jpg`;
 }
 
@@ -229,6 +239,10 @@ async function assertBufferMediaUrlReady(url: string, platform: BufferPlatform) 
     );
   }
 
+  if (platform === "instagram") {
+    await assertInstagramImageMetadata(body);
+  }
+
   if (body.byteLength < BUFFER_IMAGE_MIN_BYTES) {
     throw new Error(
       "Buffer media preflight failed: image file is unexpectedly small. Regenerate the image before sending.",
@@ -242,5 +256,40 @@ async function assertBufferMediaUrlReady(url: string, platform: BufferPlatform) 
     throw new Error(
       "Buffer media preflight failed: Instagram image is over 8 MB. Regenerate or upload a smaller image.",
     );
+  }
+}
+
+async function assertInstagramImageMetadata(body: Buffer) {
+  const metadata = await sharp(body).metadata();
+  const width = metadata.width || 0;
+  const height = metadata.height || 0;
+
+  if (!width || !height) {
+    throw new Error(
+      "Buffer media preflight failed: image dimensions could not be read.",
+    );
+  }
+
+  const aspectRatio = width / height;
+
+  if (
+    width < INSTAGRAM_IMAGE_MIN_WIDTH ||
+    width > INSTAGRAM_IMAGE_MAX_WIDTH ||
+    aspectRatio < INSTAGRAM_IMAGE_MIN_ASPECT_RATIO ||
+    aspectRatio > INSTAGRAM_IMAGE_MAX_ASPECT_RATIO
+  ) {
+    throw new Error(
+      `Buffer media preflight failed: Instagram image must be 320-1440px wide and between 4:5 and 1.91:1. Got ${width}x${height}.`,
+    );
+  }
+}
+
+function isGeneratedTemplateJpegUrl(imageUrl: string) {
+  try {
+    const pathname = new URL(imageUrl).pathname;
+
+    return /\/template-\d+\.jpe?g$/i.test(pathname);
+  } catch {
+    return false;
   }
 }
