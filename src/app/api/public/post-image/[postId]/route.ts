@@ -88,7 +88,7 @@ async function imageResponse(
   return new Response(new Uint8Array(body), {
     headers: {
       "Cache-Control": "public, max-age=31536000, immutable",
-      "Content-Disposition": `inline; filename="wordofaii-post.${extension}"`,
+      "Content-Disposition": `inline; filename="rallio-post.${extension}"`,
       "Content-Length": String(body.byteLength),
       "Content-Type": resolvedContentType,
     },

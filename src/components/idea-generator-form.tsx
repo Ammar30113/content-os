@@ -654,7 +654,8 @@ export function IdeaGeneratorForm() {
         </div>
         <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
           Rallio posts are Instagram-only. They route to the Rallio Buffer
-          channel for taste-map and waitlist growth, separate from Word of AI.
+          channel for taste-map and waitlist growth with no legacy-channel
+          fallback.
         </div>
       </div>
 

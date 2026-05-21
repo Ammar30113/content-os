@@ -14,9 +14,12 @@ const sendToBufferSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  let postId: string | null = null;
+
   try {
     assertContentOsSupabaseWriteSafety();
     const input = sendToBufferSchema.parse(await request.json());
+    postId = input.post_id;
     const { supabase, user } = await requireApiUser();
 
     const ensured = await ensurePublishingJobsForPost(supabase, {
@@ -67,6 +70,22 @@ export async function POST(request: Request) {
         "Sent to Buffer and kept scheduled in Content OS. Mark it published after Instagram confirms it went live.",
     });
   } catch (error) {
+    if (postId) {
+      try {
+        const { supabase, user } = await requireApiUser();
+        const message =
+          error instanceof Error ? error.message : "Could not send post to Buffer.";
+
+        await supabase
+          .from("generated_posts")
+          .update({ publish_error: message })
+          .eq("id", postId)
+          .eq("user_id", user.id);
+      } catch {
+        // Preserve the original send error for the API response.
+      }
+    }
+
     return jsonError(error, 400);
   }
 }

@@ -1,9 +1,9 @@
 # Content OS
 
-Content OS is a private AI-powered social media operating system for the Word
-of AI brand (`@wordofaii`). The MVP turns rough ideas, URLs, or briefs into
-complete social post packages with branded 1080x1080 images, then supports
-review, approval, scheduling, and manual publish tracking.
+Content OS is a private AI-powered social media operating system for Rallio.
+The MVP turns rough ideas, URLs, or briefs into complete Instagram post packages
+with branded 1080x1080 images, then supports review, approval, scheduling, and
+manual publish tracking.
 
 This is an internal single-user tool first. It intentionally does not include
 billing, teams, public SaaS marketing flows, or direct Instagram/X/LinkedIn
@@ -55,10 +55,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 CRON_SECRET=
 BUFFER_ACCESS_TOKEN=
 BUFFER_ORGANIZATION_ID=
-BUFFER_INSTAGRAM_CHANNEL_ID=
 BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID=
-BUFFER_X_CHANNEL_ID=
-BUFFER_LINKEDIN_CHANNEL_ID=
 ```
 
 Do not commit `.env.local` or real secrets.
@@ -68,9 +65,8 @@ project has access to and that supports structured outputs on the Responses API.
 
 `TAVILY_API_KEY` is optional. When set, generated posts can use live web research
 for topical context. Auto-pick topic also supports three source modes in the app:
-hybrid, live, and evergreen. Hybrid alternates between current Hacker News AI
-stories and the internal Word of AI evergreen topic bank; live prioritizes recent
-AI/builder stories; evergreen uses durable internal campaign seeds.
+hybrid, live, and evergreen. Rallio generation defaults to the internal
+community/taste-map topic bank for Instagram feed growth.
 
 ## Supabase Setup
 
@@ -144,16 +140,12 @@ Buffer environment variables:
 ```bash
 BUFFER_ACCESS_TOKEN=
 BUFFER_ORGANIZATION_ID=
-BUFFER_INSTAGRAM_CHANNEL_ID=
 BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID=
-BUFFER_X_CHANNEL_ID=
-BUFFER_LINKEDIN_CHANNEL_ID=
 ```
 
-`BUFFER_INSTAGRAM_CHANNEL_ID` routes Word of AI Instagram posts.
-`BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID` routes Rallio Instagram posts. X and
-LinkedIn are optional; if those env vars are missing, Content OS skips those
-channels during Buffer handoff instead of failing the post.
+`BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID` is the only publishing channel used by the
+current handoff. Rallio posts are Instagram-only, and Content OS does not fall
+back to legacy brand channels.
 
 ## Local Development
 

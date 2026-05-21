@@ -223,6 +223,16 @@ function validateBufferReadyPost(
 ) {
   const scheduledDate = new Date(job.scheduled_for);
 
+  if (platform !== "instagram") {
+    throw new Error("Rallio Buffer handoff is Instagram-only.");
+  }
+
+  if (getTemplateFieldString(post.template_fields, "brand_slug") !== "rallio") {
+    throw new Error(
+      "Buffer handoff is configured for Rallio posts only. Regenerate this post with brand_slug = rallio before sending.",
+    );
+  }
+
   if (Number.isNaN(scheduledDate.getTime())) {
     throw new Error("Scheduled time is invalid.");
   }
@@ -298,4 +308,14 @@ function withBufferPostMetadata({
 
 function isRecord(value: Json | undefined): value is Record<string, Json | undefined> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function getTemplateFieldString(templateFields: Json, key: string) {
+  if (!isRecord(templateFields)) {
+    return null;
+  }
+
+  const value = templateFields[key];
+
+  return typeof value === "string" ? value : null;
 }
