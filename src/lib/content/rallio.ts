@@ -91,6 +91,25 @@ export type RallioTopicSeed = {
   }>;
 };
 
+const RALLIO_DEFAULT_FEED_RHYTHM: RallioContentType[] = [
+  "regular_quote",
+  "spot_carousel",
+  "receipt_single",
+  "manifesto_reel",
+  "spot_carousel",
+  "owner_claim_carousel",
+  "bts_story_sequence",
+  "regular_quote",
+  "spot_carousel",
+];
+
+const RALLIO_POST_TYPE_PRIORITY: Record<PostType, RallioContentType[]> = {
+  single: ["regular_quote", "spot_carousel", "receipt_single", "manifesto_reel"],
+  carousel: ["spot_carousel", "regular_quote", "receipt_single", "manifesto_reel"],
+  reel: ["manifesto_reel", "regular_quote", "spot_carousel", "receipt_single"],
+  thread: ["regular_quote", "spot_carousel", "receipt_single", "manifesto_reel"],
+};
+
 export const rallioTopicSeeds: RallioTopicSeed[] = [
   {
     id: "regulars-quote-feed",
@@ -383,7 +402,6 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
 
 export function selectRallioSeed({
   postType,
-  quantity,
   recentText,
 }: {
   postType: PostType;
@@ -396,14 +414,79 @@ export function selectRallioSeed({
   const preferred = defaultSeeds.filter((seed) =>
     seed.bestPostTypes.includes(postType),
   );
-  const pool = preferred.length ? preferred : defaultSeeds;
-  const fresh = pool.filter(
-    (seed) => !recentText.toLowerCase().includes(seed.title.toLowerCase().slice(0, 16)),
+  const priority = RALLIO_POST_TYPE_PRIORITY[postType];
+  const pool = sortSeedsByContentPriority(
+    preferred.length ? preferred : defaultSeeds,
+    priority,
   );
-  const candidates = fresh.length ? fresh : pool;
-  const index = Math.abs((quantity * 17 + postType.length) % candidates.length);
+  const recent = normalizeRecentText(recentText);
+  const fresh = pool.filter((seed) => !seedMatchesRecent(seed, recent));
 
-  return candidates[index];
+  return (fresh.length ? fresh : pool)[0];
+}
+
+export function selectRallioAngle(seed: RallioTopicSeed, recentText: string) {
+  const recent = normalizeRecentText(recentText);
+  const fresh = seed.angleVariants.filter((angle) => !angleMatchesRecent(angle, recent));
+
+  return (fresh.length ? fresh : seed.angleVariants)[0];
+}
+
+export function getRallioContentTypeForSlot(slot: number): RallioContentType {
+  const index = Math.max(0, slot - 1) % RALLIO_DEFAULT_FEED_RHYTHM.length;
+
+  return RALLIO_DEFAULT_FEED_RHYTHM[index];
+}
+
+function sortSeedsByContentPriority(
+  seeds: RallioTopicSeed[],
+  priority: RallioContentType[],
+) {
+  return [...seeds].sort((left, right) => {
+    const leftIndex = priority.indexOf(left.contentType);
+    const rightIndex = priority.indexOf(right.contentType);
+    const normalizedLeft = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
+    const normalizedRight = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
+
+    return normalizedLeft - normalizedRight;
+  });
+}
+
+function normalizeRecentText(value: string) {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function seedMatchesRecent(seed: RallioTopicSeed, recent: string) {
+  return [
+    seed.id,
+    seed.title,
+    seed.contentType,
+    seed.rallioTemplateType,
+    ...seed.angleVariants.flatMap((angle) => [
+      angle.working_title,
+      angle.hook_direction,
+      angle.contentType,
+      angle.rallioTemplateType,
+    ]),
+  ].some((value) => recentIncludes(recent, value));
+}
+
+function angleMatchesRecent(
+  angle: RallioTopicSeed["angleVariants"][number],
+  recent: string,
+) {
+  return [
+    angle.working_title,
+    angle.hook_direction,
+    angle.contentType,
+    angle.rallioTemplateType,
+  ].some((value) => recentIncludes(recent, value));
+}
+
+function recentIncludes(recent: string, value: string) {
+  const normalized = normalizeRecentText(value);
+
+  return normalized.length >= 4 && recent.includes(normalized);
 }
 
 export function buildRallioRouletteBrief(seed: RallioTopicSeed, quantity: number) {
@@ -411,6 +494,15 @@ export function buildRallioRouletteBrief(seed: RallioTopicSeed, quantity: number
     .slice(0, Math.max(1, Math.min(quantity, seed.angleVariants.length)))
     .map((angle, index) => `${index + 1}. ${angle.working_title}: ${angle.unique_takeaway}`)
     .join("\n");
+  const rhythm =
+    quantity > 1
+      ? Array.from({ length: quantity }, (_, index) => {
+          const contentType = getRallioContentTypeForSlot(index + 1);
+          const templateType = templateForContentType(contentType);
+
+          return `${index + 1}. ${contentType} / ${templateType}`;
+        }).join("\n")
+      : "";
 
   return [
     seed.brief,
@@ -419,6 +511,9 @@ export function buildRallioRouletteBrief(seed: RallioTopicSeed, quantity: number
     "Seed markets can be mentioned as context, but headlines should default to neighborhood taste, regulars, and community recommendations.",
     "Category focus: food/drink spots people would recommend twice.",
     "Default feed rhythm: quote, spot card, receipt, manifesto/BTS, then occasional owner utility.",
+    quantity > 1
+      ? `Use this visual rhythm for this batch unless the user overrides it:\n${rhythm}`
+      : "For a single post, use the selected seed as the visual direction.",
     `CTA door: ${seed.ctaDoor}.`,
     `KPI intent: ${seed.kpiIntent}.`,
     `Visual direction: ${seed.visualDirection}`,

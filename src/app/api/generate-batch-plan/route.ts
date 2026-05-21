@@ -6,6 +6,7 @@ import { jsonError, jsonOk } from "@/lib/api";
 import {
   RALLIO_BRAND,
   RALLIO_SYSTEM_PROMPT,
+  getRallioContentTypeForSlot,
   mapRallioTemplateToCoreType,
   normalizeRallioCtaDoor,
   templateForContentType,
@@ -166,24 +167,28 @@ export async function POST(request: Request) {
       throw new Error("OpenAI did not return a structured batch plan.");
     }
 
-    const angles = normalizePlanAngles(parsed.angles, quantity).map((angle) => {
+    const rawAngles = normalizePlanAngles(parsed.angles, quantity);
+    const uniquePlannedContentTypes = new Set(
+      rawAngles.map((angle) => angle.rallio_content_type).filter(Boolean),
+    );
+    const shouldApplyFallbackRhythm = quantity > 1 && uniquePlannedContentTypes.size <= 1;
+    const angles = rawAngles.map((angle, index) => {
       const rallioContentType =
-        angle.rallio_content_type || input.rallio_content_type || "regular_quote";
+        shouldApplyFallbackRhythm
+          ? getRallioContentTypeForSlot(index + 1)
+          : angle.rallio_content_type || input.rallio_content_type || "regular_quote";
+      const rallioTemplateType =
+        shouldApplyFallbackRhythm
+          ? templateForContentType(rallioContentType)
+          : angle.rallio_template_type || templateForContentType(rallioContentType);
+      const coreTemplateType = mapRallioTemplateToCoreType(rallioTemplateType);
 
       return {
         ...angle,
         brand_slug: "rallio",
-        pillar: angle.rallio_template_type
-          ? mapRallioTemplateToCoreType(angle.rallio_template_type)
-          : angle.pillar,
-        template_type: angle.rallio_template_type
-          ? mapRallioTemplateToCoreType(angle.rallio_template_type)
-          : angle.template_type,
-        rallio_template_type:
-          angle.rallio_template_type ||
-          templateForContentType(
-            angle.rallio_content_type || input.rallio_content_type,
-          ),
+        pillar: coreTemplateType,
+        template_type: coreTemplateType,
+        rallio_template_type: rallioTemplateType,
         rallio_content_type: rallioContentType,
         rallio_cta_door: normalizeRallioCtaDoor(
           rallioContentType,

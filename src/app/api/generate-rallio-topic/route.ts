@@ -4,6 +4,7 @@ import { jsonError, jsonOk } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth";
 import {
   buildRallioRouletteBrief,
+  selectRallioAngle,
   selectRallioSeed,
 } from "@/lib/content/rallio";
 import { postTypes } from "@/lib/content/types";
@@ -14,17 +15,43 @@ const inputSchema = z.object({
   recent_titles: z.array(z.string()).optional().default([]),
 });
 
+const recentPostSchema = z.object({
+  headline: z.string().nullable(),
+  hook: z.string().nullable(),
+  template_type: z.string().nullable(),
+  template_fields: z.unknown().nullable(),
+});
+
 export async function POST(request: Request) {
   try {
-    await requireApiUser();
+    const { supabase, user } = await requireApiUser();
     const input = inputSchema.parse(await request.json());
+    const { data: recentPosts } = await supabase
+      .from("generated_posts")
+      .select("headline, hook, template_type, template_fields")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(12);
+    const safeRecentPosts = z.array(recentPostSchema).parse(recentPosts || []);
+    const recentText = [
+      ...input.recent_titles,
+      ...safeRecentPosts.flatMap((post) => [
+        post.headline,
+        post.hook,
+        post.template_type,
+        templateFieldText(post.template_fields, "rallio_template_type"),
+        templateFieldText(post.template_fields, "content_type"),
+      ]),
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     const seed = selectRallioSeed({
       postType: input.post_type,
       quantity: input.quantity,
-      recentText: input.recent_titles.join(" "),
+      recentText,
     });
-    const angle = seed.angleVariants[0];
+    const angle = selectRallioAngle(seed, recentText);
 
     return jsonOk({
       title: angle.working_title,
@@ -49,4 +76,14 @@ export async function POST(request: Request) {
   } catch (error) {
     return jsonError(error, 400);
   }
+}
+
+function templateFieldText(fields: unknown, key: string) {
+  if (!fields || typeof fields !== "object") {
+    return "";
+  }
+
+  const value = (fields as Record<string, unknown>)[key];
+
+  return typeof value === "string" ? value : "";
 }
