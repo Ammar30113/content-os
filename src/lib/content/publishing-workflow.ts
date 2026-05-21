@@ -16,11 +16,12 @@ type EnsurePublishingJobsInput = {
   postId: string;
   userId: string;
   scheduledFor?: string | null;
+  resendReady?: boolean;
 };
 
 export async function ensurePublishingJobsForPost(
   supabase: ContentOsSupabaseClient,
-  { postId, userId, scheduledFor }: EnsurePublishingJobsInput,
+  { postId, userId, scheduledFor, resendReady = false }: EnsurePublishingJobsInput,
 ) {
   const { data: post, error: postError } = await supabase
     .from("generated_posts")
@@ -122,6 +123,31 @@ export async function ensurePublishingJobsForPost(
       .eq("user_id", userId)
       .eq("platform", platform)
       .maybeSingle();
+
+    if (existingJob?.status === "ready" && resendReady) {
+      const { data: resentJob, error: resendError } = await supabase
+        .from("publishing_jobs")
+        .update({
+          user_id: userId,
+          post_id: post.id,
+          platform,
+          status: "queued",
+          scheduled_for: resolvedScheduledFor,
+          error: null,
+        })
+        .eq("id", existingJob.id)
+        .select()
+        .single();
+
+      if (resendError || !resentJob) {
+        throw new Error(
+          resendError?.message || "Could not reset Buffer job for resend.",
+        );
+      }
+
+      jobs.push(resentJob);
+      continue;
+    }
 
     if (existingJob?.status === "ready" || existingJob?.status === "published") {
       const { data: existingReadyJob, error: existingReadyError } = await supabase

@@ -258,7 +258,16 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     );
   }
 
-  async function handleSendToBuffer() {
+  async function handleSendToBuffer({ resendReady = false } = {}) {
+    if (
+      resendReady &&
+      !window.confirm(
+        "Create a fresh Buffer draft for this post? Delete the failed draft in Buffer first to avoid duplicates.",
+      )
+    ) {
+      return;
+    }
+
     setState({ loading: "Sending to Buffer", message: null, error: null });
 
     try {
@@ -281,6 +290,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           scheduled_for: form.scheduled_for
             ? new Date(form.scheduled_for).toISOString()
             : undefined,
+          resend_ready: resendReady,
         }),
       });
       const bufferPayload = await bufferResponse.json();
@@ -293,7 +303,9 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
         loading: null,
         message:
           bufferPayload.message ||
-          "Saved, sent to Buffer, and kept scheduled in Content OS.",
+          (resendReady
+            ? "Saved and created a fresh Buffer draft."
+            : "Saved, sent to Buffer, and kept scheduled in Content OS."),
         error: null,
       });
       router.refresh();
@@ -611,6 +623,19 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <Save size={16} />
             {state.loading === "Saving" ? "Saving..." : "Save changes"}
           </button>
+          {bufferPosts.length ? (
+            <button
+              type="button"
+              onClick={() => handleSendToBuffer({ resendReady: true })}
+              disabled={Boolean(state.loading)}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-[#C8923A]/50 px-3 text-sm font-semibold text-[#f5ebdc] transition hover:bg-[#C8923A]/10 disabled:opacity-50"
+            >
+              <RefreshCw size={16} />
+              {state.loading === "Sending to Buffer"
+                ? "Sending..."
+                : "Create fresh Buffer draft"}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() =>
@@ -637,7 +662,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           </button>
           <button
             type="button"
-            onClick={handleSendToBuffer}
+            onClick={() => handleSendToBuffer()}
             disabled={Boolean(state.loading)}
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded bg-[#d4ff00] px-3 text-sm font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68] disabled:opacity-50"
           >

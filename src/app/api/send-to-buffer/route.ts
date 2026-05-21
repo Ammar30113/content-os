@@ -11,6 +11,7 @@ const sendToBufferSchema = z.object({
   post_id: z.string().uuid(),
   platform: z.enum(platforms).optional(),
   scheduled_for: z.string().datetime().optional(),
+  resend_ready: z.boolean().optional().default(false),
 });
 
 export async function POST(request: Request) {
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
       postId: input.post_id,
       userId: user.id,
       scheduledFor: input.scheduled_for,
+      resendReady: input.resend_ready,
     });
 
     const targetJobs = input.platform
@@ -66,8 +68,9 @@ export async function POST(request: Request) {
       sent,
       post: ensured.post,
       scheduled_for: ensured.scheduledFor,
-      message:
-        "Sent to Buffer and kept scheduled in Content OS. Mark it published after Instagram confirms it went live.",
+      message: input.resend_ready
+        ? "Created a fresh Buffer draft with the latest media URL. Keep the old failed Buffer draft deleted."
+        : "Sent to Buffer and kept scheduled in Content OS. Mark it published after Instagram confirms it went live.",
     });
   } catch (error) {
     if (postId) {
