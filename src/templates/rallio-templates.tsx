@@ -177,6 +177,41 @@ function buildSpotAttribution({
   return `—${nbsp}${parts.join(" / ")}`;
 }
 
+function normalizeShortSince(value: unknown) {
+  const raw = safeText(value, "").trim();
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+
+  if (raw.startsWith("'") && digits.length >= 2) {
+    return `'${digits.slice(-2)}`;
+  }
+
+  if (digits.length >= 2) {
+    return `'${digits.slice(-2)}`;
+  }
+
+  return compactText(raw, "", 4);
+}
+
+function normalizeFullSinceYear(value: unknown) {
+  const raw = safeText(value, "").trim();
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+
+  if (digits.length >= 4) {
+    return digits.slice(-4);
+  }
+
+  if (digits.length >= 2) {
+    const shortYear = Number(digits.slice(-2));
+    const century = shortYear <= 26 ? "20" : "19";
+
+    return `${century}${String(shortYear).padStart(2, "0")}`;
+  }
+
+  return compactText(raw, "", 4);
+}
+
 function buildQuoteAttribution({
   name,
   neighborhood,
@@ -234,7 +269,9 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
     "",
     32,
   );
-  const recommenderSince = compactText(fields.recommender_since, "", 8);
+  const recommenderSince = normalizeShortSince(
+    fields.recommender_since || fields.regular_since_year,
+  );
   const attribution = buildSpotAttribution({
     name: recommenderName,
     neighborhood: recommenderNeighborhood,
@@ -242,6 +279,8 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
   });
   const page = compactText(fields.carousel_page, "", 3);
   const total = compactText(fields.carousel_total, "", 3);
+  const hasPageBadge = Boolean(page && total);
+  const attributionText = compactText(attribution, "", hasPageBadge ? 72 : 92);
   const nameFontSize = business.length > 22 ? 118 : business.length > 14 ? 148 : 174;
   const quoteFontSize =
     recommenderQuote.length > 90 ? 34 : recommenderQuote.length > 60 ? 42 : 50;
@@ -325,7 +364,7 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
           style={{
             position: "absolute",
             left: GRID_SAFE_INSET,
-            right: GRID_SAFE_INSET,
+            right: hasPageBadge ? GRID_SAFE_INSET + 128 : GRID_SAFE_INSET,
             bottom: 146,
             color: rallio.muted,
             fontFamily: "Manrope, Inter, Arial, sans-serif",
@@ -335,11 +374,11 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
             display: "flex",
           }}
         >
-          {attribution}
+          {attributionText}
         </div>
       ) : null}
 
-      {page && total ? <PageBadge page={page} total={total} /> : null}
+      {hasPageBadge ? <PageBadge page={page} total={total} /> : null}
       <RallioWatermark />
     </Canvas>
   );
@@ -362,9 +401,9 @@ function RallioRegularQuoteTemplate({ fields }: { fields: TemplateFields }) {
     32,
   );
   const sinceYear = compactText(
-    fields.regular_since_year || fields.recommender_since,
+    normalizeFullSinceYear(fields.regular_since_year || fields.recommender_since),
     "",
-    8,
+    4,
   );
   const business = compactText(fields.business_name, "", 28);
   const pillLabel = [business, neighborhood]
