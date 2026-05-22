@@ -11,8 +11,8 @@ export async function GET(request: Request) {
 
     const supabase = createSupabaseAdminClient();
     const publishResult = await sendDuePublishingJobsToBuffer(supabase, {
-      horizonHours: 48,
-      limit: 20,
+      horizonHours: 14 * 24,
+      limit: 100,
     });
     const cleanupResult = await deleteExpiredScheduledBufferPosts(supabase);
 

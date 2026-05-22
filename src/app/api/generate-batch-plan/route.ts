@@ -6,7 +6,7 @@ import { jsonError, jsonOk } from "@/lib/api";
 import {
   RALLIO_BRAND,
   RALLIO_SYSTEM_PROMPT,
-  getRallioContentTypeForSlot,
+  getRallioBatchSlotGuide,
   mapRallioTemplateToCoreType,
   normalizeRallioCtaDoor,
   templateForContentType,
@@ -137,6 +137,22 @@ export async function POST(request: Request) {
                 "Pick exactly one cta door per angle. Prefer founding_supporter for link-in-bio waitlist growth and local_guide for taste-map saves. Use claim_your_business only for an explicitly owner-facing utility angle.",
               feed_rhythm:
                 "Default campaign rhythm: regular_quote, spot_carousel, receipt_single, manifesto_reel or bts_story_sequence, then occasional owner_claim_carousel. For quantity 5+, include at least 3 community/feed-growth angles before any owner-claim angle.",
+              required_slot_plan:
+                quantity > 1
+                  ? Array.from({ length: quantity }, (_, index) => {
+                      const guide = getRallioBatchSlotGuide(index + 1);
+
+                      return {
+                        index: guide.slot,
+                        working_title: guide.workingTitle,
+                        rallio_content_type: guide.contentType,
+                        rallio_template_type: guide.templateType,
+                        visual_style: guide.visualStyle,
+                        cta_door: guide.ctaDoor,
+                        unique_takeaway: guide.uniqueTakeaway,
+                      };
+                    })
+                  : null,
               recent_posts_to_avoid: safeRecentPosts,
               output_requirements: [
                 "Return exactly the requested number of angles.",
@@ -168,38 +184,57 @@ export async function POST(request: Request) {
     }
 
     const rawAngles = normalizePlanAngles(parsed.angles, quantity);
-    const uniquePlannedContentTypes = new Set(
-      rawAngles.map((angle) => angle.rallio_content_type).filter(Boolean),
-    );
-    const shouldApplyFallbackRhythm = quantity > 1 && uniquePlannedContentTypes.size <= 1;
     const angles = rawAngles.map((angle, index) => {
+      const slotGuide = getRallioBatchSlotGuide(index + 1);
+      const shouldApplySlotGuide = quantity > 1;
       const rallioContentType =
-        shouldApplyFallbackRhythm
-          ? getRallioContentTypeForSlot(index + 1)
+        shouldApplySlotGuide
+          ? slotGuide.contentType
           : angle.rallio_content_type || input.rallio_content_type || "regular_quote";
       const rallioTemplateType =
-        shouldApplyFallbackRhythm
-          ? templateForContentType(rallioContentType)
+        shouldApplySlotGuide
+          ? slotGuide.templateType
           : angle.rallio_template_type || templateForContentType(rallioContentType);
       const coreTemplateType = mapRallioTemplateToCoreType(rallioTemplateType);
 
       return {
         ...angle,
         brand_slug: "rallio",
+        working_title: shouldApplySlotGuide
+          ? slotGuide.workingTitle
+          : angle.working_title,
         pillar: coreTemplateType,
         template_type: coreTemplateType,
+        hook_direction: shouldApplySlotGuide
+          ? slotGuide.hookDirection
+          : angle.hook_direction,
+        unique_takeaway: shouldApplySlotGuide
+          ? slotGuide.uniqueTakeaway
+          : angle.unique_takeaway,
+        caption_structure: shouldApplySlotGuide
+          ? slotGuide.captionStructure
+          : angle.caption_structure,
+        do_not_repeat: shouldApplySlotGuide
+          ? slotGuide.doNotRepeat
+          : angle.do_not_repeat,
         rallio_template_type: rallioTemplateType,
         rallio_content_type: rallioContentType,
         rallio_cta_door: normalizeRallioCtaDoor(
           rallioContentType,
-          angle.rallio_cta_door || input.rallio_cta_door,
+          shouldApplySlotGuide
+            ? slotGuide.ctaDoor
+            : angle.rallio_cta_door || input.rallio_cta_door,
         ),
         rallio_visual_style:
-          angle.rallio_visual_style ||
-          input.rallio_visual_style ||
-          RALLIO_BRAND.visual_style,
+          shouldApplySlotGuide
+            ? slotGuide.visualStyle
+            : angle.rallio_visual_style ||
+              input.rallio_visual_style ||
+              RALLIO_BRAND.visual_style,
         rallio_kpi_intent:
-          angle.rallio_kpi_intent || input.rallio_kpi_intent || "manual_review",
+          shouldApplySlotGuide
+            ? slotGuide.kpiIntent
+            : angle.rallio_kpi_intent || input.rallio_kpi_intent || "manual_review",
       };
     });
 

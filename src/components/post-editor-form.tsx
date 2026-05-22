@@ -22,7 +22,7 @@ import {
 } from "@/lib/content/types";
 import type { Database, Json } from "@/types/database";
 
-const MANUAL_SLOT_WINDOW_DAYS = 7;
+const MANUAL_SLOT_WINDOW_DAYS = 30;
 
 type GeneratedPost = Database["public"]["Tables"]["generated_posts"]["Row"];
 

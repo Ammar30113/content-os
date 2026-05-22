@@ -97,9 +97,20 @@ const RALLIO_DEFAULT_FEED_RHYTHM: RallioContentType[] = [
   "receipt_single",
   "manifesto_reel",
   "spot_carousel",
-  "owner_claim_carousel",
-  "bts_story_sequence",
   "regular_quote",
+  "receipt_single",
+  "bts_story_sequence",
+  "owner_claim_carousel",
+  "manifesto_reel",
+  "spot_carousel",
+  "regular_quote",
+  "receipt_single",
+  "manifesto_reel",
+  "spot_carousel",
+  "regular_quote",
+  "receipt_single",
+  "bts_story_sequence",
+  "owner_claim_carousel",
   "spot_carousel",
 ];
 
@@ -438,6 +449,131 @@ export function getRallioContentTypeForSlot(slot: number): RallioContentType {
   return RALLIO_DEFAULT_FEED_RHYTHM[index];
 }
 
+export function getRallioBatchSlotGuide(slot: number) {
+  const contentType = getRallioContentTypeForSlot(slot);
+  const occurrenceIndex = countContentTypeOccurrences(contentType, slot) - 1;
+  const candidates = getAngleVariantsForContentType(contentType);
+  const candidate = candidates[occurrenceIndex % candidates.length] || candidates[0];
+
+  if (!candidate) {
+    throw new Error(`No Rallio batch guide candidates found for ${contentType}.`);
+  }
+
+  const templateType = candidate.rallioTemplateType || templateForContentType(contentType);
+  const workingTitle = getBatchWorkingTitle(
+    candidate.working_title,
+    contentType,
+    occurrenceIndex,
+  );
+
+  return {
+    slot,
+    seedId: candidate.seed.id,
+    seedTitle: candidate.seed.title,
+    contentType,
+    templateType,
+    coreTemplateType: mapRallioTemplateToCoreType(templateType),
+    ctaDoor: normalizeRallioCtaDoor(contentType, candidate.ctaDoor),
+    visualStyle: candidate.visual_direction,
+    kpiIntent: candidate.seed.kpiIntent,
+    workingTitle,
+    hookDirection: candidate.hook_direction,
+    uniqueTakeaway: candidate.unique_takeaway,
+    captionStructure: candidate.seed.captionStructure,
+    doNotRepeat: candidate.do_not_repeat,
+    slotBrief: [
+      `${contentType} / ${templateType}`,
+      workingTitle,
+      candidate.hook_direction,
+      candidate.unique_takeaway,
+      `Visual: ${candidate.visual_direction}`,
+    ].join(" — "),
+  };
+}
+
+function getBatchWorkingTitle(
+  fallback: string,
+  contentType: RallioContentType,
+  occurrenceIndex: number,
+) {
+  const titleBank: Record<RallioContentType, string[]> = {
+    regular_quote: [
+      "The Tuesday Regular",
+      "The Recommendation You Trust",
+      "Not A Critic Line",
+      "The Counter Seat",
+      "The House Order",
+    ],
+    spot_carousel: [
+      "One Spot Worth Saving",
+      "The Saveable Detail",
+      "Recommended Twice",
+      "The Corner Pick",
+      "The Line Worth Knowing",
+    ],
+    receipt_single: [
+      "Taste Receipt",
+      "What Regulars Notice",
+      "Save Before You Forget",
+      "The Repeat Visit Ledger",
+      "Three Reasons, One Receipt",
+    ],
+    manifesto_reel: [
+      "Regulars Over Ratings",
+      "Not A Promo Feed",
+      "Taste Map, Not Top Ten",
+      "Built From Regulars",
+      "Local Memory Wins",
+    ],
+    bts_story_sequence: [
+      "Build The Map Quietly",
+      "Behind The Taste Map",
+      "What We Are Collecting",
+      "The Feed Before The App",
+      "Small Signals First",
+    ],
+    owner_claim_carousel: [
+      "Claim The Story Before Launch",
+      "Better Local Context",
+      "Community-Added, Owner-Corrected",
+      "The Owner Context Layer",
+      "A Profile Regulars Started",
+    ],
+  };
+
+  return titleBank[contentType][occurrenceIndex] || fallback;
+}
+
+function countContentTypeOccurrences(contentType: RallioContentType, slot: number) {
+  return Array.from({ length: Math.max(1, slot) }, (_, index) =>
+    getRallioContentTypeForSlot(index + 1),
+  ).filter((candidate) => candidate === contentType).length;
+}
+
+function getAngleVariantsForContentType(contentType: RallioContentType) {
+  const matchingAngles = rallioTopicSeeds.flatMap((seed) =>
+    seed.angleVariants
+      .filter((angle) => angle.contentType === contentType)
+      .map((angle) => ({ ...angle, seed })),
+  );
+
+  if (matchingAngles.length) {
+    return matchingAngles;
+  }
+
+  const seedAngles = rallioTopicSeeds
+    .filter((seed) => seed.contentType === contentType)
+    .flatMap((seed) =>
+      seed.angleVariants.map((angle) => ({ ...angle, seed })),
+    );
+
+  return seedAngles.length
+    ? seedAngles
+    : rallioTopicSeeds.flatMap((seed) =>
+        seed.angleVariants.map((angle) => ({ ...angle, seed })),
+      );
+}
+
 function sortSeedsByContentPriority(
   seeds: RallioTopicSeed[],
   priority: RallioContentType[],
@@ -490,10 +626,20 @@ function recentIncludes(recent: string, value: string) {
 }
 
 export function buildRallioRouletteBrief(seed: RallioTopicSeed, quantity: number) {
-  const angles = seed.angleVariants
-    .slice(0, Math.max(1, Math.min(quantity, seed.angleVariants.length)))
-    .map((angle, index) => `${index + 1}. ${angle.working_title}: ${angle.unique_takeaway}`)
-    .join("\n");
+  const angles =
+    quantity > 1
+      ? Array.from({ length: quantity }, (_, index) => {
+          const guide = getRallioBatchSlotGuide(index + 1);
+
+          return `${index + 1}. ${guide.workingTitle}: ${guide.slotBrief}`;
+        }).join("\n")
+      : seed.angleVariants
+          .slice(0, Math.max(1, Math.min(quantity, seed.angleVariants.length)))
+          .map(
+            (angle, index) =>
+              `${index + 1}. ${angle.working_title}: ${angle.unique_takeaway}`,
+          )
+          .join("\n");
   const rhythm =
     quantity > 1
       ? Array.from({ length: quantity }, (_, index) => {

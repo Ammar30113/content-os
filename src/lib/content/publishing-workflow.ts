@@ -1,13 +1,15 @@
 import "server-only";
 
 import { platforms } from "@/lib/content/types";
-import { getConfiguredBufferPlatforms } from "@/lib/env";
+import {
+  getBufferChannelQueueCap,
+  getConfiguredBufferPlatforms,
+} from "@/lib/env";
 import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database";
 
 export const MANUAL_SLOT_TIME_ZONE = "America/Toronto";
-export const BUFFER_FREE_CHANNEL_CAP = 10;
-export const MANUAL_SLOT_WINDOW_DAYS = 7;
+export const MANUAL_SLOT_WINDOW_DAYS = 30;
 
 type PublishPlatform = (typeof platforms)[number];
 type PublishingJob = Database["public"]["Tables"]["publishing_jobs"]["Row"];
@@ -82,7 +84,7 @@ export async function ensurePublishingJobsForPost(
     throw new Error("This post is already marked published in Content OS.");
   }
 
-  await assertBufferFreeCapacity(supabase, {
+  await assertBufferQueueCapacity(supabase, {
     userId,
     postId,
     platforms: effectivePlatforms,
@@ -320,7 +322,7 @@ export function getNextManualSlot(
   return minTime;
 }
 
-async function assertBufferFreeCapacity(
+async function assertBufferQueueCapacity(
   supabase: ContentOsSupabaseClient,
   {
     userId,
@@ -332,6 +334,12 @@ async function assertBufferFreeCapacity(
     platforms: PublishPlatform[];
   },
 ) {
+  const channelQueueCap = getBufferChannelQueueCap();
+
+  if (!channelQueueCap) {
+    return;
+  }
+
   const now = new Date().toISOString();
 
   for (const platform of selectedPlatforms) {
@@ -348,9 +356,9 @@ async function assertBufferFreeCapacity(
       throw new Error(error.message);
     }
 
-    if ((data || []).length >= BUFFER_FREE_CHANNEL_CAP) {
+    if ((data || []).length >= channelQueueCap) {
       throw new Error(
-        `Buffer free cap reached for ${platform}. Keep this post in Content OS until one queued Buffer post clears.`,
+        `Buffer channel cap reached for ${platform}. Keep this post in Content OS until one queued Buffer post clears, or raise BUFFER_CHANNEL_QUEUE_CAP.`,
       );
     }
   }

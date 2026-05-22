@@ -56,6 +56,7 @@ CRON_SECRET=
 BUFFER_ACCESS_TOKEN=
 BUFFER_ORGANIZATION_ID=
 BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID=
+BUFFER_CHANNEL_QUEUE_CAP=
 ```
 
 Do not commit `.env.local` or real secrets.
@@ -132,7 +133,7 @@ Older PNG images are served through the public proxy as JPEGs when Buffer fetche
 them.
 
 The production Vercel cron at `/api/cron/publish-due-posts` also sweeps queued
-publishing jobs inside the next 48 hours once per day. Vercel Hobby plans do not
+publishing jobs inside the next 14 days once per day. Vercel Hobby plans do not
 support high-frequency cron, so the editor button is the primary no-wait handoff.
 The same cron deletes Buffer-sent scheduled post records after the 10-day
 scheduled tab retention window once the Buffer slot has passed, including
@@ -144,11 +145,15 @@ Buffer environment variables:
 BUFFER_ACCESS_TOKEN=
 BUFFER_ORGANIZATION_ID=
 BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID=
+BUFFER_CHANNEL_QUEUE_CAP=
 ```
 
 `BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID` is the only publishing channel used by the
 current handoff. Rallio posts are Instagram-only, and Content OS does not fall
 back to legacy brand channels.
+Leave `BUFFER_CHANNEL_QUEUE_CAP` unset for paid-plan scheduling. Set it only if
+you want Content OS to enforce a local queue ceiling before handing posts to
+Buffer.
 
 ## Local Development
 

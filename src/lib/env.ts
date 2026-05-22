@@ -176,6 +176,22 @@ export function getConfiguredBufferPlatforms(): BufferPlatform[] {
   return getBufferEnvStatus().connectedChannels;
 }
 
+export function getBufferChannelQueueCap() {
+  const value = process.env.BUFFER_CHANNEL_QUEUE_CAP;
+
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    throw new Error("BUFFER_CHANNEL_QUEUE_CAP must be a positive number.");
+  }
+
+  return Math.floor(parsed);
+}
+
 export function getBufferEnv() {
   const status = getBufferEnvStatus();
   const accessToken = process.env.BUFFER_ACCESS_TOKEN;

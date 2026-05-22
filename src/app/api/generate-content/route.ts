@@ -174,6 +174,7 @@ type RallioFallbackMetadata = {
   templateType?: RallioTemplateType;
   visualStyle?: string;
   kpiIntent?: string;
+  batchWorkingTitle?: string;
 };
 
 function getRallioFallbackMetadata(
@@ -193,6 +194,7 @@ function getRallioFallbackMetadata(
       RALLIO_BRAND.visual_style,
     kpiIntent:
       input.batch_angle?.rallio_kpi_intent || input.rallio_kpi_intent || undefined,
+    batchWorkingTitle: input.batch_angle?.working_title,
   };
 }
 
@@ -208,7 +210,10 @@ function createQualityFallbackContent({
   rallioFallback?: RallioFallbackMetadata;
 }) {
   const hook = candidate.hook || candidate.headline;
-  const headline = candidate.headline || "Local Discovery Needs Better Signal";
+  const headline =
+    rallioFallback?.batchWorkingTitle ||
+    candidate.headline ||
+    "Local Discovery Needs Better Signal";
   const subhead =
     candidate.subhead ||
     "Local discovery should start with taste, regulars, and owner context.";
@@ -322,6 +327,47 @@ function normalizeFallbackHashtags(hashtags: string[]) {
     .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
 
   return uniqueStrings([...normalized, ...rallioFallbackHashtags]).slice(0, 20);
+}
+
+function validateBatchNovelty(
+  content: GeneratedContentPackage,
+  generatedSoFar: Array<{
+    headline?: string | null;
+    hook?: string | null;
+    pillar?: string | null;
+  }>,
+) {
+  if (!generatedSoFar.length) {
+    return [];
+  }
+
+  const currentHeadline = normalizeForNovelty(content.headline);
+  const currentHook = normalizeForNovelty(content.hook);
+  const failures: string[] = [];
+  const previousHeadlines = generatedSoFar
+    .map((post) => normalizeForNovelty(post.headline))
+    .filter(Boolean);
+  const previousHooks = generatedSoFar
+    .map((post) => normalizeForNovelty(post.hook))
+    .filter(Boolean);
+
+  if (currentHeadline && previousHeadlines.includes(currentHeadline)) {
+    failures.push("Headline duplicates an earlier post in this batch.");
+  }
+
+  if (currentHook && previousHooks.includes(currentHook)) {
+    failures.push("Hook duplicates an earlier post in this batch.");
+  }
+
+  return failures;
+}
+
+function normalizeForNovelty(value: string | null | undefined) {
+  return (value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export async function POST(request: Request) {
@@ -482,6 +528,20 @@ export async function POST(request: Request) {
                           "Obey the planned batch angle. This post must be distinct from other batch items in hook, headline, takeaway, CTA, examples, caption shape, and template fields.",
                       }
                     : null,
+                batch_slot_contract: input.batch_angle
+                  ? {
+                      index: input.batch_angle.index,
+                      required_working_title: input.batch_angle.working_title,
+                      required_content_type: input.batch_angle.rallio_content_type,
+                      required_template_type: input.batch_angle.rallio_template_type,
+                      required_visual_style: input.batch_angle.rallio_visual_style,
+                      duplicate_headlines_to_avoid: generatedSoFar
+                        .map((post) => post.headline)
+                        .filter(Boolean),
+                      instruction:
+                        "Use the required working title as the post headline/template headline. Do not use a headline from duplicate_headlines_to_avoid.",
+                    }
+                  : null,
                 generated_so_far: generatedSoFar,
                 recent_posts_to_avoid: safeRecentPosts,
                 caption_rules: {
@@ -547,7 +607,10 @@ export async function POST(request: Request) {
         image_mode: input.image_mode,
       };
       const templateFieldsWithWorkflow = normalizeRallioMetadata(
-        baseTemplateFieldsWithWorkflow,
+        {
+          ...baseTemplateFieldsWithWorkflow,
+          headline: input.batch_angle?.working_title || baseTemplateFieldsWithWorkflow.headline,
+        },
         rallioFallback,
       );
       const forcedTemplateType = mapRallioTemplateToCoreType(
@@ -558,6 +621,7 @@ export async function POST(request: Request) {
 
       const parsedContent = generatedContentSchema.parse({
         ...parsed,
+        headline: input.batch_angle?.working_title || parsed.headline,
         pillar: forcedTemplateType,
         template_type: forcedTemplateType,
         template_fields: templateFieldsWithWorkflow,
@@ -577,6 +641,13 @@ export async function POST(request: Request) {
       }
       fallbackCandidate = candidate;
       fallbackAttempt = attempt;
+      const noveltyFailures = validateBatchNovelty(candidate, generatedSoFar);
+
+      if (noveltyFailures.length) {
+        qualityFailures = noveltyFailures;
+        continue;
+      }
+
       const qualityResult = validateGeneratedContentQuality({
         content: candidate,
       });
