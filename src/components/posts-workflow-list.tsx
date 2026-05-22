@@ -7,6 +7,12 @@ import { useRouter } from "next/navigation";
 
 import { PostCardActions } from "@/components/post-card-actions";
 import { StatusBadge } from "@/components/status-badge";
+import {
+  BUFFER_SENT_POST_RETENTION_DAYS,
+  getBufferScheduledClearAt,
+  isBufferScheduledPost,
+  isBufferScheduledPostExpired,
+} from "@/lib/content/scheduled-retention";
 import { formatTemplateName } from "@/lib/content/types";
 import { readApiJson } from "@/lib/http/read-api-json";
 import type { Json } from "@/types/database";
@@ -41,8 +47,16 @@ type BulkSummary = {
   details?: string[];
 };
 
+type PostTab = "posts" | "scheduled";
+
+const POST_TABS: { id: PostTab; label: string }[] = [
+  { id: "posts", label: "Posts" },
+  { id: "scheduled", label: "Scheduled" },
+];
+
 export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<PostTab>("posts");
   const [state, setState] = useState<BulkState>({
     loading: null,
     message: null,
@@ -50,10 +64,13 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
     error: null,
   });
   const router = useRouter();
+  const groupedPosts = useMemo(() => groupWorkflowPosts(posts), [posts]);
+  const visiblePosts = groupedPosts[activeTab];
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const visiblePosts = posts;
   const allVisibleSelected =
     visiblePosts.length > 0 && visiblePosts.every((post) => selectedSet.has(post.id));
+  const selectedCount = selectedIds.length;
+  const isActivePostsTab = activeTab === "posts";
 
   function togglePost(postId: string) {
     setSelectedIds((current) =>
@@ -65,6 +82,11 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
 
   function selectAllVisible() {
     setSelectedIds(visiblePosts.map((post) => post.id));
+  }
+
+  function changeTab(tab: PostTab) {
+    setSelectedIds([]);
+    setActiveTab(tab);
   }
 
   async function runBulkAction(
@@ -120,15 +142,34 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   return (
     <div className="space-y-5">
       <div className="sticky top-0 z-10 rounded border border-zinc-800 bg-[#0a0a0b]/95 p-4 backdrop-blur">
+        <div className="mb-4 flex flex-wrap gap-2 border-b border-zinc-900 pb-4">
+          {POST_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => changeTab(tab.id)}
+              className={`inline-flex h-9 items-center gap-2 rounded border px-3 text-xs font-semibold transition ${
+                activeTab === tab.id
+                  ? "border-[#C8923A] bg-[#C8923A]/15 text-[#F5EBDC]"
+                  : "border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+              }`}
+            >
+              {tab.label}
+              <span className="rounded bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-300">
+                {groupedPosts[tab.id].length}
+              </span>
+            </button>
+          ))}
+        </div>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-sm font-semibold text-white">
-              {selectedIds.length} selected
+              {selectedCount} selected
             </p>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
-              Bulk send approves, uses the next manual Buffer slot, sends to
-              configured Buffer channels, then keeps the Content OS post
-              scheduled until Instagram confirms it went live.
+              {isActivePostsTab
+                ? "Bulk send approves, uses the next manual Buffer slot, sends to configured Buffer channels, then moves the post into Scheduled."
+                : `Buffer-sent posts stay here for ${BUFFER_SENT_POST_RETENTION_DAYS} days, then daily cleanup deletes them after the Buffer slot has passed.`}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -145,66 +186,70 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
             <button
               type="button"
               onClick={() => setSelectedIds([])}
-              disabled={Boolean(state.loading) || !selectedIds.length}
+              disabled={Boolean(state.loading) || !selectedCount}
               className="inline-flex h-9 items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
             >
               <X size={15} />
               Clear
             </button>
-            <button
-              type="button"
-              disabled={Boolean(state.loading) || !selectedIds.length}
-              onClick={() =>
-                runBulkAction(
-                  "Approving selected",
-                  "/api/posts/bulk/approve",
-                  (payload) =>
-                    `Approved ${String(payload.approved_count || 0)} posts.`,
-                )
-              }
-              className="inline-flex h-9 items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
-            >
-              <Check size={15} />
-              {state.loading === "Approving selected"
-                ? "Approving..."
-                : "Approve selected"}
-            </button>
-            <button
-              type="button"
-              disabled={Boolean(state.loading) || !selectedIds.length}
-              onClick={() =>
-                runBulkAction(
-                  "Sending selected",
-                  "/api/posts/bulk/send-to-buffer",
-                  (payload) => {
-                    const sent = String(payload.sent_count || 0);
-                    const failed = Number(payload.failed_count || 0);
-                    const details = getBulkFailureDetails(payload);
+            {isActivePostsTab ? (
+              <>
+                <button
+                  type="button"
+                  disabled={Boolean(state.loading) || !selectedCount}
+                  onClick={() =>
+                    runBulkAction(
+                      "Approving selected",
+                      "/api/posts/bulk/approve",
+                      (payload) =>
+                        `Approved ${String(payload.approved_count || 0)} posts.`,
+                    )
+                  }
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
+                >
+                  <Check size={15} />
+                  {state.loading === "Approving selected"
+                    ? "Approving..."
+                    : "Approve selected"}
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(state.loading) || !selectedCount}
+                  onClick={() =>
+                    runBulkAction(
+                      "Sending selected",
+                      "/api/posts/bulk/send-to-buffer",
+                      (payload) => {
+                        const sent = String(payload.sent_count || 0);
+                        const failed = Number(payload.failed_count || 0);
+                        const details = getBulkFailureDetails(payload);
 
-                    return failed
-                      ? {
-                          message: `Sent ${sent} posts to Buffer. ${failed} need review.`,
-                          details,
-                        }
-                      : `Sent ${sent} posts to Buffer and kept them scheduled.`;
-                  },
-                )
-              }
-              className="inline-flex h-9 items-center justify-center gap-2 rounded bg-[#C8923A] px-3 text-xs font-semibold text-[#0a0a0b] transition hover:bg-[#d9a85a] disabled:opacity-50"
-            >
-              <Send size={15} />
-              {state.loading === "Sending selected"
-                ? "Sending..."
-                : "Send selected to Buffer"}
-            </button>
+                        return failed
+                          ? {
+                              message: `Sent ${sent} posts to Buffer. ${failed} need review.`,
+                              details,
+                            }
+                          : `Sent ${sent} posts to Buffer and moved them to Scheduled.`;
+                      },
+                    )
+                  }
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded bg-[#C8923A] px-3 text-xs font-semibold text-[#0a0a0b] transition hover:bg-[#d9a85a] disabled:opacity-50"
+                >
+                  <Send size={15} />
+                  {state.loading === "Sending selected"
+                    ? "Sending..."
+                    : "Send selected to Buffer"}
+                </button>
+              </>
+            ) : null}
             <button
               type="button"
-              disabled={Boolean(state.loading) || !selectedIds.length}
+              disabled={Boolean(state.loading) || !selectedCount}
               onClick={() => {
                 if (
                   !window.confirm(
-                    `Delete ${selectedIds.length} selected post${
-                      selectedIds.length === 1 ? "" : "s"
+                    `Delete ${selectedCount} selected post${
+                      selectedCount === 1 ? "" : "s"
                     }? This removes related schedule jobs and generated image records.`,
                   )
                 ) {
@@ -253,6 +298,9 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
 
       <div className="grid gap-5 xl:grid-cols-2">
         {visiblePosts.map((post) => {
+          const clearAt =
+            activeTab === "scheduled" ? getBufferScheduledClearAt(post) : null;
+
           return (
             <article
               key={post.id}
@@ -333,6 +381,14 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                             : "Auto slot"}
                         </dd>
                       </div>
+                      {clearAt ? (
+                        <div>
+                          <dt className="text-zinc-500">Clears</dt>
+                          <dd className="mt-1 font-medium text-zinc-200">
+                            {new Date(clearAt).toLocaleDateString()}
+                          </dd>
+                        </div>
+                      ) : null}
                     </dl>
                   </div>
                 </div>
@@ -350,13 +406,37 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
       </div>
       {!visiblePosts.length ? (
         <div className="rounded border border-zinc-800 bg-zinc-950 p-8 text-center">
-          <p className="font-semibold text-white">No posts yet.</p>
+          <p className="font-semibold text-white">
+            {isActivePostsTab ? "No active posts." : "No scheduled posts."}
+          </p>
           <p className="mt-2 text-sm text-zinc-500">
-            Create a new package from Ideas.
+            {isActivePostsTab
+              ? "Create a new package from Ideas."
+              : "Posts sent to Buffer will appear here until the 10-day cleanup window deletes them."}
           </p>
         </div>
       ) : null}
     </div>
+  );
+}
+
+function groupWorkflowPosts(posts: PostListItem[]) {
+  const now = new Date();
+
+  return posts.reduce<Record<PostTab, PostListItem[]>>(
+    (groups, post) => {
+      if (isBufferScheduledPost(post)) {
+        if (!isBufferScheduledPostExpired(post, now)) {
+          groups.scheduled.push(post);
+        }
+
+        return groups;
+      }
+
+      groups.posts.push(post);
+      return groups;
+    },
+    { posts: [], scheduled: [] },
   );
 }
 

@@ -134,6 +134,9 @@ them.
 The production Vercel cron at `/api/cron/publish-due-posts` also sweeps queued
 publishing jobs inside the next 48 hours once per day. Vercel Hobby plans do not
 support high-frequency cron, so the editor button is the primary no-wait handoff.
+The same cron deletes Buffer-sent scheduled post records after the 10-day
+scheduled tab retention window once the Buffer slot has passed, including
+generated image storage cleanup.
 
 Buffer environment variables:
 
