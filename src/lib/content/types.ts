@@ -50,6 +50,22 @@ export const postStatuses = [
   "archived",
 ] as const;
 
+export const rallioLocalSignalSchema = z.object({
+  id: z.string(),
+  spot_name: z.string(),
+  neighborhood: z.string(),
+  street: z.string(),
+  category: z.string(),
+  signature_order: z.string(),
+  sensory_detail: z.string(),
+  regular_quote: z.string(),
+  regular_name: z.string(),
+  regular_since_year: z.string(),
+  participation_prompt: z.string(),
+  cta_door: z.enum(rallioCtaDoors),
+  source_status: z.string(),
+});
+
 export const batchAngleSchema = z.object({
   index: z.number().int().min(1).max(20),
   working_title: z.string(),
@@ -65,6 +81,8 @@ export const batchAngleSchema = z.object({
   rallio_cta_door: z.enum(rallioCtaDoors).nullable(),
   rallio_visual_style: z.string().nullable(),
   rallio_kpi_intent: z.string().nullable(),
+  rallio_signal: rallioLocalSignalSchema.nullable().optional(),
+  participation_prompt: z.string().nullable().optional(),
 });
 
 export const recentContextSchema = z.object({
@@ -74,6 +92,12 @@ export const recentContextSchema = z.object({
         hook: z.string().nullable().optional(),
         headline: z.string().nullable().optional(),
         pillar: z.string().nullable().optional(),
+        local_signal_id: z.string().nullable().optional(),
+        business_name: z.string().nullable().optional(),
+        spot_category: z.string().nullable().optional(),
+        launch_neighborhood: z.string().nullable().optional(),
+        regular_quote: z.string().nullable().optional(),
+        participation_prompt: z.string().nullable().optional(),
       }),
     )
     .optional()
@@ -107,6 +131,8 @@ export const ideaInputSchema = z
     rallio_template_type: z.enum(rallioTemplateTypes).optional(),
     rallio_visual_style: z.string().trim().optional().or(z.literal("")),
     rallio_kpi_intent: z.string().trim().optional().or(z.literal("")),
+    rallio_signal: rallioLocalSignalSchema.optional(),
+    participation_prompt: z.string().trim().optional().or(z.literal("")),
     batch_angle: batchAngleSchema.optional(),
     recent_context: recentContextSchema.optional(),
   })
@@ -160,6 +186,11 @@ export const templateFieldsSchema = z
     attribution: z.string().optional(),
     bottom_label: z.string().optional(),
     review_notes: z.string().optional(),
+    local_signal_id: z.string().optional(),
+    source_status: z.string().optional(),
+    signature_order: z.string().optional(),
+    sensory_detail: z.string().optional(),
+    participation_prompt: z.string().optional(),
     image_mode: z.enum(imageModes).optional(),
   })
   .passthrough();
@@ -220,6 +251,7 @@ export type TemplateType = (typeof templateTypes)[number];
 export type RallioCtaDoor = (typeof rallioCtaDoors)[number];
 export type RallioContentType = (typeof rallioContentTypes)[number];
 export type RallioTemplateType = (typeof rallioTemplateTypes)[number];
+export type RallioLocalSignal = z.infer<typeof rallioLocalSignalSchema>;
 
 export function normalizeHashtags(value: string | string[] | null | undefined) {
   if (Array.isArray(value)) {

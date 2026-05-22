@@ -13,6 +13,7 @@ import {
   tones,
 } from "@/lib/content/types";
 import { readApiJson } from "@/lib/http/read-api-json";
+import type { RallioLocalSignal } from "@/lib/content/types";
 
 type ImageMode = (typeof imageModes)[number];
 
@@ -32,6 +33,8 @@ type FormState = {
   rallio_template_type?: string;
   rallio_visual_style?: string;
   rallio_kpi_intent?: string;
+  rallio_signal?: RallioLocalSignal;
+  participation_prompt?: string;
 };
 
 function createDefaultForm(): FormState {
@@ -61,6 +64,8 @@ type TopicRoulettePayload = {
   rallio_template_type?: string;
   rallio_visual_style?: string;
   rallio_kpi_intent?: string;
+  rallio_signal?: RallioLocalSignal;
+  participation_prompt?: string;
   roulette: {
     seed_id: string;
     source: "rallio_bank";
@@ -86,6 +91,12 @@ type GeneratedPostSummary = {
   hook?: string | null;
   headline?: string | null;
   pillar?: string | null;
+  local_signal_id?: string | null;
+  business_name?: string | null;
+  spot_category?: string | null;
+  launch_neighborhood?: string | null;
+  regular_quote?: string | null;
+  participation_prompt?: string | null;
 };
 
 type GeneratePayload = {
@@ -207,6 +218,8 @@ export function IdeaGeneratorForm() {
       rallio_template_type: roulette.rallio_template_type,
       rallio_visual_style: roulette.rallio_visual_style,
       rallio_kpi_intent: roulette.rallio_kpi_intent,
+      rallio_signal: roulette.rallio_signal,
+      participation_prompt: roulette.participation_prompt,
     };
 
     setForm(nextForm);
@@ -452,6 +465,30 @@ export function IdeaGeneratorForm() {
             hook: payload.content.hook || payload.post.hook,
             headline: payload.content.headline || payload.post.headline,
             pillar: payload.content.pillar || payload.post.pillar,
+            local_signal_id:
+              typeof payload.content.template_fields.local_signal_id === "string"
+                ? payload.content.template_fields.local_signal_id
+                : null,
+            business_name:
+              typeof payload.content.template_fields.business_name === "string"
+                ? payload.content.template_fields.business_name
+                : null,
+            spot_category:
+              typeof payload.content.template_fields.spot_category === "string"
+                ? payload.content.template_fields.spot_category
+                : null,
+            launch_neighborhood:
+              typeof payload.content.template_fields.launch_neighborhood === "string"
+                ? payload.content.template_fields.launch_neighborhood
+                : null,
+            regular_quote:
+              typeof payload.content.template_fields.regular_quote === "string"
+                ? payload.content.template_fields.regular_quote
+                : null,
+            participation_prompt:
+              typeof payload.content.template_fields.participation_prompt === "string"
+                ? payload.content.template_fields.participation_prompt
+                : null,
           });
 
           if (activeForm.image_mode === "template") {
@@ -533,8 +570,8 @@ export function IdeaGeneratorForm() {
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <TopicSourceButton
               active={form.auto_topic}
-              title="Auto-pick from Rallio bank"
-              description="Draws a community-first taste-map topic from the Rallio seed bank."
+              title="Generate from Rallio signal bank"
+              description="Uses source details, regular quotes, and participation prompts."
               icon={<Shuffle size={15} className="text-[#f5ebdc]" />}
               onClick={() => updateField("auto_topic", true)}
             />
@@ -575,7 +612,10 @@ export function IdeaGeneratorForm() {
           </>
         ) : (
           <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
-            Auto-pick fills a feed-growth topic, funnel door, tone, template type, and visual direction from the Rallio seed bank. Owner utility stays occasional in batch planning.
+            Auto-pick fills a feed-growth topic, taste-map source details,
+            participation prompt, funnel door, tone, template type, and visual
+            direction from the Rallio signal bank. Owner utility stays
+            occasional in batch planning.
           </div>
         )}
         {!form.auto_topic ? (
@@ -654,8 +694,8 @@ export function IdeaGeneratorForm() {
         </div>
         <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
           Rallio posts are Instagram-only. They route to the Rallio Buffer
-          channel for taste-map and waitlist growth with no legacy-channel
-          fallback.
+          channel for taste-map, participation, and waitlist growth with no
+          legacy-channel fallback.
         </div>
       </div>
 

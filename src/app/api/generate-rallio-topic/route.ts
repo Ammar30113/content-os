@@ -4,6 +4,7 @@ import { jsonError, jsonOk } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth";
 import {
   buildRallioRouletteBrief,
+  getRallioLocalSignalForSlot,
   selectRallioAngle,
   selectRallioSeed,
 } from "@/lib/content/rallio";
@@ -52,10 +53,18 @@ export async function POST(request: Request) {
       recentText,
     });
     const angle = selectRallioAngle(seed, recentText);
+    const signal = getRallioLocalSignalForSlot(1);
 
     return jsonOk({
       title: angle.working_title,
-      brief: buildRallioRouletteBrief(seed, input.quantity),
+      brief: [
+        buildRallioRouletteBrief(seed, input.quantity),
+        input.quantity === 1
+          ? `\nRequired local signal: ${signal.spot_name}, ${signal.neighborhood}, ${signal.category}. Order/detail: ${signal.signature_order}. Regular quote: "${signal.regular_quote}". Participation prompt: ${signal.participation_prompt}.`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(""),
       source_url: "",
       tone: seed.preferredTone,
       template_hint: seed.templateHint,
@@ -65,6 +74,9 @@ export async function POST(request: Request) {
       rallio_template_type: seed.rallioTemplateType,
       rallio_visual_style: seed.visualDirection,
       rallio_kpi_intent: seed.kpiIntent,
+      rallio_signal: input.quantity === 1 ? signal : undefined,
+      participation_prompt:
+        input.quantity === 1 ? signal.participation_prompt : undefined,
       roulette: {
         seed_id: seed.id,
         source: "rallio_bank" as const,

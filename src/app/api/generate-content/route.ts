@@ -10,6 +10,7 @@ import {
   mapRallioTemplateToCoreType,
   normalizeRallioCtaDoor,
   normalizeRallioMetadata,
+  rallioSignalToTemplateFields,
   RALLIO_BRAND,
   RALLIO_SYSTEM_PROMPT,
 } from "@/lib/content/rallio";
@@ -29,6 +30,7 @@ import {
 import type {
   RallioContentType,
   RallioCtaDoor,
+  RallioLocalSignal,
   RallioTemplateType,
 } from "@/lib/content/types";
 import type { Json } from "@/types/database";
@@ -69,6 +71,11 @@ const openAITemplateFieldsSchema = z.object({
   receipt_lines: z.array(z.string()).nullable(),
   subtotal: z.string().nullable(),
   owner_steps: z.array(z.string()).nullable(),
+  local_signal_id: z.string().nullable(),
+  source_status: z.string().nullable(),
+  signature_order: z.string().nullable(),
+  sensory_detail: z.string().nullable(),
+  participation_prompt: z.string().nullable(),
 });
 
 const openAIContentSchema = z.object({
@@ -165,6 +172,11 @@ function normalizeTemplateFields(
     receipt_lines: fields.receipt_lines || undefined,
     subtotal: fields.subtotal || undefined,
     owner_steps: fields.owner_steps || undefined,
+    local_signal_id: fields.local_signal_id || undefined,
+    source_status: fields.source_status || undefined,
+    signature_order: fields.signature_order || undefined,
+    sensory_detail: fields.sensory_detail || undefined,
+    participation_prompt: fields.participation_prompt || undefined,
   };
 }
 
@@ -175,6 +187,8 @@ type RallioFallbackMetadata = {
   visualStyle?: string;
   kpiIntent?: string;
   batchWorkingTitle?: string;
+  localSignal?: RallioLocalSignal | null;
+  participationPrompt?: string | null;
 };
 
 function getRallioFallbackMetadata(
@@ -195,6 +209,9 @@ function getRallioFallbackMetadata(
     kpiIntent:
       input.batch_angle?.rallio_kpi_intent || input.rallio_kpi_intent || undefined,
     batchWorkingTitle: input.batch_angle?.working_title,
+    localSignal: input.batch_angle?.rallio_signal || input.rallio_signal || null,
+    participationPrompt:
+      input.batch_angle?.participation_prompt || input.participation_prompt || null,
   };
 }
 
@@ -209,16 +226,35 @@ function createQualityFallbackContent({
   attempt: number;
   rallioFallback?: RallioFallbackMetadata;
 }) {
-  const hook = candidate.hook || candidate.headline;
+  const signal = rallioFallback?.localSignal || null;
+  const hook =
+    candidate.hook ||
+    (signal
+      ? `${signal.spot_name} keeps showing up for a reason.`
+      : candidate.headline);
   const headline =
     rallioFallback?.batchWorkingTitle ||
     candidate.headline ||
     "Local Discovery Needs Better Signal";
   const subhead =
     candidate.subhead ||
-    "Local discovery should start with taste, regulars, and owner context.";
-  const bullets = uniqueStrings([...rallioFallbackActionBullets]).slice(0, 4);
-  const finalLine = "This isn't a promo feed. It's a taste map people can help build.";
+    (signal
+      ? `${signal.signature_order} is the kind of local signal a taste map should keep.`
+      : "Local discovery should start with taste, regulars, and owner context.");
+  const bullets = uniqueStrings([
+    ...(signal
+      ? [
+          `${signal.spot_name} in ${signal.neighborhood}`,
+          signal.signature_order,
+          signal.sensory_detail,
+          signal.participation_prompt,
+        ]
+      : []),
+    ...rallioFallbackActionBullets,
+  ]).slice(0, 4);
+  const finalLine =
+    signal?.participation_prompt ||
+    "This isn't a promo feed. It's a taste map people can help build.";
   const hashtags = normalizeFallbackHashtags([
     ...(candidate.hashtags || []),
     ...rallioFallbackHashtags,
@@ -236,8 +272,12 @@ function createQualityFallbackContent({
   const caption = [
     hook,
     "",
-    "The weak local app turns every place into the same card.",
-    "The useful one captures why people actually return.",
+    signal
+      ? `${signal.regular_name} has been a ${signal.neighborhood} regular since ${signal.regular_since_year}.`
+      : "The weak local app turns every place into the same card.",
+    signal
+      ? `The signal: ${signal.regular_quote}`
+      : "The useful one captures why people actually return.",
     "",
     ...bullets.map((bullet) => `- ${bullet}`),
     "",
@@ -259,8 +299,12 @@ function createQualityFallbackContent({
   const templateFields = normalizeRallioMetadata(
     {
       ...candidate.template_fields,
+      ...rallioSignalToTemplateFields(rallioFallback?.localSignal),
       headline,
       subhead,
+      participation_prompt:
+        rallioFallback?.participationPrompt ||
+        candidate.template_fields.participation_prompt,
       receipt_lines: candidate.template_fields.receipt_lines || bullets.slice(0, 3),
       owner_steps: candidate.template_fields.owner_steps || bullets.slice(0, 3),
       review_notes: [
@@ -335,6 +379,12 @@ function validateBatchNovelty(
     headline?: string | null;
     hook?: string | null;
     pillar?: string | null;
+    local_signal_id?: string | null;
+    business_name?: string | null;
+    spot_category?: string | null;
+    launch_neighborhood?: string | null;
+    regular_quote?: string | null;
+    participation_prompt?: string | null;
   }>,
 ) {
   if (!generatedSoFar.length) {
@@ -343,12 +393,38 @@ function validateBatchNovelty(
 
   const currentHeadline = normalizeForNovelty(content.headline);
   const currentHook = normalizeForNovelty(content.hook);
+  const currentQuote = normalizeForNovelty(
+    content.template_fields.regular_quote ||
+      content.template_fields.recommender_quote ||
+      content.template_fields.quote,
+  );
+  const currentSignalId = normalizeForNovelty(content.template_fields.local_signal_id);
+  const currentBusiness = normalizeForNovelty(content.template_fields.business_name);
+  const currentCategory = normalizeForNovelty(content.template_fields.spot_category);
+  const currentNeighborhood = normalizeForNovelty(
+    content.template_fields.launch_neighborhood,
+  );
+  const currentParticipation = normalizeForNovelty(
+    content.template_fields.participation_prompt,
+  );
   const failures: string[] = [];
   const previousHeadlines = generatedSoFar
     .map((post) => normalizeForNovelty(post.headline))
     .filter(Boolean);
   const previousHooks = generatedSoFar
     .map((post) => normalizeForNovelty(post.hook))
+    .filter(Boolean);
+  const previousQuotes = generatedSoFar
+    .map((post) => normalizeForNovelty(post.regular_quote))
+    .filter(Boolean);
+  const previousSignalIds = generatedSoFar
+    .map((post) => normalizeForNovelty(post.local_signal_id))
+    .filter(Boolean);
+  const previousBusinesses = generatedSoFar
+    .map((post) => normalizeForNovelty(post.business_name))
+    .filter(Boolean);
+  const previousParticipationPrompts = generatedSoFar
+    .map((post) => normalizeForNovelty(post.participation_prompt))
     .filter(Boolean);
 
   if (currentHeadline && previousHeadlines.includes(currentHeadline)) {
@@ -359,7 +435,145 @@ function validateBatchNovelty(
     failures.push("Hook duplicates an earlier post in this batch.");
   }
 
+  if (currentHook && previousHooks.some((hook) => tokenSimilarity(currentHook, hook) > 0.78)) {
+    failures.push("Hook is too similar to an earlier post in this batch.");
+  }
+
+  if (currentQuote && previousQuotes.includes(currentQuote)) {
+    failures.push("Regular quote duplicates an earlier post in this batch.");
+  }
+
+  if (currentSignalId && previousSignalIds.includes(currentSignalId)) {
+    failures.push("Local signal duplicates an earlier post in this batch.");
+  }
+
+  if (currentBusiness && previousBusinesses.includes(currentBusiness)) {
+    failures.push("Business name duplicates an earlier post in this batch.");
+  }
+
+  if (currentParticipation && previousParticipationPrompts.includes(currentParticipation)) {
+    failures.push("Participation prompt duplicates an earlier post in this batch.");
+  }
+
+  if (
+    currentCategory &&
+    currentNeighborhood &&
+    generatedSoFar.some(
+      (post) =>
+        normalizeForNovelty(post.spot_category) === currentCategory &&
+        normalizeForNovelty(post.launch_neighborhood) === currentNeighborhood,
+    )
+  ) {
+    failures.push("Spot category and neighborhood repeat an earlier batch pairing.");
+  }
+
   return failures;
+}
+
+function validateRallioSpecificity(
+  content: GeneratedContentPackage,
+  localSignal?: RallioLocalSignal | null,
+) {
+  const failures: string[] = [];
+  const fields = content.template_fields;
+  const businessName = fields.business_name || "";
+  const copyText = [
+    content.hook,
+    content.headline,
+    content.subhead,
+    content.caption,
+    content.cta,
+  ].join(" ");
+  if (isGenericBusinessName(businessName)) {
+    failures.push(`Business name is too generic: ${businessName}.`);
+  }
+
+  if (localSignal && fields.local_signal_id && fields.local_signal_id !== localSignal.id) {
+    failures.push("Template local_signal_id does not match the planned local signal.");
+  }
+
+  const concreteDetails = [
+    fields.business_name,
+    fields.spot_address,
+    fields.signature_order,
+    fields.sensory_detail,
+    fields.regular_quote,
+    fields.recommender_quote,
+    fields.participation_prompt,
+    fields.launch_neighborhood,
+  ].filter((value): value is string => typeof value === "string" && value.trim().length > 3);
+
+  if (!concreteDetails.length) {
+    failures.push(
+      "Rallio post is missing a concrete local detail such as spot, order, street, sensory note, regular quote, or participation prompt.",
+    );
+  }
+
+  if (
+    localSignal &&
+    ![
+      localSignal.spot_name,
+      localSignal.signature_order,
+      localSignal.sensory_detail,
+      localSignal.regular_quote,
+      localSignal.participation_prompt,
+      localSignal.neighborhood,
+      localSignal.street,
+    ].some((detail) => includesNormalized(copyText, detail))
+  ) {
+    failures.push("Generated copy did not use the assigned local signal.");
+  }
+
+  return failures;
+}
+
+function isGenericBusinessName(value: string) {
+  const normalized = normalizeForNovelty(value);
+
+  if (!normalized) {
+    return false;
+  }
+
+  const genericNames = new Set([
+    "taco haven",
+    "tacos haven",
+    "tacos delights",
+    "taco delights",
+    "the cozy corner cafe",
+    "cozy corner cafe",
+    "spice market",
+    "pasta perfection",
+    "cheesy goodness",
+    "local favorite",
+    "hidden gem",
+  ]);
+
+  return (
+    genericNames.has(normalized) ||
+    /\b(taco|tacos|pizza|pasta|coffee|spice|burger|sushi|ramen)\s+(haven|delight|delights|corner|cafe|spot|place|market|perfection)\b/.test(
+      normalized,
+    )
+  );
+}
+
+function includesNormalized(text: string, detail: string) {
+  const normalizedText = normalizeForNovelty(text);
+  const normalizedDetail = normalizeForNovelty(detail);
+
+  return normalizedDetail.length >= 4 && normalizedText.includes(normalizedDetail);
+}
+
+function tokenSimilarity(left: string, right: string) {
+  const leftTokens = new Set(left.split(" ").filter((token) => token.length > 2));
+  const rightTokens = new Set(right.split(" ").filter((token) => token.length > 2));
+
+  if (!leftTokens.size || !rightTokens.size) {
+    return 0;
+  }
+
+  const overlap = [...leftTokens].filter((token) => rightTokens.has(token)).length;
+
+  return overlap / Math.max(leftTokens.size, rightTokens.size);
 }
 
 function normalizeForNovelty(value: string | null | undefined) {
@@ -486,6 +700,14 @@ export async function POST(request: Request) {
                 rallio_context: {
                   brand: RALLIO_BRAND,
                   roulette_seed_id: input.roulette_seed_id || null,
+                  local_signal:
+                    input.batch_angle?.rallio_signal || input.rallio_signal || null,
+                  participation_prompt:
+                    input.batch_angle?.participation_prompt ||
+                    input.participation_prompt ||
+                    input.batch_angle?.rallio_signal?.participation_prompt ||
+                    input.rallio_signal?.participation_prompt ||
+                    null,
                   cta_door:
                     input.batch_angle?.rallio_cta_door ||
                     input.rallio_cta_door ||
@@ -507,7 +729,7 @@ export async function POST(request: Request) {
                     input.rallio_kpi_intent ||
                     null,
                   instruction:
-                    "Return Instagram-ready Rallio content only. Set selected_platforms to instagram. Use exactly one funnel CTA door. Default to community/feed-growth posts for regulars, spot recommendations, receipts, and taste-map waitlist growth. Use claim_your_business only when the requested content type is owner_claim_carousel. Store Rallio metadata in template_fields.",
+                    "Return Instagram-ready Rallio feed-post content only. Set selected_platforms to instagram. Use exactly one funnel CTA door. Default to community/feed-growth posts for regulars, spot recommendations, receipts, participation prompts, and taste-map waitlist growth. Use claim_your_business only when the requested content type is owner_claim_carousel. Store Rallio metadata and the local signal fields in template_fields.",
                 },
                 reference_image: referenceImageUrl
                   ? {
@@ -538,8 +760,13 @@ export async function POST(request: Request) {
                       duplicate_headlines_to_avoid: generatedSoFar
                         .map((post) => post.headline)
                         .filter(Boolean),
+                      required_local_signal: input.batch_angle.rallio_signal || null,
+                      required_participation_prompt:
+                        input.batch_angle.participation_prompt ||
+                        input.batch_angle.rallio_signal?.participation_prompt ||
+                        null,
                       instruction:
-                        "Use the required working title as the post headline/template headline. Do not use a headline from duplicate_headlines_to_avoid.",
+                        "Use the required working title as the post headline/template headline. Use required_local_signal as the source of truth for the spot, category, neighborhood, order/detail, regular quote, and participation prompt. Do not use a headline from duplicate_headlines_to_avoid.",
                     }
                   : null,
                 generated_so_far: generatedSoFar,
@@ -556,7 +783,7 @@ export async function POST(request: Request) {
                   style:
                     "Rallio local editorial system. Cream/ink/amber/wheat/moss, Fraunces-style quote cards, spot carousel cards, receipt details, black manifesto tiles, dark owner-utility phone/profile cards.",
                   template_fields:
-                    "Use headline, subhead, brand_handle, launch_neighborhood, category_focus, cta_door, content_type, visual_style, rallio_template_type, door_label, bio_rotation_hint, kpi_intent, business_name, spot_category, spot_address, spot_list_name, spot_list_position, spot_list_total, recommender_quote, recommender_name, recommender_neighborhood, recommender_since, regular_quote, regular_neighborhood, regular_since_year, carousel_page, carousel_total, quote, attribution, info_rows, receipt_lines, subtotal, owner_steps, bottom_label, and review_notes. Return every template field; use null when unavailable.",
+                    "Use headline, subhead, brand_handle, launch_neighborhood, category_focus, cta_door, content_type, visual_style, rallio_template_type, door_label, bio_rotation_hint, kpi_intent, business_name, spot_category, spot_address, spot_list_name, spot_list_position, spot_list_total, recommender_quote, recommender_name, recommender_neighborhood, recommender_since, regular_quote, regular_neighborhood, regular_since_year, carousel_page, carousel_total, quote, attribution, info_rows, receipt_lines, subtotal, owner_steps, bottom_label, local_signal_id, source_status, signature_order, sensory_detail, participation_prompt, and review_notes. Return every template field; use null when unavailable.",
                   thumbnail_rule:
                     "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
                   rallio_copy_rule:
@@ -567,6 +794,8 @@ export async function POST(request: Request) {
                     "For rallio_spot_carousel: set business_name to the place name; spot_category to specific cuisine; spot_address to street/intersection (e.g. '93 Ossington Ave'); spot_list_name to the collection title in uppercase (e.g. 'THE OSSINGTON 30'); spot_list_position and spot_list_total as zero-padded strings (e.g. '04', '30'); recommender_quote to one short italic line from a believable regular; recommender_name to a first-name handle (e.g. '@mayachen' or 'Maya'); recommender_neighborhood to a lowercase short area label (e.g. 'ossington'); recommender_since to a two-digit year like \"'22\"; carousel_page and carousel_total to numeric strings like '1' and '6'.",
                     "For rallio_regular_quote: set regular_quote to the full quote; attribution to the regular's first name; regular_neighborhood to the neighborhood they regular at (e.g. 'Little Italy'); regular_since_year to a four-digit year (e.g. '2019'); business_name to the spot they're a regular of.",
                     "For rallio_receipt: set receipt_lines as 'label · value' rows; subtotal to the final number; launch_neighborhood to the neighborhood context for the receipt.",
+                    "For participation feed posts: set participation_prompt to one concrete question people can answer in comments or replies. Use it in the caption, but do not write tag-a-friend bait.",
+                    "When a required_local_signal is provided, copy its local_signal_id/source_status into template fields and use its spot_name, category, street, signature_order, sensory_detail, regular_quote, regular_name, regular_since_year, and participation_prompt.",
                     "Return null for any rich field you cannot fill with a concrete, believable value. Never invent stock placeholder addresses, fake handles ending in numbers like @user123, or generic neighborhoods.",
                   ].join(" "),
                 },
@@ -599,8 +828,17 @@ export async function POST(request: Request) {
 
       const normalizedTemplateFields = normalizeTemplateFields(parsed.template_fields);
       const rallioFallback = getRallioFallbackMetadata(input);
+      const signalTemplateFields = rallioSignalToTemplateFields(
+        input.batch_angle?.rallio_signal || input.rallio_signal,
+      );
       const baseTemplateFieldsWithWorkflow = {
         ...normalizedTemplateFields,
+        ...signalTemplateFields,
+        participation_prompt:
+          input.batch_angle?.participation_prompt ||
+          input.participation_prompt ||
+          normalizedTemplateFields.participation_prompt ||
+          signalTemplateFields.participation_prompt,
         reference_image_url: referenceImageUrl,
         reference_image_asset_id: input.reference_image_asset_id,
         selected_platforms: ["instagram" as const],
@@ -641,6 +879,16 @@ export async function POST(request: Request) {
       }
       fallbackCandidate = candidate;
       fallbackAttempt = attempt;
+      const specificityFailures = validateRallioSpecificity(
+        candidate,
+        input.batch_angle?.rallio_signal || input.rallio_signal,
+      );
+
+      if (specificityFailures.length) {
+        qualityFailures = specificityFailures;
+        continue;
+      }
+
       const noveltyFailures = validateBatchNovelty(candidate, generatedSoFar);
 
       if (noveltyFailures.length) {

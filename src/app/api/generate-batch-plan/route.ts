@@ -150,6 +150,8 @@ export async function POST(request: Request) {
                         visual_style: guide.visualStyle,
                         cta_door: guide.ctaDoor,
                         unique_takeaway: guide.uniqueTakeaway,
+                        local_signal: guide.localSignal,
+                        participation_prompt: guide.participationPrompt,
                       };
                     })
                   : null,
@@ -164,7 +166,9 @@ export async function POST(request: Request) {
                 "Do not use Toronto + Rajkot as repeated headline copy. Mention seed markets only when the exact scope matters.",
                 "Do not write generic launch/product angles. Rallio is the taste map being built, not a fully launched product to promote.",
                 "Do not assign claim_your_business unless rallio_content_type is owner_claim_carousel and the angle is explicitly for food/drink owners.",
-                "Vary the angle, CTA door, and visual treatment across the batch where possible.",
+                "Use each required_slot_plan local_signal as source context. Do not swap it for a generic fake restaurant.",
+                "Every non-owner angle must include a participation prompt or taste-map response ask in the angle.",
+                "Vary the angle, CTA door, local signal, spot category, neighborhood, and visual treatment across the batch where possible.",
               ],
             },
             null,
@@ -217,6 +221,12 @@ export async function POST(request: Request) {
         do_not_repeat: shouldApplySlotGuide
           ? slotGuide.doNotRepeat
           : angle.do_not_repeat,
+        participation_prompt: shouldApplySlotGuide
+          ? slotGuide.participationPrompt
+          : angle.participation_prompt,
+        rallio_signal: shouldApplySlotGuide
+          ? slotGuide.localSignal
+          : angle.rallio_signal || null,
         rallio_template_type: rallioTemplateType,
         rallio_content_type: rallioContentType,
         rallio_cta_door: normalizeRallioCtaDoor(

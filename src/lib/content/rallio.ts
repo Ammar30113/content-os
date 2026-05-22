@@ -4,6 +4,7 @@ import type {
   PostType,
   RallioContentType,
   RallioCtaDoor,
+  RallioLocalSignal,
   RallioTemplateType,
   TemplateType,
   Tone,
@@ -120,6 +121,309 @@ const RALLIO_POST_TYPE_PRIORITY: Record<PostType, RallioContentType[]> = {
   reel: ["manifesto_reel", "regular_quote", "spot_carousel", "receipt_single"],
   thread: ["regular_quote", "spot_carousel", "receipt_single", "manifesto_reel"],
 };
+
+export const rallioLocalSignals: RallioLocalSignal[] = [
+  {
+    id: "bang-bang-ossington",
+    spot_name: "Bang Bang Ice Cream",
+    neighborhood: "Ossington",
+    street: "Ossington Ave",
+    category: "ice cream bakery",
+    signature_order: "burnt toffee scoop after dinner",
+    sensory_detail: "the line moves slowly enough for people to compare orders",
+    regular_quote: "I do not mind waiting when the cone is the plan.",
+    regular_name: "Maya",
+    regular_since_year: "2022",
+    participation_prompt: "Which dessert line is still worth joining?",
+    cta_door: "local_guide",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "bar-isabel-little-italy",
+    spot_name: "Bar Isabel",
+    neighborhood: "Little Italy",
+    street: "College Street",
+    category: "Spanish tavern",
+    signature_order: "octopus on a Tuesday night",
+    sensory_detail: "the room gets louder right when the plates start landing",
+    regular_quote: "I plan around the octopus more than I plan around the week.",
+    regular_name: "Priya",
+    regular_since_year: "2019",
+    participation_prompt: "What dish would you build a weeknight around?",
+    cta_door: "founding_supporter",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "pilot-coffee-ossington",
+    spot_name: "Pilot Coffee",
+    neighborhood: "Ossington",
+    street: "Ossington Ave",
+    category: "third-wave coffee",
+    signature_order: "cortado at the front window",
+    sensory_detail: "the first quiet table disappears before lunch",
+    regular_quote: "I come for the cortado and stay because nobody rushes the room.",
+    regular_name: "Jonah",
+    regular_since_year: "2021",
+    participation_prompt: "Where is your reliable first-coffee stop?",
+    cta_door: "founding_supporter",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "famiglia-baldassarre-geary",
+    spot_name: "Famiglia Baldassarre",
+    neighborhood: "Geary",
+    street: "Geary Ave",
+    category: "fresh pasta counter",
+    signature_order: "lunch pasta before it sells out",
+    sensory_detail: "the counter feels like a production room that happens to feed you",
+    regular_quote: "If I miss the lunch window, that is on me.",
+    regular_name: "Noor",
+    regular_since_year: "2020",
+    participation_prompt: "What lunch window is actually worth protecting?",
+    cta_door: "local_guide",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "pizzeria-badiali-dovercourt",
+    spot_name: "Pizzeria Badiali",
+    neighborhood: "Dovercourt",
+    street: "Dovercourt Road",
+    category: "slice shop",
+    signature_order: "vodka slice on the walk home",
+    sensory_detail: "the box barely makes it to the corner before someone opens it",
+    regular_quote: "The slice is better when you eat it before you pretend you will save it.",
+    regular_name: "Eli",
+    regular_since_year: "2023",
+    participation_prompt: "Which slice should never make it home?",
+    cta_door: "local_guide",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "mamakas-ossington",
+    spot_name: "Mamakas",
+    neighborhood: "Ossington",
+    street: "Ossington Ave",
+    category: "Greek taverna",
+    signature_order: "saganaki at the bar",
+    sensory_detail: "the bar seats turn one shared plate into a whole night",
+    regular_quote: "I bring people here when I want dinner to feel easy.",
+    regular_name: "Sofia",
+    regular_since_year: "2018",
+    participation_prompt: "Where do you take someone when dinner needs to feel easy?",
+    cta_door: "founding_supporter",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "rasta-pasta-kensington",
+    spot_name: "Rasta Pasta",
+    neighborhood: "Kensington",
+    street: "Kensington Ave",
+    category: "Caribbean pasta counter",
+    signature_order: "jerk chicken pasta",
+    sensory_detail: "the lunch rush smells like smoke, spice, and butter",
+    regular_quote: "It is my bad-day lunch and my good-day lunch.",
+    regular_name: "Malik",
+    regular_since_year: "2021",
+    participation_prompt: "What is your bad-day and good-day lunch?",
+    cta_door: "local_guide",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "pho-tien-thanh-ossington",
+    spot_name: "Pho Tien Thanh",
+    neighborhood: "Ossington",
+    street: "Ossington Ave",
+    category: "pho shop",
+    signature_order: "rare beef pho after a cold walk",
+    sensory_detail: "the broth does most of the talking",
+    regular_quote: "I do not check the weather before I crave it.",
+    regular_name: "Linh",
+    regular_since_year: "2017",
+    participation_prompt: "What bowl fixes the day without asking questions?",
+    cta_door: "founding_supporter",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "manita-ossington",
+    spot_name: "Manita",
+    neighborhood: "Ossington",
+    street: "Ossington Ave",
+    category: "cafe wine bar",
+    signature_order: "breakfast sandwich before noon",
+    sensory_detail: "the room changes lanes from coffee to wine without feeling staged",
+    regular_quote: "It is the rare place that works before noon and after work.",
+    regular_name: "Ari",
+    regular_since_year: "2020",
+    participation_prompt: "Which spot changes lanes without losing the room?",
+    cta_door: "local_guide",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "hanmoto-dundas-west",
+    spot_name: "Hanmoto",
+    neighborhood: "Dundas West",
+    street: "Dundas Street West",
+    category: "izakaya",
+    signature_order: "dyno wings with the table",
+    sensory_detail: "the room feels built for ordering one more thing",
+    regular_quote: "Nobody at my table orders enough on the first pass.",
+    regular_name: "Sam",
+    regular_since_year: "2019",
+    participation_prompt: "Where does the table always order one more thing?",
+    cta_door: "founding_supporter",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "foxley-ossington",
+    spot_name: "Foxley",
+    neighborhood: "Ossington",
+    street: "Ossington Ave",
+    category: "small plates",
+    signature_order: "ceviche and something crispy",
+    sensory_detail: "regulars read the specials like they are checking weather",
+    regular_quote: "I ask about the special before I say hello.",
+    regular_name: "Dev",
+    regular_since_year: "2018",
+    participation_prompt: "Which specials board do you trust without reading twice?",
+    cta_door: "local_guide",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "milou-dundas-west",
+    spot_name: "Milou",
+    neighborhood: "Dundas West",
+    street: "Dundas Street West",
+    category: "bistro",
+    signature_order: "burger at the bar",
+    sensory_detail: "the seat you want is whichever one faces the room",
+    regular_quote: "I call it a burger plan, but it is really a room plan.",
+    regular_name: "Claire",
+    regular_since_year: "2022",
+    participation_prompt: "What bar seat feels like the whole plan?",
+    cta_door: "founding_supporter",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "union-ossington",
+    spot_name: "Union",
+    neighborhood: "Ossington",
+    street: "Ossington Ave",
+    category: "neighborhood bistro",
+    signature_order: "roast chicken when the room is full",
+    sensory_detail: "it feels like the kind of dinner people remember without photographing",
+    regular_quote: "This is where I stop performing dinner and just eat.",
+    regular_name: "Nadia",
+    regular_since_year: "2016",
+    participation_prompt: "Where do you go when dinner should just feel like dinner?",
+    cta_door: "local_guide",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "cafe-neon-wallace-emerson",
+    spot_name: "Cafe Neon",
+    neighborhood: "Wallace Emerson",
+    street: "Wallace Ave",
+    category: "neighborhood cafe",
+    signature_order: "morning bun and drip coffee",
+    sensory_detail: "the regulars look like they built their route around it",
+    regular_quote: "It is my first stop, not my backup plan.",
+    regular_name: "Rina",
+    regular_since_year: "2021",
+    participation_prompt: "What first stop has earned its place in your route?",
+    cta_door: "founding_supporter",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "sugo-bloorcourt",
+    spot_name: "Sugo",
+    neighborhood: "Bloorcourt",
+    street: "Bloor Street West",
+    category: "red-sauce pasta",
+    signature_order: "spaghetti with extra sauce energy",
+    sensory_detail: "the room runs on plates, elbows, and repeat orders",
+    regular_quote: "I do not come here to be subtle.",
+    regular_name: "Marco",
+    regular_since_year: "2019",
+    participation_prompt: "Where is subtlety not the point?",
+    cta_door: "local_guide",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "dreyfus-harbord",
+    spot_name: "Dreyfus",
+    neighborhood: "Harbord Village",
+    street: "Harbord Street",
+    category: "wine bar",
+    signature_order: "shared chicken and a glass you did not know",
+    sensory_detail: "the list feels like a conversation instead of homework",
+    regular_quote: "I let them pick the glass and I have not regretted it.",
+    regular_name: "Bea",
+    regular_since_year: "2022",
+    participation_prompt: "Where do you trust the glass someone else picks?",
+    cta_door: "founding_supporter",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "sunnys-kensington",
+    spot_name: "Sunny's Chinese",
+    neighborhood: "Kensington",
+    street: "Kensington Ave",
+    category: "Chinese kitchen",
+    signature_order: "dan dan noodles with friends",
+    sensory_detail: "the table gets quiet for exactly three bites",
+    regular_quote: "We talk a lot until the noodles land.",
+    regular_name: "Tess",
+    regular_since_year: "2023",
+    participation_prompt: "What dish makes the table go quiet first?",
+    cta_door: "local_guide",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "burdock-bloordale",
+    spot_name: "Burdock",
+    neighborhood: "Bloordale",
+    street: "Bloor Street West",
+    category: "brewery kitchen",
+    signature_order: "fries and a saison",
+    sensory_detail: "the low-stakes table somehow becomes the long hang",
+    regular_quote: "One drink turns into staying because the room lets you.",
+    regular_name: "Owen",
+    regular_since_year: "2020",
+    participation_prompt: "Where does one quick drink turn into the long hang?",
+    cta_door: "founding_supporter",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "bar-raval-little-italy",
+    spot_name: "Bar Raval",
+    neighborhood: "Little Italy",
+    street: "College Street",
+    category: "standing-room tapas",
+    signature_order: "pintxos before a later dinner",
+    sensory_detail: "standing room makes the whole place feel in motion",
+    regular_quote: "I go when I want dinner to start before dinner.",
+    regular_name: "Iris",
+    regular_since_year: "2018",
+    participation_prompt: "Where does the night start before the reservation?",
+    cta_door: "local_guide",
+    source_status: "operator_seed_for_review",
+  },
+  {
+    id: "the-federal-dundas-west",
+    spot_name: "The Federal",
+    neighborhood: "Dundas West",
+    street: "Dundas Street West",
+    category: "brunch counter",
+    signature_order: "eggs and coffee at the small table",
+    sensory_detail: "the weekend line looks calmer than it should",
+    regular_quote: "I only call it brunch because breakfast sounds too early.",
+    regular_name: "Alex",
+    regular_since_year: "2017",
+    participation_prompt: "What brunch line still feels calm enough to join?",
+    cta_door: "founding_supporter",
+    source_status: "operator_seed_for_review",
+  },
+];
 
 export const rallioTopicSeeds: RallioTopicSeed[] = [
   {
@@ -454,6 +758,7 @@ export function getRallioBatchSlotGuide(slot: number) {
   const occurrenceIndex = countContentTypeOccurrences(contentType, slot) - 1;
   const candidates = getAngleVariantsForContentType(contentType);
   const candidate = candidates[occurrenceIndex % candidates.length] || candidates[0];
+  const localSignal = getRallioLocalSignalForSlot(slot);
 
   if (!candidate) {
     throw new Error(`No Rallio batch guide candidates found for ${contentType}.`);
@@ -464,7 +769,14 @@ export function getRallioBatchSlotGuide(slot: number) {
     candidate.working_title,
     contentType,
     occurrenceIndex,
+    localSignal,
   );
+  const participationPrompt = getParticipationPrompt(contentType, localSignal);
+  const ctaDoor = normalizeRallioCtaDoor(
+    contentType,
+    contentType === "owner_claim_carousel" ? candidate.ctaDoor : localSignal.cta_door,
+  );
+  const signalTakeaway = buildSignalTakeaway(localSignal, contentType);
 
   return {
     slot,
@@ -473,19 +785,26 @@ export function getRallioBatchSlotGuide(slot: number) {
     contentType,
     templateType,
     coreTemplateType: mapRallioTemplateToCoreType(templateType),
-    ctaDoor: normalizeRallioCtaDoor(contentType, candidate.ctaDoor),
+    ctaDoor,
     visualStyle: candidate.visual_direction,
     kpiIntent: candidate.seed.kpiIntent,
     workingTitle,
     hookDirection: candidate.hook_direction,
-    uniqueTakeaway: candidate.unique_takeaway,
+    uniqueTakeaway: `${candidate.unique_takeaway} ${signalTakeaway}`,
     captionStructure: candidate.seed.captionStructure,
-    doNotRepeat: candidate.do_not_repeat,
+    doNotRepeat: [
+      candidate.do_not_repeat,
+      "Do not reuse this batch's spot, category, quote, participation prompt, or local signal.",
+    ].join(" "),
+    localSignal,
+    participationPrompt,
     slotBrief: [
       `${contentType} / ${templateType}`,
       workingTitle,
+      `${localSignal.spot_name} / ${localSignal.category} / ${localSignal.neighborhood}`,
       candidate.hook_direction,
-      candidate.unique_takeaway,
+      signalTakeaway,
+      `Participation: ${participationPrompt}`,
       `Visual: ${candidate.visual_direction}`,
     ].join(" — "),
   };
@@ -495,8 +814,53 @@ function getBatchWorkingTitle(
   fallback: string,
   contentType: RallioContentType,
   occurrenceIndex: number,
+  localSignal: RallioLocalSignal,
 ) {
-  const titleBank: Record<RallioContentType, string[]> = {
+  const signalTitleBank: Record<RallioContentType, string[]> = {
+    regular_quote: [
+      `${localSignal.regular_name}'s ${shortNeighborhood(localSignal.neighborhood)} Order`,
+      `The ${shortNeighborhood(localSignal.neighborhood)} Regular`,
+      `${shortSpotName(localSignal.spot_name)} Regular`,
+      `A Regular At ${shortSpotName(localSignal.spot_name)}`,
+      `${localSignal.signature_order}`,
+    ],
+    spot_carousel: [
+      localSignal.spot_name,
+      `${shortSpotName(localSignal.spot_name)} Belongs Here`,
+      `${shortNeighborhood(localSignal.neighborhood)} Save`,
+      `One ${localSignal.category} Worth Saving`,
+      `${shortSpotName(localSignal.spot_name)} Detail`,
+    ],
+    receipt_single: [
+      `${shortSpotName(localSignal.spot_name)} Receipt`,
+      `${shortNeighborhood(localSignal.neighborhood)} Taste Receipt`,
+      `Why Regulars Return`,
+      `The Repeat Visit Ledger`,
+      `${localSignal.category} Signals`,
+    ],
+    manifesto_reel: [
+      "What Belongs On The Map",
+      "Drop The Order",
+      "Stop Gatekeeping Local Taste",
+      "Built From Regulars",
+      "Local Memory Wins",
+    ],
+    bts_story_sequence: [
+      "What We Are Collecting",
+      "Help Shape The Map",
+      "The Feed Before The App",
+      "Small Signals First",
+      "Reply With A Spot",
+    ],
+    owner_claim_carousel: [
+      `${shortSpotName(localSignal.spot_name)} Profile`,
+      "Community-Added, Owner-Corrected",
+      "The Owner Context Layer",
+      "A Profile Regulars Started",
+      `${shortNeighborhood(localSignal.neighborhood)} Owner Context`,
+    ],
+  };
+  const fallbackTitleBank: Record<RallioContentType, string[]> = {
     regular_quote: [
       "The Tuesday Regular",
       "The Recommendation You Trust",
@@ -541,7 +905,83 @@ function getBatchWorkingTitle(
     ],
   };
 
-  return titleBank[contentType][occurrenceIndex] || fallback;
+  return (
+    signalTitleBank[contentType][occurrenceIndex] ||
+    fallbackTitleBank[contentType][occurrenceIndex] ||
+    fallback
+  );
+}
+
+export function getRallioLocalSignalForSlot(slot: number): RallioLocalSignal {
+  const index = Math.max(0, slot - 1) % rallioLocalSignals.length;
+
+  return rallioLocalSignals[index];
+}
+
+export function rallioSignalToTemplateFields(
+  signal?: RallioLocalSignal | null,
+): Partial<TemplateFields> {
+  if (!signal) {
+    return {};
+  }
+
+  return {
+    local_signal_id: signal.id,
+    source_status: signal.source_status,
+    business_name: signal.spot_name,
+    launch_neighborhood: signal.neighborhood,
+    spot_category: signal.category,
+    spot_address: signal.street,
+    signature_order: signal.signature_order,
+    sensory_detail: signal.sensory_detail,
+    participation_prompt: signal.participation_prompt,
+    regular_quote: signal.regular_quote,
+    recommender_quote: signal.regular_quote,
+    quote: signal.regular_quote,
+    attribution: signal.regular_name,
+    regular_neighborhood: signal.neighborhood,
+    recommender_neighborhood: signal.neighborhood.toLowerCase(),
+    regular_since_year: signal.regular_since_year,
+    recommender_since: `'${signal.regular_since_year.slice(-2)}`,
+  };
+}
+
+function getParticipationPrompt(
+  contentType: RallioContentType,
+  signal: RallioLocalSignal,
+) {
+  if (contentType === "manifesto_reel") {
+    return "Which spot belongs on the taste map?";
+  }
+
+  if (contentType === "bts_story_sequence") {
+    return "Reply with the spot regulars know.";
+  }
+
+  if (contentType === "receipt_single") {
+    return "Drop the one order you would defend.";
+  }
+
+  return signal.participation_prompt;
+}
+
+function buildSignalTakeaway(
+  signal: RallioLocalSignal,
+  contentType: RallioContentType,
+) {
+  if (contentType === "owner_claim_carousel") {
+    return `Use ${signal.spot_name} as the concrete community-added profile context, but keep the angle owner-facing and occasional.`;
+  }
+
+  return `Use ${signal.spot_name} in ${signal.neighborhood} as the concrete local signal: ${signal.signature_order}; ${signal.sensory_detail}.`;
+}
+
+function shortSpotName(value: string) {
+  return value.replace(/\s+(Ice Cream|Coffee|Chinese|Brewery|Taverna)$/i, "").trim();
+}
+
+function shortNeighborhood(value: string) {
+  return value.split(/\s+/).slice(0, 2).join(" ");
 }
 
 function countContentTypeOccurrences(contentType: RallioContentType, slot: number) {
@@ -631,7 +1071,7 @@ export function buildRallioRouletteBrief(seed: RallioTopicSeed, quantity: number
       ? Array.from({ length: quantity }, (_, index) => {
           const guide = getRallioBatchSlotGuide(index + 1);
 
-          return `${index + 1}. ${guide.workingTitle}: ${guide.slotBrief}`;
+          return `${index + 1}. ${guide.workingTitle}: ${guide.slotBrief}. Required signal: ${guide.localSignal.spot_name}, ${guide.localSignal.neighborhood}, ${guide.localSignal.signature_order}. Participation prompt: ${guide.participationPrompt}`;
         }).join("\n")
       : seed.angleVariants
           .slice(0, Math.max(1, Math.min(quantity, seed.angleVariants.length)))
@@ -656,6 +1096,8 @@ export function buildRallioRouletteBrief(seed: RallioTopicSeed, quantity: number
     `Launch scope: ${RALLIO_BRAND.launch_scope}`,
     "Seed markets can be mentioned as context, but headlines should default to neighborhood taste, regulars, and community recommendations.",
     "Category focus: food/drink spots people would recommend twice.",
+    "Use the assigned local signal as source context. Vary spot names, categories, neighborhoods, quotes, and participation prompts across the batch.",
+    "Participation prompts are feed-post copy, not reels or stories. Use prompts like: Which spot belongs on the taste map? Drop the one order you'd defend. What place should locals stop gatekeeping? Reply with the spot regulars know.",
     "Default feed rhythm: quote, spot card, receipt, manifesto/BTS, then occasional owner utility.",
     quantity > 1
       ? `Use this visual rhythm for this batch unless the user overrides it:\n${rhythm}`
