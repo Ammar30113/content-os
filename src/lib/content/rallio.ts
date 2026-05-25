@@ -10,7 +10,7 @@ import type {
   Tone,
 } from "@/lib/content/types";
 import type { GeneratedContent, TemplateFields } from "@/lib/content/types";
-import { rallioTorontoSourceSignals } from "@/lib/content/rallio-source-bank";
+import { rallioSourceSignals } from "@/lib/content/rallio-source-bank";
 
 export const RALLIO_BRAND = {
   brand_slug: "rallio",
@@ -427,7 +427,7 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
 ];
 
 export const rallioLocalSignals: RallioLocalSignal[] = [
-  ...rallioTorontoSourceSignals,
+  ...rallioSourceSignals,
   ...rallioFallbackLocalSignals,
 ];
 
@@ -759,12 +759,23 @@ export function getRallioContentTypeForSlot(slot: number): RallioContentType {
   return RALLIO_DEFAULT_FEED_RHYTHM[index];
 }
 
-export function getRallioBatchSlotGuide(slot: number) {
+export function getRallioSignalOffset(seed?: string | null) {
+  if (!seed) {
+    return 0;
+  }
+
+  return Array.from(seed).reduce(
+    (total, character) => total + character.charCodeAt(0),
+    0,
+  ) % rallioLocalSignals.length;
+}
+
+export function getRallioBatchSlotGuide(slot: number, signalOffset = 0) {
   const contentType = getRallioContentTypeForSlot(slot);
   const occurrenceIndex = countContentTypeOccurrences(contentType, slot) - 1;
   const candidates = getAngleVariantsForContentType(contentType);
   const candidate = candidates[occurrenceIndex % candidates.length] || candidates[0];
-  const localSignal = getRallioLocalSignalForSlot(slot);
+  const localSignal = getRallioLocalSignalForSlot(slot + signalOffset);
 
   if (!candidate) {
     throw new Error(`No Rallio batch guide candidates found for ${contentType}.`);

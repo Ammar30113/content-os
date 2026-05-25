@@ -7,6 +7,7 @@ import {
   RALLIO_BRAND,
   RALLIO_SYSTEM_PROMPT,
   getRallioBatchSlotGuide,
+  getRallioSignalOffset,
   mapRallioTemplateToCoreType,
   normalizeRallioCtaDoor,
   templateForContentType,
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
       .limit(10);
 
     const safeRecentPosts = z.array(recentPostSchema).parse(recentPosts || []);
+    const signalOffset = getRallioSignalOffset(idea.id);
     const { apiKey, model } = getOpenAIEnv();
     const openai = new OpenAI({ apiKey });
 
@@ -140,7 +142,10 @@ export async function POST(request: Request) {
               required_slot_plan:
                 quantity > 1
                   ? Array.from({ length: quantity }, (_, index) => {
-                      const guide = getRallioBatchSlotGuide(index + 1);
+                      const guide = getRallioBatchSlotGuide(
+                        index + 1,
+                        signalOffset,
+                      );
 
                       return {
                         index: guide.slot,
@@ -189,7 +194,7 @@ export async function POST(request: Request) {
 
     const rawAngles = normalizePlanAngles(parsed.angles, quantity);
     const angles = rawAngles.map((angle, index) => {
-      const slotGuide = getRallioBatchSlotGuide(index + 1);
+      const slotGuide = getRallioBatchSlotGuide(index + 1, signalOffset);
       const shouldApplySlotGuide = quantity > 1;
       const rallioContentType =
         shouldApplySlotGuide
