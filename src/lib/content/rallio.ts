@@ -10,6 +10,7 @@ import type {
   Tone,
 } from "@/lib/content/types";
 import type { GeneratedContent, TemplateFields } from "@/lib/content/types";
+import { rallioTorontoSourceSignals } from "@/lib/content/rallio-source-bank";
 
 export const RALLIO_BRAND = {
   brand_slug: "rallio",
@@ -122,7 +123,7 @@ const RALLIO_POST_TYPE_PRIORITY: Record<PostType, RallioContentType[]> = {
   thread: ["regular_quote", "spot_carousel", "receipt_single", "manifesto_reel"],
 };
 
-export const rallioLocalSignals: RallioLocalSignal[] = [
+const rallioFallbackLocalSignals: RallioLocalSignal[] = [
   {
     id: "bang-bang-ossington",
     spot_name: "Bang Bang Ice Cream",
@@ -423,6 +424,11 @@ export const rallioLocalSignals: RallioLocalSignal[] = [
     cta_door: "founding_supporter",
     source_status: "operator_seed_for_review",
   },
+];
+
+export const rallioLocalSignals: RallioLocalSignal[] = [
+  ...rallioTorontoSourceSignals,
+  ...rallioFallbackLocalSignals,
 ];
 
 export const rallioTopicSeeds: RallioTopicSeed[] = [
