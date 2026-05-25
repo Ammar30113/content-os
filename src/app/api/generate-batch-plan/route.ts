@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     const safeRecentPosts = z.array(recentPostSchema).parse(recentPosts || []);
     const signalOffset = getRallioSignalOffset(idea.id);
     const { apiKey, model } = getOpenAIEnv();
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({ apiKey, timeout: 90_000, maxRetries: 1 });
 
     const response = await openai.responses.parse({
       model,

@@ -373,24 +373,31 @@ function normalizeFallbackHashtags(hashtags: string[]) {
   return uniqueStrings([...normalized, ...rallioFallbackHashtags]).slice(0, 20);
 }
 
+type NoveltyItem = {
+  headline?: string | null;
+  hook?: string | null;
+  pillar?: string | null;
+  local_signal_id?: string | null;
+  business_name?: string | null;
+  spot_category?: string | null;
+  launch_neighborhood?: string | null;
+  regular_quote?: string | null;
+  participation_prompt?: string | null;
+};
+
 function validateBatchNovelty(
   content: GeneratedContentPackage,
-  generatedSoFar: Array<{
-    headline?: string | null;
-    hook?: string | null;
-    pillar?: string | null;
-    local_signal_id?: string | null;
-    business_name?: string | null;
-    spot_category?: string | null;
-    launch_neighborhood?: string | null;
-    regular_quote?: string | null;
-    participation_prompt?: string | null;
-  }>,
+  generatedSoFar: NoveltyItem[],
+  history: NoveltyItem[] = [],
 ) {
-  if (!generatedSoFar.length) {
+  if (!generatedSoFar.length && !history.length) {
     return [];
   }
 
+  // Exact-match checks span both the current batch and recent post history.
+  // Similarity and category/neighborhood pairing stay batch-only so legitimately
+  // recurring spots across days are not blocked.
+  const dedupeScope = [...generatedSoFar, ...history];
   const currentHeadline = normalizeForNovelty(content.headline);
   const currentHook = normalizeForNovelty(content.hook);
   const currentQuote = normalizeForNovelty(
@@ -408,50 +415,49 @@ function validateBatchNovelty(
     content.template_fields.participation_prompt,
   );
   const failures: string[] = [];
-  const previousHeadlines = generatedSoFar
-    .map((post) => normalizeForNovelty(post.headline))
-    .filter(Boolean);
-  const previousHooks = generatedSoFar
-    .map((post) => normalizeForNovelty(post.hook))
-    .filter(Boolean);
-  const previousQuotes = generatedSoFar
-    .map((post) => normalizeForNovelty(post.regular_quote))
-    .filter(Boolean);
-  const previousSignalIds = generatedSoFar
-    .map((post) => normalizeForNovelty(post.local_signal_id))
-    .filter(Boolean);
-  const previousBusinesses = generatedSoFar
-    .map((post) => normalizeForNovelty(post.business_name))
-    .filter(Boolean);
-  const previousParticipationPrompts = generatedSoFar
-    .map((post) => normalizeForNovelty(post.participation_prompt))
-    .filter(Boolean);
+  const collectNormalized = (
+    items: NoveltyItem[],
+    key: keyof NoveltyItem,
+  ) => items.map((item) => normalizeForNovelty(item[key])).filter(Boolean);
+  const previousHeadlines = collectNormalized(dedupeScope, "headline");
+  const previousHooks = collectNormalized(dedupeScope, "hook");
+  const previousQuotes = collectNormalized(dedupeScope, "regular_quote");
+  const previousSignalIds = collectNormalized(dedupeScope, "local_signal_id");
+  const previousBusinesses = collectNormalized(dedupeScope, "business_name");
+  const batchHooks = collectNormalized(generatedSoFar, "hook");
+  const batchParticipationPrompts = collectNormalized(
+    generatedSoFar,
+    "participation_prompt",
+  );
 
   if (currentHeadline && previousHeadlines.includes(currentHeadline)) {
-    failures.push("Headline duplicates an earlier post in this batch.");
+    failures.push("Headline duplicates a recent post.");
   }
 
   if (currentHook && previousHooks.includes(currentHook)) {
-    failures.push("Hook duplicates an earlier post in this batch.");
+    failures.push("Hook duplicates a recent post.");
   }
 
-  if (currentHook && previousHooks.some((hook) => tokenSimilarity(currentHook, hook) > 0.78)) {
+  if (currentHook && batchHooks.some((hook) => tokenSimilarity(currentHook, hook) > 0.78)) {
     failures.push("Hook is too similar to an earlier post in this batch.");
   }
 
   if (currentQuote && previousQuotes.includes(currentQuote)) {
-    failures.push("Regular quote duplicates an earlier post in this batch.");
+    failures.push("Regular quote duplicates a recent post.");
   }
 
   if (currentSignalId && previousSignalIds.includes(currentSignalId)) {
-    failures.push("Local signal duplicates an earlier post in this batch.");
+    failures.push("Local signal duplicates a recent post.");
   }
 
   if (currentBusiness && previousBusinesses.includes(currentBusiness)) {
-    failures.push("Business name duplicates an earlier post in this batch.");
+    failures.push("Business name duplicates a recent post.");
   }
 
-  if (currentParticipation && previousParticipationPrompts.includes(currentParticipation)) {
+  if (
+    currentParticipation &&
+    batchParticipationPrompts.includes(currentParticipation)
+  ) {
     failures.push("Participation prompt duplicates an earlier post in this batch.");
   }
 
@@ -468,6 +474,29 @@ function validateBatchNovelty(
   }
 
   return failures;
+}
+
+function recentPostToNoveltyItem(post: {
+  headline: string | null;
+  hook: string | null;
+  template_fields: unknown;
+}): NoveltyItem {
+  const fields =
+    post.template_fields && typeof post.template_fields === "object"
+      ? (post.template_fields as Record<string, unknown>)
+      : {};
+  const str = (value: unknown) => (typeof value === "string" ? value : null);
+
+  return {
+    headline: post.headline,
+    hook: post.hook,
+    local_signal_id: str(fields.local_signal_id),
+    business_name: str(fields.business_name),
+    spot_category: str(fields.spot_category),
+    launch_neighborhood: str(fields.launch_neighborhood),
+    regular_quote: str(fields.regular_quote),
+    participation_prompt: str(fields.participation_prompt),
+  };
 }
 
 function validateRallioSpecificity(
@@ -650,12 +679,13 @@ export async function POST(request: Request) {
 
     const { data: recentPosts } = await supabase
       .from("generated_posts")
-      .select("headline, hook, pillar")
+      .select("headline, hook, pillar, template_fields")
       .order("created_at", { ascending: false })
       .limit(10);
     const safeRecentPosts = z.array(recentPostSchema).parse(recentPosts || []);
+    const recentHistory = (recentPosts || []).map(recentPostToNoveltyItem);
     const { apiKey, model } = getOpenAIEnv();
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({ apiKey, timeout: 90_000, maxRetries: 1 });
 
     let content: GeneratedContentPackage | null = null;
     let qualityFailures: string[] = [];
@@ -889,7 +919,11 @@ export async function POST(request: Request) {
         continue;
       }
 
-      const noveltyFailures = validateBatchNovelty(candidate, generatedSoFar);
+      const noveltyFailures = validateBatchNovelty(
+        candidate,
+        generatedSoFar,
+        recentHistory,
+      );
 
       if (noveltyFailures.length) {
         qualityFailures = noveltyFailures;

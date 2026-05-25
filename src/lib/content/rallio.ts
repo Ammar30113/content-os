@@ -442,10 +442,23 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
   },
 ];
 
-export const rallioLocalSignals: RallioLocalSignal[] = [
+export const rallioLocalSignals: RallioLocalSignal[] = dedupeSignalsById([
   ...rallioSourceSignals,
   ...rallioFallbackLocalSignals,
-];
+]);
+
+function dedupeSignalsById(signals: RallioLocalSignal[]): RallioLocalSignal[] {
+  const seen = new Set<string>();
+
+  return signals.filter((signal) => {
+    if (seen.has(signal.id)) {
+      return false;
+    }
+
+    seen.add(signal.id);
+    return true;
+  });
+}
 
 export const rallioTopicSeeds: RallioTopicSeed[] = [
   {
