@@ -600,22 +600,35 @@ function ReceiptRow({ label, value }: { label: string; value: string }) {
 }
 
 function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
+  const isParticipation = fields.content_type === "participation_single";
   const headline = displayHeadline(
-    fields.headline,
-    "you've been doing rallio's job for free.",
+    isParticipation ? fields.participation_prompt || fields.headline : fields.headline,
+    isParticipation
+      ? "Which spot belongs on the taste map?"
+      : "you've been doing rallio's job for free.",
     96,
   );
   const fontSize = headline.length > 70 ? 78 : headline.length > 40 ? 96 : 118;
+  const contextLabel = compactText(
+    [fields.business_name, fields.launch_neighborhood]
+      .filter(Boolean)
+      .join(" · "),
+    "taste-map question",
+    42,
+  );
 
   return (
-    <Canvas background={rallio.ink}>
+    <Canvas background={isParticipation ? rallio.cream : rallio.ink}>
+      {isParticipation ? (
+        <SpotTagPill label={contextLabel} />
+      ) : null}
       <div
         style={{
           position: "absolute",
           left: GRID_SAFE_INSET,
           right: GRID_SAFE_INSET,
-          bottom: 132,
-          color: rallio.cream,
+          bottom: isParticipation ? 236 : 132,
+          color: isParticipation ? rallio.ink : rallio.cream,
           fontFamily: "Fraunces, Georgia, serif",
           fontSize,
           lineHeight: 1.02,
@@ -625,7 +638,29 @@ function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
       >
         {headline}
       </div>
-      <RallioWatermark color="rgba(245,235,220,0.55)" />
+      {isParticipation ? (
+        <div
+          style={{
+            position: "absolute",
+            left: GRID_SAFE_INSET,
+            right: GRID_SAFE_INSET,
+            bottom: 124,
+            color: rallio.muted,
+            borderTop: `2px solid ${rallio.ink}`,
+            paddingTop: 28,
+            fontFamily: "Manrope, Inter, Arial, sans-serif",
+            fontSize: 28,
+            fontWeight: 700,
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 24,
+          }}
+        >
+          <span style={{ display: "flex" }}>reply with the spot regulars know</span>
+          <span style={{ display: "flex", color: rallio.amber }}>taste map</span>
+        </div>
+      ) : null}
+      <RallioWatermark color={isParticipation ? rallio.muted : "rgba(245,235,220,0.55)"} />
     </Canvas>
   );
 }

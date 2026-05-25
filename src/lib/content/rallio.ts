@@ -61,7 +61,8 @@ FUNNEL CTA DOORS
 OUTPUT STYLE
 - Instagram-first.
 - Keep captions scannable and grounded.
-- Default rhythm: regular quote, spot card, receipt, manifesto/BTS, then occasional owner utility.
+- Default rhythm: regular quote, spot card, receipt, participation feed post, then occasional owner utility.
+- Participation prompts are feed posts, not reels or stories.
 - Every post should make one concrete local behavior feel worth doing: save a spot, notice a detail, quote a regular, request the taste map, or join the waitlist.
 - Rallio can be named, but do not hard-sell the app or claim the product is already launched.
 `.trim();
@@ -97,30 +98,45 @@ const RALLIO_DEFAULT_FEED_RHYTHM: RallioContentType[] = [
   "regular_quote",
   "spot_carousel",
   "receipt_single",
-  "manifesto_reel",
+  "participation_single",
   "spot_carousel",
   "regular_quote",
   "receipt_single",
-  "bts_story_sequence",
+  "participation_single",
   "owner_claim_carousel",
-  "manifesto_reel",
+  "participation_single",
   "spot_carousel",
   "regular_quote",
   "receipt_single",
-  "manifesto_reel",
+  "participation_single",
   "spot_carousel",
   "regular_quote",
   "receipt_single",
-  "bts_story_sequence",
+  "participation_single",
   "owner_claim_carousel",
   "spot_carousel",
 ];
 
 const RALLIO_POST_TYPE_PRIORITY: Record<PostType, RallioContentType[]> = {
-  single: ["regular_quote", "spot_carousel", "receipt_single", "manifesto_reel"],
-  carousel: ["spot_carousel", "regular_quote", "receipt_single", "manifesto_reel"],
-  reel: ["manifesto_reel", "regular_quote", "spot_carousel", "receipt_single"],
-  thread: ["regular_quote", "spot_carousel", "receipt_single", "manifesto_reel"],
+  single: [
+    "regular_quote",
+    "spot_carousel",
+    "receipt_single",
+    "participation_single",
+  ],
+  carousel: [
+    "spot_carousel",
+    "regular_quote",
+    "receipt_single",
+    "participation_single",
+  ],
+  reel: ["participation_single", "regular_quote", "spot_carousel", "receipt_single"],
+  thread: [
+    "regular_quote",
+    "spot_carousel",
+    "receipt_single",
+    "participation_single",
+  ],
 };
 
 const rallioFallbackLocalSignals: RallioLocalSignal[] = [
@@ -613,6 +629,69 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     ],
   },
   {
+    id: "participation-feed",
+    title: "Participation prompts for the taste map",
+    brief:
+      "Create Rallio feed posts that ask one specific local question people can answer from memory. Keep the visual simple and editorial. The post should collect taste-map source material, not tease a Reel or Story.",
+    preferredTone: "contrarian",
+    templateHint: "founder_story",
+    rallioTemplateType: "rallio_manifesto",
+    contentType: "participation_single",
+    ctaDoor: "local_guide",
+    bestPostTypes: ["single"],
+    kpiIntent: "comments_saves_waitlist",
+    visualDirection:
+      "Ink or cream participation tile with one large answerable question, local signal context, and small link-in-bio taste-map cue.",
+    captionStructure:
+      "One concrete question as hook, one local signal, 2-3 examples of useful replies, link-in-bio taste-map CTA.",
+    doNotSay:
+      "Do not write tag-a-friend bait, polls for polls' sake, launch hype, or generic comment bait.",
+    angleVariants: [
+      {
+        working_title: "Which Spot Belongs Here?",
+        pillar: "founder_story",
+        hook_direction:
+          "Ask locals to name the place that belongs on the map before rankings flatten it.",
+        unique_takeaway:
+          "Participation posts should turn comments into source material for the taste map.",
+        visual_direction:
+          "Cream participation tile with a large question and small local-signal label.",
+        do_not_repeat: "Do not make this a generic engagement prompt.",
+        rallioTemplateType: "rallio_manifesto",
+        contentType: "participation_single",
+        ctaDoor: "local_guide",
+      },
+      {
+        working_title: "Drop The Order",
+        pillar: "founder_story",
+        hook_direction:
+          "Ask for the one order someone would defend because it reveals regular behavior.",
+        unique_takeaway:
+          "The useful reply is not 'best restaurant.' It is the specific order worth repeating.",
+        visual_direction:
+          "Ink participation tile with one large order-defense prompt.",
+        do_not_repeat: "Do not ask people to tag friends.",
+        rallioTemplateType: "rallio_manifesto",
+        contentType: "participation_single",
+        ctaDoor: "founding_supporter",
+      },
+      {
+        working_title: "Stop Gatekeeping The Spot",
+        pillar: "founder_story",
+        hook_direction:
+          "Invite locals to share the place regulars know without sounding like a hype page.",
+        unique_takeaway:
+          "A taste map gets sharper when people share the spot, order, and reason together.",
+        visual_direction:
+          "Black manifesto tile with a direct stop-gatekeeping question.",
+        do_not_repeat: "Do not use influencer or hidden-gem cliches.",
+        rallioTemplateType: "rallio_manifesto",
+        contentType: "participation_single",
+        ctaDoor: "local_guide",
+      },
+    ],
+  },
+  {
     id: "manifesto-bts",
     title: "The taste map is being built in public",
     brief:
@@ -855,6 +934,13 @@ function getBatchWorkingTitle(
       `The Repeat Visit Ledger`,
       `${localSignal.category} Signals`,
     ],
+    participation_single: [
+      localSignal.participation_prompt,
+      `What Belongs In ${shortNeighborhood(localSignal.neighborhood)}?`,
+      `Drop The ${localSignal.category} Order`,
+      `Stop Gatekeeping ${shortNeighborhood(localSignal.neighborhood)}`,
+      `Reply With The Local Signal`,
+    ],
     manifesto_reel: [
       "What Belongs On The Map",
       "Drop The Order",
@@ -898,6 +984,13 @@ function getBatchWorkingTitle(
       "Save Before You Forget",
       "The Repeat Visit Ledger",
       "Three Reasons, One Receipt",
+    ],
+    participation_single: [
+      "Which Spot Belongs Here?",
+      "Drop The Order",
+      "Stop Gatekeeping The Spot",
+      "Reply With A Local Signal",
+      "What Should We Add?",
     ],
     manifesto_reel: [
       "Regulars Over Ratings",
@@ -967,6 +1060,10 @@ function getParticipationPrompt(
   contentType: RallioContentType,
   signal: RallioLocalSignal,
 ) {
+  if (contentType === "participation_single") {
+    return signal.participation_prompt || "Which spot belongs on the taste map?";
+  }
+
   if (contentType === "manifesto_reel") {
     return "Which spot belongs on the taste map?";
   }
@@ -988,6 +1085,10 @@ function buildSignalTakeaway(
 ) {
   if (contentType === "owner_claim_carousel") {
     return `Use ${signal.spot_name} as the concrete community-added profile context, but keep the angle owner-facing and occasional.`;
+  }
+
+  if (contentType === "participation_single") {
+    return `Use ${signal.spot_name} in ${signal.neighborhood} as the seed context, but make the post an answerable participation prompt: ${signal.participation_prompt}.`;
   }
 
   return `Use ${signal.spot_name} in ${signal.neighborhood} as the concrete local signal: ${signal.signature_order}; ${signal.sensory_detail}.`;
@@ -1115,7 +1216,7 @@ export function buildRallioRouletteBrief(seed: RallioTopicSeed, quantity: number
     "Category focus: food/drink spots people would recommend twice.",
     "Use the assigned local signal as source context. Vary spot names, categories, neighborhoods, quotes, and participation prompts across the batch.",
     "Participation prompts are feed-post copy, not reels or stories. Use prompts like: Which spot belongs on the taste map? Drop the one order you'd defend. What place should locals stop gatekeeping? Reply with the spot regulars know.",
-    "Default feed rhythm: quote, spot card, receipt, manifesto/BTS, then occasional owner utility.",
+    "Default feed rhythm: quote, spot card, receipt, participation prompt, then occasional owner utility.",
     quantity > 1
       ? `Use this visual rhythm for this batch unless the user overrides it:\n${rhythm}`
       : "For a single post, use the selected seed as the visual direction.",
@@ -1238,6 +1339,10 @@ export function templateForContentType(
 
   if (contentType === "owner_claim_carousel") {
     return "rallio_owner_claim";
+  }
+
+  if (contentType === "participation_single") {
+    return "rallio_manifesto";
   }
 
   return "rallio_manifesto";

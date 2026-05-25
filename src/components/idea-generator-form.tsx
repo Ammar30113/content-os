@@ -12,10 +12,14 @@ import {
   templateHints,
   tones,
 } from "@/lib/content/types";
-import { readApiJson } from "@/lib/http/read-api-json";
+import { getApiErrorMessage, readApiJson } from "@/lib/http/read-api-json";
 import type { RallioLocalSignal } from "@/lib/content/types";
 
 type ImageMode = (typeof imageModes)[number];
+
+const rallioFeedPostTypes = postTypes.filter((type) =>
+  type === "single" || type === "carousel",
+);
 
 type FormState = {
   auto_topic: boolean;
@@ -182,12 +186,12 @@ export function IdeaGeneratorForm() {
         quantity,
       }),
     });
-    const payload = await readApiJson<TopicRoulettePayload & { error?: string }>(
+    const payload = await readApiJson<TopicRoulettePayload & { error?: unknown }>(
       response,
     );
 
     if (!response.ok) {
-      throw new Error(payload.error || "Could not pick a Rallio topic.");
+      throw new Error(getApiErrorMessage(payload.error, "Could not pick a Rallio topic."));
     }
 
     return payload as TopicRoulettePayload;
@@ -251,11 +255,13 @@ export function IdeaGeneratorForm() {
     const payload = await readApiJson<{
       asset: { id: string };
       image_url: string;
-      error?: string;
+      error?: unknown;
     }>(response);
 
     if (!response.ok) {
-      throw new Error(payload.error || "Could not upload reference image.");
+      throw new Error(
+        getApiErrorMessage(payload.error, "Could not upload reference image."),
+      );
     }
 
     const uploaded = {
@@ -279,10 +285,10 @@ export function IdeaGeneratorForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildRequestPayload(reference, undefined, activeForm)),
       });
-      const payload = await readApiJson<{ error?: string }>(response);
+      const payload = await readApiJson<{ error?: unknown }>(response);
 
       if (!response.ok) {
-        throw new Error(payload.error || "Could not save idea.");
+        throw new Error(getApiErrorMessage(payload.error, "Could not save idea."));
       }
 
       setState({ loading: false, message: "Idea saved.", error: null });
@@ -291,7 +297,7 @@ export function IdeaGeneratorForm() {
       setState({
         loading: false,
         message: null,
-        error: error instanceof Error ? error.message : "Could not save idea.",
+        error: getApiErrorMessage(error, "Could not save idea."),
       });
     }
   }
@@ -306,12 +312,12 @@ export function IdeaGeneratorForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(buildRequestPayload(reference, quantity, activeForm)),
     });
-    const payload = await readApiJson<BatchPlanPayload & { error?: string }>(
+    const payload = await readApiJson<BatchPlanPayload & { error?: unknown }>(
       response,
     );
 
     if (!response.ok) {
-      throw new Error(payload.error || "Could not plan campaign.");
+      throw new Error(getApiErrorMessage(payload.error, "Could not plan campaign."));
     }
 
     return payload as BatchPlanPayload;
@@ -347,12 +353,12 @@ export function IdeaGeneratorForm() {
         generation_index: index,
       }),
     });
-    const payload = await readApiJson<GeneratePayload & { error?: string }>(
+    const payload = await readApiJson<GeneratePayload & { error?: unknown }>(
       response,
     );
 
     if (!response.ok) {
-      throw new Error(payload.error || "Could not generate content.");
+      throw new Error(getApiErrorMessage(payload.error, "Could not generate content."));
     }
 
     return payload as GeneratePayload;
@@ -365,19 +371,26 @@ export function IdeaGeneratorForm() {
       template_fields: Record<string, unknown>;
     };
   }) {
-    const renderResponse = await fetch("/api/render-template", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        post_id: payload.post.id,
-        template_type: payload.content.template_type,
-        template_fields: payload.content.template_fields,
-      }),
-    });
-    const renderPayload = await readApiJson<{ error?: string }>(renderResponse);
+    let renderResponse: Response;
+
+    try {
+      renderResponse = await fetch("/api/render-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          post_id: payload.post.id,
+          template_type: payload.content.template_type,
+          template_fields: payload.content.template_fields,
+        }),
+      });
+    } catch (error) {
+      return getApiErrorMessage(error, "Image render failed.");
+    }
+
+    const renderPayload = await readApiJson<{ error?: unknown }>(renderResponse);
 
     if (!renderResponse.ok) {
-      return renderPayload.error || "Image render failed.";
+      return getApiErrorMessage(renderPayload.error, "Image render failed.");
     }
 
     return null;
@@ -531,13 +544,17 @@ export function IdeaGeneratorForm() {
       );
       router.refresh();
     } catch (error) {
+      const imageFailureMessage = imageFailures.length
+        ? ` ${imageFailures.length} image${imageFailures.length === 1 ? "" : "s"} also failed and can be regenerated from the post editor.`
+        : "";
+      const partialMessage = createdPostIds.length
+        ? ` ${createdPostIds.length} post${createdPostIds.length === 1 ? "" : "s"} were created before the failure.`
+        : "";
+
       setState({
         loading: false,
         message: null,
-        error:
-          error instanceof Error
-            ? `${error.message}${createdPostIds.length ? ` ${createdPostIds.length} post${createdPostIds.length === 1 ? "" : "s"} were created before the failure.` : ""}`
-            : "Could not generate content package.",
+        error: `${getApiErrorMessage(error, "Could not generate content package.")}${partialMessage}${imageFailureMessage}`,
       });
     }
   }
@@ -670,7 +687,7 @@ export function IdeaGeneratorForm() {
           <SelectField
             label="Post type"
             value={form.post_type}
-            options={postTypes}
+            options={rallioFeedPostTypes}
             onChange={(value) => updateField("post_type", value)}
           />
           <SelectField

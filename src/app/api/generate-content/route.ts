@@ -729,7 +729,7 @@ export async function POST(request: Request) {
                     input.rallio_kpi_intent ||
                     null,
                   instruction:
-                    "Return Instagram-ready Rallio feed-post content only. Set selected_platforms to instagram. Use exactly one funnel CTA door. Default to community/feed-growth posts for regulars, spot recommendations, receipts, participation prompts, and taste-map waitlist growth. Use claim_your_business only when the requested content type is owner_claim_carousel. Store Rallio metadata and the local signal fields in template_fields.",
+                    "Return Instagram-ready Rallio feed-post content only. Set selected_platforms to instagram. Use exactly one funnel CTA door. Default to community/feed-growth posts for regulars, spot recommendations, receipts, participation_single prompts, and taste-map waitlist growth. Do not write Reels or Stories for Rallio in this phase. Use claim_your_business only when the requested content type is owner_claim_carousel. Store Rallio metadata and the local signal fields in template_fields.",
                 },
                 reference_image: referenceImageUrl
                   ? {
@@ -794,7 +794,7 @@ export async function POST(request: Request) {
                     "For rallio_spot_carousel: set business_name to the place name; spot_category to specific cuisine; spot_address to street/intersection (e.g. '93 Ossington Ave'); spot_list_name to the collection title in uppercase (e.g. 'THE OSSINGTON 30'); spot_list_position and spot_list_total as zero-padded strings (e.g. '04', '30'); recommender_quote to one short italic line from a believable regular; recommender_name to a first-name handle (e.g. '@mayachen' or 'Maya'); recommender_neighborhood to a lowercase short area label (e.g. 'ossington'); recommender_since to a two-digit year like \"'22\"; carousel_page and carousel_total to numeric strings like '1' and '6'.",
                     "For rallio_regular_quote: set regular_quote to the full quote; attribution to the regular's first name; regular_neighborhood to the neighborhood they regular at (e.g. 'Little Italy'); regular_since_year to a four-digit year (e.g. '2019'); business_name to the spot they're a regular of.",
                     "For rallio_receipt: set receipt_lines as 'label · value' rows; subtotal to the final number; launch_neighborhood to the neighborhood context for the receipt.",
-                    "For participation feed posts: set participation_prompt to one concrete question people can answer in comments or replies. Use it in the caption, but do not write tag-a-friend bait.",
+                    "For participation_single feed posts: set headline to the concrete question, set participation_prompt to the same answerable question, use the assigned local signal as the example context, and make the caption invite comments or replies without tag-a-friend bait.",
                     "When a required_local_signal is provided, copy its local_signal_id/source_status into template fields and use its spot_name, category, street, signature_order, sensory_detail, regular_quote, regular_name, regular_since_year, and participation_prompt.",
                     "Return null for any rich field you cannot fill with a concrete, believable value. Never invent stock placeholder addresses, fake handles ending in numbers like @user123, or generic neighborhoods.",
                   ].join(" "),

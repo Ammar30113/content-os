@@ -25,6 +25,7 @@ export const rallioCtaDoors = [
   "claim_your_business",
 ] as const;
 export const rallioContentTypes = [
+  "participation_single",
   "manifesto_reel",
   "spot_carousel",
   "receipt_single",

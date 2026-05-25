@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
+import { getUnknownErrorMessage } from "@/lib/errors";
+
 export function jsonError(error: unknown, status = 400) {
   if (error instanceof ZodError) {
     return NextResponse.json(
@@ -13,7 +15,7 @@ export function jsonError(error: unknown, status = 400) {
 
   return NextResponse.json(
     {
-      error: error instanceof Error ? error.message : "Unexpected error.",
+      error: getUnknownErrorMessage(error),
     },
     { status },
   );

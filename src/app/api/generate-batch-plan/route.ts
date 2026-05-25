@@ -138,7 +138,7 @@ export async function POST(request: Request) {
               funnel_cta_policy:
                 "Pick exactly one cta door per angle. Prefer founding_supporter for link-in-bio waitlist growth and local_guide for taste-map saves. Use claim_your_business only for an explicitly owner-facing utility angle.",
               feed_rhythm:
-                "Default campaign rhythm: regular_quote, spot_carousel, receipt_single, manifesto_reel or bts_story_sequence, then occasional owner_claim_carousel. For quantity 5+, include at least 3 community/feed-growth angles before any owner-claim angle.",
+                "Default campaign rhythm: regular_quote, spot_carousel, receipt_single, participation_single, then occasional owner_claim_carousel. For quantity 5+, include participation feed posts and at least 3 community/feed-growth angles before any owner-claim angle. Do not plan Reels or Stories for Rallio in this phase.",
               required_slot_plan:
                 quantity > 1
                   ? Array.from({ length: quantity }, (_, index) => {
