@@ -1028,6 +1028,24 @@ export function getRallioLocalSignalForSlot(slot: number): RallioLocalSignal {
   return rallioLocalSignals[index];
 }
 
+export function selectRallioLocalSignal(recentText = ""): RallioLocalSignal {
+  const recent = normalizeRecentText(recentText);
+  const fresh = rallioLocalSignals.find(
+    (signal) => !signalMatchesRecent(signal, recent),
+  );
+
+  return fresh || rallioLocalSignals[0];
+}
+
+function signalMatchesRecent(signal: RallioLocalSignal, recent: string) {
+  return [
+    signal.id,
+    signal.spot_name,
+    signal.signature_order,
+    signal.regular_quote,
+  ].some((value) => recentIncludes(recent, value));
+}
+
 export function rallioSignalToTemplateFields(
   signal?: RallioLocalSignal | null,
 ): Partial<TemplateFields> {
@@ -1385,7 +1403,6 @@ export function enforceRallioCopySafety(content: GeneratedContent): GeneratedCon
     "coupons",
     "promo code",
     "save money",
-    "instant",
     "download the app",
     "app store",
     "available now",
@@ -1403,6 +1420,7 @@ export function enforceRallioCopySafety(content: GeneratedContent): GeneratedCon
     "reward",
     "rewards",
   ];
+  const strictBannedWords = ["instant"];
   const joined = [
     content.hook,
     content.headline,
@@ -1416,6 +1434,9 @@ export function enforceRallioCopySafety(content: GeneratedContent): GeneratedCon
     .toLowerCase();
   const hit =
     strictBanned.find((phrase) => joined.includes(phrase)) ||
+    strictBannedWords.find((word) =>
+      new RegExp(`\\b${escapeRegExp(word)}\\b`).test(joined),
+    ) ||
     findUnsafeContextualTerm(joined, contextualBanned);
 
   if (hit) {

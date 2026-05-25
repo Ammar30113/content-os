@@ -4,8 +4,8 @@ import { jsonError, jsonOk } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth";
 import {
   buildRallioRouletteBrief,
-  getRallioLocalSignalForSlot,
   selectRallioAngle,
+  selectRallioLocalSignal,
   selectRallioSeed,
 } from "@/lib/content/rallio";
 import { postTypes } from "@/lib/content/types";
@@ -42,6 +42,8 @@ export async function POST(request: Request) {
         post.template_type,
         templateFieldText(post.template_fields, "rallio_template_type"),
         templateFieldText(post.template_fields, "content_type"),
+        templateFieldText(post.template_fields, "business_name"),
+        templateFieldText(post.template_fields, "local_signal_id"),
       ]),
     ]
       .filter(Boolean)
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
       recentText,
     });
     const angle = selectRallioAngle(seed, recentText);
-    const signal = getRallioLocalSignalForSlot(1);
+    const signal = selectRallioLocalSignal(recentText);
 
     return jsonOk({
       title: angle.working_title,
