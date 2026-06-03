@@ -40,6 +40,14 @@ export function RallioTemplate({ fields }: { fields: TemplateFields }) {
     return <RallioOwnerClaimTemplate fields={fields} />;
   }
 
+  if (
+    template === "rallio_steps" ||
+    template === "supporter_steps_carousel" ||
+    template === "owner_steps_carousel"
+  ) {
+    return <RallioStepsTemplate fields={fields} />;
+  }
+
   return <RallioManifestoTemplate fields={fields} />;
 }
 
@@ -740,6 +748,201 @@ function RallioOwnerClaimTemplate({ fields }: { fields: TemplateFields }) {
         {note}
       </div>
       <RallioWatermark color={rallio.muted} />
+    </Canvas>
+  );
+}
+
+function RallioStepsTemplate({ fields }: { fields: TemplateFields }) {
+  const isOwner =
+    fields.step_audience === "owner" || fields.content_type === "owner_steps_carousel";
+  const fallbackSteps = isOwner
+    ? [
+        "Download or open Rallio.",
+        "Choose Business Owner.",
+        "Add or claim a free business profile.",
+        "Keep profile details accurate.",
+        "Review and approve supporter posts.",
+        "Track posts, profile clicks, and visits.",
+      ]
+    : [
+        "Download or open Rallio.",
+        "Choose Supporter and select your city.",
+        "Browse or search local spots.",
+        "Follow places you trust.",
+        "Create a support post with a real recommendation.",
+        "Build Your Taste from picks, posts, places, and areas.",
+      ];
+  const providedSteps = safeArray(isOwner ? fields.owner_steps : fields.supporter_steps);
+  const steps = (providedSteps.length ? providedSteps : fallbackSteps).slice(0, 6);
+  const headline = displayHeadline(
+    fields.headline,
+    isOwner ? "Owners: claim the profile" : "Start with one spot",
+    58,
+  );
+  const subhead = compactText(
+    fields.subhead,
+    isOwner
+      ? "Your customers can help shape the profile. You keep it accurate."
+      : "Follow places, post real recommendations, and build Your Taste.",
+    112,
+  );
+  const background = isOwner ? rallio.ink : rallio.cream;
+  const foreground = isOwner ? rallio.cream : rallio.ink;
+  const muted = isOwner ? "rgba(245,235,220,0.68)" : rallio.muted;
+  const accent = isOwner ? rallio.moss : rallio.amber;
+  const pillLabel = isOwner
+    ? "OWNER SETUP · TORONTO + RAJKOT FIRST"
+    : "APP STORE LAUNCH · TORONTO + RAJKOT FIRST";
+  const headlineSize = headline.length > 42 ? 66 : headline.length > 28 ? 78 : 92;
+
+  return (
+    <Canvas background={background}>
+      <div
+        style={{
+          position: "absolute",
+          left: GRID_SAFE_INSET,
+          top: 86,
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          padding: "13px 24px",
+          borderRadius: 999,
+          backgroundColor: isOwner ? "rgba(95,138,110,0.22)" : rallio.ink,
+          color: isOwner ? rallio.cream : rallio.cream,
+          fontFamily: "Manrope, Inter, Arial, sans-serif",
+          fontSize: 20,
+          fontWeight: 900,
+          letterSpacing: 2.8,
+          textTransform: "uppercase",
+        }}
+      >
+        <div
+          style={{
+            width: 12,
+            height: 12,
+            borderRadius: 12,
+            backgroundColor: accent,
+            display: "flex",
+          }}
+        />
+        <span style={{ display: "flex" }}>{pillLabel}</span>
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
+          top: 168,
+          color: foreground,
+          fontFamily: "Fraunces, Georgia, serif",
+          fontSize: headlineSize,
+          lineHeight: 0.96,
+          fontWeight: 900,
+          display: "flex",
+        }}
+      >
+        {headline}
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
+          top: 306,
+          color: muted,
+          fontFamily: "Manrope, Inter, Arial, sans-serif",
+          fontSize: 28,
+          lineHeight: 1.28,
+          fontWeight: 700,
+          display: "flex",
+        }}
+      >
+        {subhead}
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
+          top: 390,
+          display: "flex",
+          flexDirection: "column",
+          gap: 18,
+        }}
+      >
+        {steps.map((step, index) => (
+          <div
+            key={`${step}-${index}`}
+            style={{
+              minHeight: 62,
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 20,
+              paddingBottom: 16,
+              borderBottom: `1px solid ${isOwner ? "rgba(245,235,220,0.14)" : "rgba(12,10,8,0.13)"}`,
+            }}
+          >
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 42,
+                backgroundColor: accent,
+                color: isOwner ? rallio.ink : rallio.cream,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "JetBrains Mono, ui-monospace, monospace",
+                fontSize: 20,
+                fontWeight: 900,
+              }}
+            >
+              {String(index + 1).padStart(2, "0")}
+            </div>
+            <div
+              style={{
+                flex: 1,
+                color: foreground,
+                fontFamily: "Manrope, Inter, Arial, sans-serif",
+                fontSize: 25,
+                lineHeight: 1.18,
+                fontWeight: 800,
+                display: "flex",
+              }}
+            >
+              {compactText(step, "", 86)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
+          bottom: 94,
+          color: muted,
+          fontFamily: "Manrope, Inter, Arial, sans-serif",
+          fontSize: 26,
+          fontWeight: 800,
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 24,
+          borderTop: `2px solid ${isOwner ? "rgba(245,235,220,0.26)" : "rgba(12,10,8,0.32)"}`,
+          paddingTop: 28,
+        }}
+      >
+        <span style={{ display: "flex" }}>link in bio</span>
+        <span style={{ display: "flex", color: accent }}>
+          {compactText(fields.door_label, isOwner ? "Owner setup" : "Download Rallio", 24)}
+        </span>
+      </div>
+
+      <RallioWatermark color={isOwner ? "rgba(245,235,220,0.55)" : rallio.muted} />
     </Canvas>
   );
 }

@@ -430,8 +430,9 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <code>review_notes</code>. Rallio posts can use{" "}
             <code>brand_slug</code>, <code>cta_door</code>,{" "}
             <code>rallio_template_type</code>, <code>receipt_lines</code>,{" "}
-            <code>regular_quote</code>, and <code>owner_steps</code>. Leave URL
-            fields blank unless you have a real image URL.
+            <code>regular_quote</code>, <code>supporter_steps</code>,{" "}
+            <code>owner_steps</code>, and <code>step_audience</code>. Leave URL fields
+            blank unless you have a real image URL.
           </p>
           <label className="block">
             <span className="text-sm font-medium text-zinc-300">Template type</span>

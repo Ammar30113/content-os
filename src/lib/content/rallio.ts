@@ -17,10 +17,29 @@ export const RALLIO_BRAND = {
   name: "Rallio",
   handle: "@rallio",
   launch_neighborhood: "local taste map",
-  launch_scope: "community waitlist first; Toronto and Rajkot are seed markets, not headline defaults",
+  launch_scope:
+    "App Store launch live; Toronto and Rajkot are first active markets; ask other cities to request the map next",
   category_focus: "food_drink",
   visual_style: "cream_ink_amber_wheat_moss_editorial",
 } as const;
+
+export const RALLIO_SUPPORTER_STEPS = [
+  "Download or open Rallio.",
+  "Choose Supporter and select your city.",
+  "Browse or search local food and drink spots.",
+  "Follow places you trust.",
+  "Create a support post with a real recommendation, photo, or social link.",
+  "Build Your Taste from picks, live posts, places, and areas.",
+] as const;
+
+export const RALLIO_OWNER_STEPS = [
+  "Download or open Rallio.",
+  "Choose Business Owner.",
+  "Add or claim a free business profile.",
+  "Keep profile details accurate.",
+  "Review and approve supporter posts.",
+  "Track posts, profile clicks, and visits from owner home.",
+] as const;
 
 export const RALLIO_SYSTEM_PROMPT = `
 You are the Rallio content brain inside Content OS.
@@ -28,43 +47,48 @@ You are the Rallio content brain inside Content OS.
 Rallio is a community-built taste map for people who trust regulars, local recommendations, and repeat-worthy spots more than generic rankings.
 
 CURRENT LAUNCH CONTEXT
-- Product stage: pre-launch / waitlist growth.
-- The feed should grow community demand first, then convert through link-in-bio waitlist and taste-map asks.
-- Toronto and Rajkot are seed markets, but do not use "Toronto + Rajkot" as repeated headline copy.
+- Product stage: live in the App Store.
+- Core line: "Rallio is where local recommendations become a map."
+- Toronto + Rajkot are first active markets. Mention that scope when launch-market context matters, but do not use "Toronto + Rajkot" as repeated headline copy.
+- For other cities, use a soft-global invitation: "Want your city on the map? Tell us where to build next."
 - Category focus: food and drink first.
-- Audience: neighborhood regulars, food/drink explorers, people who recommend local spots, and independent owners.
+- Audience: supporters who recommend local spots and owners who want community-added attention to stay accurate.
 
 VOICE
 - Warm, local, specific, confident.
 - Taste-first. Regular-aware. Operator-aware only when the post is explicitly for owners.
 - Write like someone who notices what regulars order, what lines are worth joining, and which spots people recommend twice.
-- No hype. No exclamation points. No "best deals near you". No "download now".
-- Rallio is the taste map being built, not a fully launched product to promote.
+- No hype. No exclamation points. No "best deals near you". No generic product-launch noise.
+- Rallio is live, but the map is still being built from real supporter recommendations.
 
 HARD BANS
 - Do not promise instant app access or instant downloads.
 - Do not frame Rallio as coupons, cashback, price promos, or generic rewards.
 - Do not hype perks. Perks can exist later, but they are not the story.
 - Do not say "save money", "exclusive rewards", "free food", or "limited-time deal".
-- Do not say it is available everywhere. Toronto and Rajkot are seed-market context, not the default headline.
+- Do not say Rallio has full global density, is available everywhere, or has every city mapped.
+- Do not mention reservations, Moments, perks, or rewards as launch features.
 - Do not use "TAG A FRIEND WHO..." engagement bait.
 - Do not use "claim your business" unless the post is explicitly owner-facing.
 - Do not make owner-claim posts the default feed rhythm.
-- Do not write generic launch/product copy such as "Rallio is launching soon" as the hook.
+- Do not write generic launch/product copy such as "download now" as the hook.
 - Do not use "Toronto + Rajkot" in headlines unless the exact market scope is the point.
 
 FUNNEL CTA DOORS
-- founding_supporter: invite people to join the link-in-bio waitlist for the taste map.
+- founding_supporter: legacy source door; prefer app_download_supporter for launch batches.
 - local_guide: invite people to save/request the neighborhood taste map or guide.
 - claim_your_business: owner-only utility; invite food/drink owners to claim a community-added profile when that owner door is intentionally selected.
+- app_download_supporter: invite supporters to download/open Rallio, choose Supporter, follow places, post real recommendations, and build Your Taste.
+- app_download_owner: invite owners to download/open Rallio, choose Business Owner, add or claim a free profile, approve supporter posts, and track attention.
+- city_request: invite people outside Toronto + Rajkot to request the next city or neighborhood.
 
 OUTPUT STYLE
 - Instagram-first.
 - Keep captions scannable and grounded.
-- Default rhythm: regular quote, spot card, receipt, participation feed post, then occasional owner utility.
+- Default launch rhythm: 40% local recommendation posts, 25% supporter step/action posts, 15% owner step/claim posts, 20% soft-global city-request or participation posts.
 - Participation prompts are feed posts, not reels or stories.
-- Every post should make one concrete local behavior feel worth doing: save a spot, notice a detail, quote a regular, request the taste map, or join the waitlist.
-- Rallio can be named, but do not hard-sell the app or claim the product is already launched.
+- Every post should make one concrete local behavior feel worth doing: download/open Rallio, follow a spot, post a real recommendation, request a city, save a spot, or claim an owner profile.
+- Rallio can be named, but the useful action should stay simple and specific.
 `.trim();
 
 export type RallioTopicSeed = {
@@ -95,47 +119,53 @@ export type RallioTopicSeed = {
 };
 
 const RALLIO_DEFAULT_FEED_RHYTHM: RallioContentType[] = [
+  "supporter_steps_carousel",
   "regular_quote",
   "spot_carousel",
-  "receipt_single",
   "participation_single",
+  "owner_steps_carousel",
+  "receipt_single",
+  "supporter_steps_carousel",
   "spot_carousel",
   "regular_quote",
-  "receipt_single",
   "participation_single",
   "owner_claim_carousel",
-  "participation_single",
-  "spot_carousel",
-  "regular_quote",
+  "supporter_steps_carousel",
   "receipt_single",
-  "participation_single",
   "spot_carousel",
+  "owner_steps_carousel",
   "regular_quote",
-  "receipt_single",
+  "supporter_steps_carousel",
   "participation_single",
-  "owner_claim_carousel",
-  "spot_carousel",
+  "supporter_steps_carousel",
+  "participation_single",
 ];
 
 const RALLIO_POST_TYPE_PRIORITY: Record<PostType, RallioContentType[]> = {
   single: [
+    "supporter_steps_carousel",
     "regular_quote",
     "spot_carousel",
     "receipt_single",
     "participation_single",
+    "owner_steps_carousel",
   ],
   carousel: [
+    "supporter_steps_carousel",
     "spot_carousel",
+    "owner_steps_carousel",
     "regular_quote",
     "receipt_single",
     "participation_single",
   ],
   reel: ["participation_single", "regular_quote", "spot_carousel", "receipt_single"],
   thread: [
+    "supporter_steps_carousel",
     "regular_quote",
     "spot_carousel",
     "receipt_single",
     "participation_single",
+    "owner_steps_carousel",
   ],
 };
 
@@ -465,7 +495,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     id: "regulars-quote-feed",
     title: "Regulars make the local taste map",
     brief:
-      "Create Rallio content built around a believable quote from a local regular. Make the post feel like community taste, not product marketing. The goal is saves, shares, and link-in-bio waitlist interest for the taste map.",
+      "Create Rallio content built around a believable quote from a local regular. Make the post feel like community taste, not product marketing. The goal is saves, shares, and link-in-bio app-download interest for the taste map.",
     preferredTone: "founder",
     templateHint: "creator_economy",
     rallioTemplateType: "rallio_regular_quote",
@@ -476,7 +506,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     visualDirection:
       "Cream editorial quote card with Fraunces-style italic pull quote, amber dot, local spot label, and small Rallio mark.",
     captionStructure:
-      "Regular quote as hook, short observation, 3 community taste signals, link-in-bio waitlist or taste-map CTA.",
+      "Regular quote as hook, short observation, 3 community taste signals, link-in-bio download or taste-map CTA.",
     doNotSay:
       "Do not say download now, launching soon, claim your business, coupons, cashback, reward hype, or tag a friend.",
     angleVariants: [
@@ -592,11 +622,11 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     contentType: "receipt_single",
     ctaDoor: "founding_supporter",
     bestPostTypes: ["single", "carousel"],
-    kpiIntent: "saves_waitlist",
+    kpiIntent: "saves_app_downloads",
     visualDirection:
-      "Receipt graphic with cream paper, dashed dividers, mono line items, amber subtotal, and small link-in-bio waitlist cue.",
+      "Receipt graphic with cream paper, dashed dividers, mono line items, amber subtotal, and small link-in-bio Rallio cue.",
     captionStructure:
-      "Receipt metaphor hook, short local tension, 3-4 taste-map line items, link-in-bio waitlist CTA.",
+      "Receipt metaphor hook, short local tension, 3-4 taste-map line items, link-in-bio download or taste-map CTA.",
     doNotSay:
       "Do not mention perks, rewards, discounts, instant access, or claim-your-business copy.",
     angleVariants: [
@@ -652,7 +682,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     contentType: "participation_single",
     ctaDoor: "local_guide",
     bestPostTypes: ["single"],
-    kpiIntent: "comments_saves_waitlist",
+    kpiIntent: "comments_saves_city_requests",
     visualDirection:
       "Ink or cream participation tile with one large answerable question, local signal context, and small link-in-bio taste-map cue.",
     captionStructure:
@@ -705,21 +735,133 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     ],
   },
   {
+    id: "launch-supporter-steps",
+    title: "Supporter launch steps",
+    brief:
+      "Create Rallio launch posts that explain exactly what a supporter does after downloading or opening Rallio. Keep the action sequence practical: choose Supporter, select a city, browse/search local spots, follow places, create a support post, and build Your Taste.",
+    preferredTone: "tutorial",
+    templateHint: "tutorial",
+    rallioTemplateType: "rallio_steps",
+    contentType: "supporter_steps_carousel",
+    ctaDoor: "app_download_supporter",
+    bestPostTypes: ["single", "carousel"],
+    kpiIntent: "app_download_supporter_action",
+    visualDirection:
+      "Cream launch steps tile with amber numbers, short supporter flow, Toronto + Rajkot first context, and link-in-bio download cue.",
+    captionStructure:
+      "Launch hook, one-line supporter promise, 3-5 action bullets from the real app flow, city/taste-profile CTA, hashtags.",
+    doNotSay:
+      "Do not mention perks, rewards, reservations, Moments, global density, or vague app-store hype.",
+    angleVariants: [
+      {
+        working_title: "Start With One Spot",
+        pillar: "tutorial",
+        hook_direction:
+          "The app is live, but the first useful action is one real local recommendation.",
+        unique_takeaway:
+          "Supporters should understand the simple loop: follow a place, post why it matters, and build Your Taste.",
+        visual_direction:
+          "Cream steps card with six numbered supporter actions and a small Toronto + Rajkot first marker.",
+        do_not_repeat: "Do not make this a generic app announcement.",
+        rallioTemplateType: "rallio_steps",
+        contentType: "supporter_steps_carousel",
+        ctaDoor: "app_download_supporter",
+      },
+      {
+        working_title: "Build Your Taste",
+        pillar: "tutorial",
+        hook_direction:
+          "Your Taste becomes more useful when every pick comes from a place you actually trust.",
+        unique_takeaway:
+          "Supporter content should connect downloads to taste-profile building, not abstract launch excitement.",
+        visual_direction:
+          "Cream supporter flow tile with Your Taste profile as the final step.",
+        do_not_repeat: "Do not say Rallio is available everywhere.",
+        rallioTemplateType: "rallio_steps",
+        contentType: "supporter_steps_carousel",
+        ctaDoor: "app_download_supporter",
+      },
+      {
+        working_title: "Follow, Post, Map",
+        pillar: "tutorial",
+        hook_direction:
+          "A recommendation becomes useful when it moves from memory into the local map.",
+        unique_takeaway:
+          "The supporter path should feel lightweight enough to try today after downloading Rallio.",
+        visual_direction:
+          "Minimal launch steps tile with follow, post, and taste-map actions grouped together.",
+        do_not_repeat: "Do not use tag-a-friend bait or fake urgency.",
+        rallioTemplateType: "rallio_steps",
+        contentType: "supporter_steps_carousel",
+        ctaDoor: "app_download_supporter",
+      },
+    ],
+  },
+  {
+    id: "launch-owner-steps",
+    title: "Owner launch steps",
+    brief:
+      "Create occasional Rallio launch posts for business owners. Explain the actual owner path: choose Business Owner, add or claim a free profile, keep details accurate, review supporter posts, and track posts, profile clicks, and visits from owner home.",
+    preferredTone: "tutorial",
+    templateHint: "tutorial",
+    rallioTemplateType: "rallio_steps",
+    contentType: "owner_steps_carousel",
+    ctaDoor: "app_download_owner",
+    bestPostTypes: ["single", "carousel"],
+    kpiIntent: "owner_setup_claim_review",
+    visualDirection:
+      "Ink-forward owner steps tile with moss accents, profile/dashboard language, and calm owner setup CTA.",
+    captionStructure:
+      "Owner-aware launch hook, why community-added profiles matter, 3-5 practical setup bullets, owner download/claim CTA, hashtags.",
+    doNotSay:
+      "Do not pitch ads, revenue guarantees, paid traffic, perks, rewards, or instant setup.",
+    angleVariants: [
+      {
+        working_title: "Owners: Claim The Profile",
+        pillar: "tutorial",
+        hook_direction:
+          "If customers can recommend your spot, owners should have a simple way to keep the profile accurate.",
+        unique_takeaway:
+          "Owner posts should explain claim, review, and dashboard behavior without sounding like sales outreach.",
+        visual_direction:
+          "Dark owner steps tile with six numbered actions and moss dashboard accent.",
+        do_not_repeat: "Do not promise paid growth or instant setup.",
+        rallioTemplateType: "rallio_steps",
+        contentType: "owner_steps_carousel",
+        ctaDoor: "app_download_owner",
+      },
+      {
+        working_title: "Review What Supporters Post",
+        pillar: "tutorial",
+        hook_direction:
+          "Supporter posts become stronger when owners can approve accurate context.",
+        unique_takeaway:
+          "The owner loop is claim, correct details, approve posts, and track attention back to the business.",
+        visual_direction:
+          "Owner dashboard-inspired steps tile with profile clicks and visits as final metrics.",
+        do_not_repeat: "Do not use claim copy for non-owner posts.",
+        rallioTemplateType: "rallio_steps",
+        contentType: "owner_steps_carousel",
+        ctaDoor: "app_download_owner",
+      },
+    ],
+  },
+  {
     id: "manifesto-bts",
     title: "The taste map is being built in public",
     brief:
-      "Create a black manifesto or BTS-style Rallio post about why the feed is community-first. Make it feel like a motion tile: one sharp line, local taste over product launch, and a waitlist/taste-map CTA.",
+      "Create a black manifesto or BTS-style Rallio post about why the feed is community-first. Make it feel like a motion tile: one sharp line, local taste over generic discovery, and a download/taste-map/city-request CTA.",
     preferredTone: "contrarian",
     templateHint: "founder_story",
     rallioTemplateType: "rallio_manifesto",
     contentType: "manifesto_reel",
     ctaDoor: "founding_supporter",
     bestPostTypes: ["single", "reel"],
-    kpiIntent: "shares_waitlist",
+    kpiIntent: "shares_app_downloads",
     visualDirection:
       "Ink-black manifesto tile with cream serif headline, amber marker, and minimal community-first taste-map copy.",
     captionStructure:
-      "One-line belief, short tension, 3 feed principles, link-in-bio waitlist CTA.",
+      "One-line belief, short tension, 3 feed principles, link-in-bio launch CTA.",
     doNotSay:
       "Do not write generic launch copy. Do not overuse Toronto + Rajkot. Do not mention rewards or owner claims.",
     angleVariants: [
@@ -755,8 +897,8 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         hook_direction:
           "The best local maps are built from patient recommendations, not launch noise.",
         unique_takeaway:
-          "Waitlist growth should feel like helping shape the map before it opens wider.",
-        visual_direction: "BTS manifesto tile with link-in-bio waitlist cue.",
+          "Launch growth should feel like helping shape the map before it opens wider.",
+        visual_direction: "BTS manifesto tile with link-in-bio launch cue.",
         do_not_repeat: "Do not make a city-versus-city point.",
         rallioTemplateType: "rallio_manifesto",
         contentType: "bts_story_sequence",
@@ -775,7 +917,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     contentType: "owner_claim_carousel",
     ctaDoor: "claim_your_business",
     bestPostTypes: ["carousel"],
-    kpiIntent: "business_waitlist",
+    kpiIntent: "owner_setup",
     visualDirection:
       "Dark owner-claim phone/profile card with moss owner marker, community-added badge, small stats, and takes-about-a-minute CTA.",
     captionStructure:
@@ -784,7 +926,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
       "Do not sound like sales outreach. Do not promise paid traffic, revenue, perks, rewards, or instant setup.",
     angleVariants: [
       {
-        working_title: "Claim The Story Before Launch",
+        working_title: "Claim The Story After Launch",
         pillar: "founder_story",
         hook_direction:
           "If regulars added your spot, the profile should still be easy for the owner to correct.",
@@ -880,11 +1022,24 @@ export function getRallioBatchSlotGuide(slot: number, signalOffset = 0) {
     occurrenceIndex,
     localSignal,
   );
-  const participationPrompt = getParticipationPrompt(contentType, localSignal);
-  const ctaDoor = normalizeRallioCtaDoor(
+  const isCityRequestSlot =
+    contentType === "participation_single" && occurrenceIndex % 2 === 0;
+  const participationPrompt = getParticipationPrompt(
     contentType,
-    contentType === "owner_claim_carousel" ? candidate.ctaDoor : localSignal.cta_door,
+    localSignal,
+    isCityRequestSlot,
   );
+  const plannedCtaDoor: RallioCtaDoor =
+    contentType === "supporter_steps_carousel"
+      ? "app_download_supporter"
+      : contentType === "owner_steps_carousel"
+        ? "app_download_owner"
+        : isCityRequestSlot
+          ? "city_request"
+          : contentType === "owner_claim_carousel"
+            ? candidate.ctaDoor
+            : localSignal.cta_door;
+  const ctaDoor = normalizeRallioCtaDoor(contentType, plannedCtaDoor);
   const signalTakeaway = buildSignalTakeaway(localSignal, contentType);
 
   return {
@@ -926,6 +1081,20 @@ function getBatchWorkingTitle(
   localSignal: RallioLocalSignal,
 ) {
   const signalTitleBank: Record<RallioContentType, string[]> = {
+    supporter_steps_carousel: [
+      "Start With One Spot",
+      "Build Your Taste",
+      "Follow, Post, Map",
+      `Start In ${shortNeighborhood(localSignal.neighborhood)}`,
+      "Your First Rallio Post",
+    ],
+    owner_steps_carousel: [
+      "Owners: Claim The Profile",
+      "Review What Supporters Post",
+      `${shortSpotName(localSignal.spot_name)} Owner Setup`,
+      "Claim, Review, Track",
+      "The Owner Home Loop",
+    ],
     regular_quote: [
       `${localSignal.regular_name}'s ${shortNeighborhood(localSignal.neighborhood)} Order`,
       `The ${shortNeighborhood(localSignal.neighborhood)} Regular`,
@@ -964,7 +1133,7 @@ function getBatchWorkingTitle(
     bts_story_sequence: [
       "What We Are Collecting",
       "Help Shape The Map",
-      "The Feed Before The App",
+      "The Feed That Builds The App",
       "Small Signals First",
       "Reply With A Spot",
     ],
@@ -977,6 +1146,20 @@ function getBatchWorkingTitle(
     ],
   };
   const fallbackTitleBank: Record<RallioContentType, string[]> = {
+    supporter_steps_carousel: [
+      "Start With One Spot",
+      "Build Your Taste",
+      "Follow, Post, Map",
+      "Your First Rallio Post",
+      "From Pick To Profile",
+    ],
+    owner_steps_carousel: [
+      "Owners: Claim The Profile",
+      "Review What Supporters Post",
+      "Claim, Review, Track",
+      "The Owner Home Loop",
+      "Keep The Profile Accurate",
+    ],
     regular_quote: [
       "The Tuesday Regular",
       "The Recommendation You Trust",
@@ -1016,11 +1199,11 @@ function getBatchWorkingTitle(
       "Build The Map Quietly",
       "Behind The Taste Map",
       "What We Are Collecting",
-      "The Feed Before The App",
+      "The Feed That Builds The App",
       "Small Signals First",
     ],
     owner_claim_carousel: [
-      "Claim The Story Before Launch",
+      "Claim The Story After Launch",
       "Better Local Context",
       "Community-Added, Owner-Corrected",
       "The Owner Context Layer",
@@ -1090,8 +1273,21 @@ export function rallioSignalToTemplateFields(
 function getParticipationPrompt(
   contentType: RallioContentType,
   signal: RallioLocalSignal,
+  isCityRequestSlot = false,
 ) {
+  if (contentType === "supporter_steps_carousel") {
+    return "What spot would you start with on Rallio?";
+  }
+
+  if (contentType === "owner_steps_carousel") {
+    return "Which profile should an owner keep accurate first?";
+  }
+
   if (contentType === "participation_single") {
+    if (isCityRequestSlot) {
+      return "Which city or neighborhood should Rallio map next?";
+    }
+
     return signal.participation_prompt || "Which spot belongs on the taste map?";
   }
 
@@ -1114,6 +1310,14 @@ function buildSignalTakeaway(
   signal: RallioLocalSignal,
   contentType: RallioContentType,
 ) {
+  if (contentType === "supporter_steps_carousel") {
+    return `Use ${signal.spot_name} as the example first spot, but make the post explain the supporter flow: download/open Rallio, choose Supporter and city, browse or search, follow places, create a support post, and build Your Taste.`;
+  }
+
+  if (contentType === "owner_steps_carousel") {
+    return `Use ${signal.spot_name} as the example owner context, but make the post explain the owner flow: download/open Rallio, choose Business Owner, add or claim a free profile, keep details accurate, approve supporter posts, and track posts, profile clicks, and visits.`;
+  }
+
   if (contentType === "owner_claim_carousel") {
     return `Use ${signal.spot_name} as the concrete community-added profile context, but keep the angle owner-facing and occasional.`;
   }
@@ -1243,11 +1447,12 @@ export function buildRallioRouletteBrief(seed: RallioTopicSeed, quantity: number
     seed.brief,
     "",
     `Launch scope: ${RALLIO_BRAND.launch_scope}`,
-    "Seed markets can be mentioned as context, but headlines should default to neighborhood taste, regulars, and community recommendations.",
+    "Toronto + Rajkot can be mentioned when launch-market context matters, but headlines should default to useful local action, neighborhood taste, regulars, owner setup, or city-request participation.",
     "Category focus: food/drink spots people would recommend twice.",
     "Use the assigned local signal as source context. Vary spot names, categories, neighborhoods, quotes, and participation prompts across the batch.",
+    "Launch action posts must match the submitted app flow: supporters choose Supporter/city, browse/search, follow places, create support posts, and build Your Taste; owners choose Business Owner, add/claim a free profile, keep details accurate, approve supporter posts, and track posts/clicks/visits.",
     "Participation prompts are feed-post copy, not reels or stories. Use prompts like: Which spot belongs on the taste map? Drop the one order you'd defend. What place should locals stop gatekeeping? Reply with the spot regulars know.",
-    "Default feed rhythm: quote, spot card, receipt, participation prompt, then occasional owner utility.",
+    "Default launch feed rhythm: 40% local recommendations, 25% supporter step/action posts, 15% owner step/claim posts, and 20% city-request or participation prompts.",
     quantity > 1
       ? `Use this visual rhythm for this batch unless the user overrides it:\n${rhythm}`
       : "For a single post, use the selected seed as the visual direction.",
@@ -1265,6 +1470,10 @@ export function buildRallioRouletteBrief(seed: RallioTopicSeed, quantity: number
 export function mapRallioTemplateToCoreType(
   rallioTemplateType: RallioTemplateType | null | undefined,
 ): TemplateType {
+  if (rallioTemplateType === "rallio_steps") {
+    return "tutorial";
+  }
+
   if (rallioTemplateType === "rallio_owner_claim") {
     return "tutorial";
   }
@@ -1304,9 +1513,11 @@ export function normalizeRallioMetadata(
     fields.rallio_template_type ||
     fallback?.templateType ||
     templateForContentType(contentType);
+  const launchStepFields = buildLaunchStepTemplateDefaults(contentType, fields);
 
   return {
     ...fields,
+    ...launchStepFields,
     brand_slug: "rallio",
     brand_handle: RALLIO_BRAND.handle,
     launch_neighborhood: cleanNeighborhood(fields.launch_neighborhood),
@@ -1321,12 +1532,55 @@ export function normalizeRallioMetadata(
   };
 }
 
+function buildLaunchStepTemplateDefaults(
+  contentType: RallioContentType,
+  fields: TemplateFields,
+): Partial<TemplateFields> {
+  if (contentType === "supporter_steps_carousel") {
+    const supporterSteps = Array.isArray(fields.supporter_steps)
+      ? fields.supporter_steps.filter(Boolean)
+      : [];
+
+    return {
+      step_audience: "supporter",
+      supporter_steps: supporterSteps.length
+        ? supporterSteps
+        : [...RALLIO_SUPPORTER_STEPS],
+    };
+  }
+
+  if (contentType === "owner_steps_carousel") {
+    const ownerSteps = Array.isArray(fields.owner_steps)
+      ? fields.owner_steps.filter(Boolean)
+      : [];
+
+    return {
+      step_audience: "owner",
+      owner_steps: ownerSteps.length ? ownerSteps : [...RALLIO_OWNER_STEPS],
+    };
+  }
+
+  return {};
+}
+
 export function normalizeRallioCtaDoor(
   contentType: RallioContentType | null | undefined,
   ctaDoor: RallioCtaDoor | null | undefined,
 ): RallioCtaDoor {
+  if (contentType === "supporter_steps_carousel") {
+    return "app_download_supporter";
+  }
+
+  if (contentType === "owner_steps_carousel") {
+    return "app_download_owner";
+  }
+
   if (contentType === "owner_claim_carousel") {
     return "claim_your_business";
+  }
+
+  if (ctaDoor === "app_download_owner") {
+    return "founding_supporter";
   }
 
   if (ctaDoor === "claim_your_business") {
@@ -1372,6 +1626,13 @@ export function templateForContentType(
     return "rallio_owner_claim";
   }
 
+  if (
+    contentType === "supporter_steps_carousel" ||
+    contentType === "owner_steps_carousel"
+  ) {
+    return "rallio_steps";
+  }
+
   if (contentType === "participation_single") {
     return "rallio_manifesto";
   }
@@ -1380,6 +1641,18 @@ export function templateForContentType(
 }
 
 export function formatRallioDoorLabel(ctaDoor: RallioCtaDoor) {
+  if (ctaDoor === "app_download_supporter") {
+    return "Download Rallio";
+  }
+
+  if (ctaDoor === "app_download_owner") {
+    return "Owner setup";
+  }
+
+  if (ctaDoor === "city_request") {
+    return "Request your city";
+  }
+
   if (ctaDoor === "local_guide" || ctaDoor === "ossington_30_guide") {
     return "Taste map";
   }
@@ -1388,10 +1661,22 @@ export function formatRallioDoorLabel(ctaDoor: RallioCtaDoor) {
     return "Owner profile";
   }
 
-  return "Waitlist";
+  return "Download Rallio";
 }
 
 export function bioHintForDoor(ctaDoor: RallioCtaDoor) {
+  if (ctaDoor === "app_download_supporter") {
+    return "Rotate bio to the App Store download door for supporter launch posts.";
+  }
+
+  if (ctaDoor === "app_download_owner") {
+    return "Rotate bio to the owner setup door for owner-facing launch posts.";
+  }
+
+  if (ctaDoor === "city_request") {
+    return "Rotate bio to the city-request door for soft-global launch posts.";
+  }
+
   if (ctaDoor === "local_guide" || ctaDoor === "ossington_30_guide") {
     return "Rotate bio to the taste-map guide door for 48 hours after this post.";
   }
@@ -1400,7 +1685,7 @@ export function bioHintForDoor(ctaDoor: RallioCtaDoor) {
     return "Rotate bio to the owner profile door only for owner-facing posts.";
   }
 
-  return "Default link-in-bio waitlist door.";
+  return "Default link-in-bio Rallio launch door.";
 }
 
 export function enforceRallioCopySafety(content: GeneratedContent): GeneratedContent {
@@ -1416,10 +1701,14 @@ export function enforceRallioCopySafety(content: GeneratedContent): GeneratedCon
     "coupons",
     "promo code",
     "save money",
-    "download the app",
-    "app store",
-    "available now",
-    "now live",
+    "available everywhere",
+    "global app is live",
+    "global taste map is live",
+    "every city is mapped",
+    "every city is ready",
+    "worldwide coverage",
+    "reservations",
+    "moments",
     "tag a friend who",
     "launching soon",
   ];
@@ -1475,8 +1764,14 @@ export function enforceRallioCopySafety(content: GeneratedContent): GeneratedCon
     );
   }
 
+  const isOwnerFacing =
+    ctaDoor === "claim_your_business" ||
+    ctaDoor === "app_download_owner" ||
+    contentType === "owner_claim_carousel" ||
+    contentType === "owner_steps_carousel";
+
   if (
-    ctaDoor !== "claim_your_business" &&
+    !isOwnerFacing &&
     /\b(claim your business|owner claim|claim the profile|claim it)\b/.test(joined)
   ) {
     throw new Error(

@@ -134,11 +134,14 @@ export async function POST(request: Request) {
                 "founding_supporter",
                 "local_guide",
                 "claim_your_business",
+                "app_download_supporter",
+                "app_download_owner",
+                "city_request",
               ],
               funnel_cta_policy:
-                "Pick exactly one cta door per angle. Prefer founding_supporter for link-in-bio waitlist growth and local_guide for taste-map saves. Use claim_your_business only for an explicitly owner-facing utility angle.",
+                "Pick exactly one cta door per angle. Prefer app_download_supporter for supporter setup/action posts, app_download_owner for owner setup posts, city_request for next-city asks, local_guide for taste-map saves, and claim_your_business only for owner_claim_carousel.",
               feed_rhythm:
-                "Default campaign rhythm: regular_quote, spot_carousel, receipt_single, participation_single, then occasional owner_claim_carousel. For quantity 5+, include participation feed posts and at least 3 community/feed-growth angles before any owner-claim angle. Do not plan Reels or Stories for Rallio in this phase.",
+                "Default launch campaign rhythm: 40% local recommendation posts, 25% supporter_steps_carousel action posts, 15% owner_steps_carousel or owner_claim_carousel posts, and 20% city_request or participation_single posts. For quantity 5+, include at least one supporter step post, one owner step or owner utility post, and one participation or city-request post. Do not plan Reels or Stories for Rallio in this phase.",
               required_slot_plan:
                 quantity > 1
                   ? Array.from({ length: quantity }, (_, index) => {
@@ -167,10 +170,13 @@ export async function POST(request: Request) {
                 "Every angle must include brand_slug = rallio.",
                 "Every angle must include rallio_template_type, rallio_content_type, rallio_cta_door, rallio_visual_style, and rallio_kpi_intent.",
                 "Set pillar/template_type to the closest core Content OS template type even though rendering uses the Rallio template metadata.",
-                "Do not mention coupons, cashback, price-promo framing, perks, reward hype, instant access, instant downloads, app-store CTAs, or exclamation-point promo copy.",
-                "Do not use Toronto + Rajkot as repeated headline copy. Mention seed markets only when the exact scope matters.",
-                "Do not write generic launch/product angles. Rallio is the taste map being built, not a fully launched product to promote.",
+                "Do not mention coupons, cashback, price-promo framing, perks, reward hype, instant access, instant downloads, reservations, Moments, full-global availability, or exclamation-point promo copy.",
+                "Do not use Toronto + Rajkot as repeated headline copy. Mention Toronto + Rajkot as first active markets only when the exact launch scope matters.",
+                "Rallio is live in the App Store, but do not claim full global density. For people outside Toronto + Rajkot, ask them to request the next city or neighborhood.",
                 "Do not assign claim_your_business unless rallio_content_type is owner_claim_carousel and the angle is explicitly for food/drink owners.",
+                "Use app_download_owner only for owner_steps_carousel. Use app_download_supporter for supporter_steps_carousel. Use city_request for soft-global participation prompts.",
+                "supporter_steps_carousel must explain: download/open Rallio, choose Supporter and city, browse/search spots, follow places, create a support post, and build Your Taste.",
+                "owner_steps_carousel must explain: download/open Rallio, choose Business Owner, add or claim a free profile, keep details accurate, review/approve supporter posts, and track posts/profile clicks/visits.",
                 "Use each required_slot_plan local_signal as source context. Do not swap it for a generic fake restaurant.",
                 "Every non-owner angle must include a participation prompt or taste-map response ask in the angle.",
                 "Vary the angle, CTA door, local signal, spot category, neighborhood, and visual treatment across the batch where possible.",

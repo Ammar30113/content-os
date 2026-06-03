@@ -23,9 +23,14 @@ export const rallioCtaDoors = [
   "local_guide",
   "ossington_30_guide",
   "claim_your_business",
+  "app_download_supporter",
+  "app_download_owner",
+  "city_request",
 ] as const;
 export const rallioContentTypes = [
   "participation_single",
+  "supporter_steps_carousel",
+  "owner_steps_carousel",
   "manifesto_reel",
   "spot_carousel",
   "receipt_single",
@@ -39,6 +44,7 @@ export const rallioTemplateTypes = [
   "rallio_receipt",
   "rallio_regular_quote",
   "rallio_owner_claim",
+  "rallio_steps",
 ] as const;
 export const imageModes = ["template", "uploaded"] as const;
 export const postStatuses = [
@@ -181,7 +187,9 @@ export const templateFieldsSchema = z
     carousel_total: z.string().optional(),
     receipt_lines: z.array(z.string()).optional(),
     subtotal: z.string().optional(),
+    supporter_steps: z.array(z.string()).optional(),
     owner_steps: z.array(z.string()).optional(),
+    step_audience: z.enum(["supporter", "owner"]).optional(),
     info_rows: z.array(z.string()).optional(),
     quote: z.string().optional(),
     attribution: z.string().optional(),
