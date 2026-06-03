@@ -779,13 +779,9 @@ function RallioStepsTemplate({ fields }: { fields: TemplateFields }) {
     isOwner ? "Owners: claim the profile" : "Start with one spot",
     58,
   );
-  const subhead = compactText(
-    fields.subhead,
-    isOwner
-      ? "Your customers can help shape the profile. You keep it accurate."
-      : "Follow places, post real recommendations, and build Your Taste.",
-    112,
-  );
+  const subhead = isOwner
+    ? "Claim a free profile, approve supporter posts, and track attention."
+    : "Follow trusted places, share one real recommendation, and build Your Taste.";
   const background = isOwner ? rallio.ink : rallio.cream;
   const foreground = isOwner ? rallio.cream : rallio.ink;
   const muted = isOwner ? "rgba(245,235,220,0.68)" : rallio.muted;
@@ -793,7 +789,7 @@ function RallioStepsTemplate({ fields }: { fields: TemplateFields }) {
   const pillLabel = isOwner
     ? "OWNER SETUP · TORONTO + RAJKOT FIRST"
     : "APP STORE LAUNCH · TORONTO + RAJKOT FIRST";
-  const headlineSize = headline.length > 42 ? 66 : headline.length > 28 ? 78 : 92;
+  const headlineSize = headline.length > 40 ? 56 : headline.length > 24 ? 64 : 72;
 
   return (
     <Canvas background={background}>
@@ -850,10 +846,10 @@ function RallioStepsTemplate({ fields }: { fields: TemplateFields }) {
           position: "absolute",
           left: GRID_SAFE_INSET,
           right: GRID_SAFE_INSET,
-          top: 306,
+          top: 322,
           color: muted,
           fontFamily: "Manrope, Inter, Arial, sans-serif",
-          fontSize: 28,
+          fontSize: 26,
           lineHeight: 1.28,
           fontWeight: 700,
           display: "flex",
@@ -867,7 +863,7 @@ function RallioStepsTemplate({ fields }: { fields: TemplateFields }) {
           position: "absolute",
           left: GRID_SAFE_INSET,
           right: GRID_SAFE_INSET,
-          top: 390,
+          top: 404,
           display: "flex",
           flexDirection: "column",
           gap: 18,

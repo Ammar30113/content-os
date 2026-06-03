@@ -1015,15 +1015,16 @@ export function getRallioBatchSlotGuide(slot: number, signalOffset = 0) {
     throw new Error(`No Rallio batch guide candidates found for ${contentType}.`);
   }
 
+  const isCityRequestSlot =
+    contentType === "participation_single" && occurrenceIndex % 2 === 0;
   const templateType = candidate.rallioTemplateType || templateForContentType(contentType);
   const workingTitle = getBatchWorkingTitle(
     candidate.working_title,
     contentType,
     occurrenceIndex,
     localSignal,
+    isCityRequestSlot,
   );
-  const isCityRequestSlot =
-    contentType === "participation_single" && occurrenceIndex % 2 === 0;
   const participationPrompt = getParticipationPrompt(
     contentType,
     localSignal,
@@ -1079,7 +1080,20 @@ function getBatchWorkingTitle(
   contentType: RallioContentType,
   occurrenceIndex: number,
   localSignal: RallioLocalSignal,
+  isCityRequestSlot = false,
 ) {
+  if (contentType === "participation_single" && isCityRequestSlot) {
+    const cityRequestTitles = [
+      "Which City Should We Map Next?",
+      "Request The Next City",
+      "Tell Us Where To Build Next",
+      "Where Should Rallio Start Next?",
+      "Your City Can Be Next",
+    ];
+
+    return cityRequestTitles[occurrenceIndex % cityRequestTitles.length] || fallback;
+  }
+
   const signalTitleBank: Record<RallioContentType, string[]> = {
     supporter_steps_carousel: [
       "Start With One Spot",
@@ -1504,14 +1518,14 @@ export function normalizeRallioMetadata(
   },
 ): TemplateFields {
   const contentType: RallioContentType =
-    fields.content_type || fallback?.contentType || "regular_quote";
+    fallback?.contentType || fields.content_type || "regular_quote";
   const ctaDoor = normalizeRallioCtaDoor(
     contentType,
-    fields.cta_door || fallback?.ctaDoor || "founding_supporter",
+    fallback?.ctaDoor || fields.cta_door || "founding_supporter",
   );
   const rallioTemplateType: RallioTemplateType =
-    fields.rallio_template_type ||
     fallback?.templateType ||
+    fields.rallio_template_type ||
     templateForContentType(contentType);
   const launchStepFields = buildLaunchStepTemplateDefaults(contentType, fields);
 
@@ -1525,8 +1539,8 @@ export function normalizeRallioMetadata(
     content_type: contentType,
     cta_door: ctaDoor,
     rallio_template_type: rallioTemplateType,
-    visual_style: fields.visual_style || fallback?.visualStyle || RALLIO_BRAND.visual_style,
-    kpi_intent: fields.kpi_intent || fallback?.kpiIntent || "manual_review",
+    visual_style: fallback?.visualStyle || fields.visual_style || RALLIO_BRAND.visual_style,
+    kpi_intent: fallback?.kpiIntent || fields.kpi_intent || "manual_review",
     door_label: fields.door_label || formatRallioDoorLabel(ctaDoor),
     bio_rotation_hint: fields.bio_rotation_hint || bioHintForDoor(ctaDoor),
   };
