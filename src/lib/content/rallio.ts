@@ -75,7 +75,7 @@ HARD BANS
 - Do not use "Toronto + Rajkot" in headlines unless the exact market scope is the point.
 
 FUNNEL CTA DOORS
-- founding_supporter: legacy source door; prefer app_download_supporter for launch batches.
+- founding_supporter: retired pre-launch door. Never use it. Supporter-facing discovery and community posts default to app_download_supporter.
 - local_guide: invite people to save/request the neighborhood taste map or guide.
 - claim_your_business: owner-only utility; invite food/drink owners to claim a community-added profile when that owner door is intentionally selected.
 - app_download_supporter: invite supporters to download/open Rallio, choose Supporter, follow places, post real recommendations, and build Your Taste.
@@ -197,7 +197,7 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
     regular_name: "Priya",
     regular_since_year: "2019",
     participation_prompt: "What dish would you build a weeknight around?",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -212,7 +212,7 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
     regular_name: "Jonah",
     regular_since_year: "2021",
     participation_prompt: "Where is your reliable first-coffee stop?",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -257,7 +257,7 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
     regular_name: "Sofia",
     regular_since_year: "2018",
     participation_prompt: "Where do you take someone when dinner needs to feel easy?",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -287,7 +287,7 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
     regular_name: "Linh",
     regular_since_year: "2017",
     participation_prompt: "What bowl fixes the day without asking questions?",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -317,7 +317,7 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
     regular_name: "Sam",
     regular_since_year: "2019",
     participation_prompt: "Where does the table always order one more thing?",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -347,7 +347,7 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
     regular_name: "Claire",
     regular_since_year: "2022",
     participation_prompt: "What bar seat feels like the whole plan?",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -377,7 +377,7 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
     regular_name: "Rina",
     regular_since_year: "2021",
     participation_prompt: "What first stop has earned its place in your route?",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -407,7 +407,7 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
     regular_name: "Bea",
     regular_since_year: "2022",
     participation_prompt: "Where do you trust the glass someone else picks?",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -437,7 +437,7 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
     regular_name: "Owen",
     regular_since_year: "2020",
     participation_prompt: "Where does one quick drink turn into the long hang?",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -467,7 +467,7 @@ const rallioFallbackLocalSignals: RallioLocalSignal[] = [
     regular_name: "Alex",
     regular_since_year: "2017",
     participation_prompt: "What brunch line still feels calm enough to join?",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
 ];
@@ -500,7 +500,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     templateHint: "creator_economy",
     rallioTemplateType: "rallio_regular_quote",
     contentType: "regular_quote",
-    ctaDoor: "founding_supporter",
+    ctaDoor: "app_download_supporter",
     bestPostTypes: ["single", "carousel", "reel"],
     kpiIntent: "follower_growth_saves_shares",
     visualDirection:
@@ -521,7 +521,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         do_not_repeat: "Do not turn the quote into food critic language.",
         rallioTemplateType: "rallio_regular_quote",
         contentType: "regular_quote",
-        ctaDoor: "founding_supporter",
+        ctaDoor: "app_download_supporter",
       },
       {
         working_title: "The Recommendation You Trust",
@@ -534,7 +534,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         do_not_repeat: "Do not mention launch markets in the headline.",
         rallioTemplateType: "rallio_regular_quote",
         contentType: "regular_quote",
-        ctaDoor: "founding_supporter",
+        ctaDoor: "app_download_supporter",
       },
       {
         working_title: "Not A Critic Line",
@@ -547,7 +547,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         do_not_repeat: "Do not use restaurant-review cliches.",
         rallioTemplateType: "rallio_regular_quote",
         contentType: "regular_quote",
-        ctaDoor: "founding_supporter",
+        ctaDoor: "app_download_supporter",
       },
     ],
   },
@@ -620,7 +620,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     templateHint: "tutorial",
     rallioTemplateType: "rallio_receipt",
     contentType: "receipt_single",
-    ctaDoor: "founding_supporter",
+    ctaDoor: "app_download_supporter",
     bestPostTypes: ["single", "carousel"],
     kpiIntent: "saves_app_downloads",
     visualDirection:
@@ -641,7 +641,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         do_not_repeat: "Do not make this a product feature list.",
         rallioTemplateType: "rallio_receipt",
         contentType: "receipt_single",
-        ctaDoor: "founding_supporter",
+        ctaDoor: "app_download_supporter",
       },
       {
         working_title: "What Regulars Notice",
@@ -654,7 +654,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         do_not_repeat: "Do not use generic checklist language.",
         rallioTemplateType: "rallio_receipt",
         contentType: "receipt_single",
-        ctaDoor: "founding_supporter",
+        ctaDoor: "app_download_supporter",
       },
       {
         working_title: "Save Before You Forget",
@@ -716,7 +716,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         do_not_repeat: "Do not ask people to tag friends.",
         rallioTemplateType: "rallio_manifesto",
         contentType: "participation_single",
-        ctaDoor: "founding_supporter",
+        ctaDoor: "app_download_supporter",
       },
       {
         working_title: "Stop Gatekeeping The Spot",
@@ -855,7 +855,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
     templateHint: "founder_story",
     rallioTemplateType: "rallio_manifesto",
     contentType: "manifesto_reel",
-    ctaDoor: "founding_supporter",
+    ctaDoor: "app_download_supporter",
     bestPostTypes: ["single", "reel"],
     kpiIntent: "shares_app_downloads",
     visualDirection:
@@ -876,7 +876,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         do_not_repeat: "Do not use app-launch language.",
         rallioTemplateType: "rallio_manifesto",
         contentType: "manifesto_reel",
-        ctaDoor: "founding_supporter",
+        ctaDoor: "app_download_supporter",
       },
       {
         working_title: "Not A Promo Feed",
@@ -889,7 +889,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         do_not_repeat: "Do not use coupon or deal framing.",
         rallioTemplateType: "rallio_manifesto",
         contentType: "manifesto_reel",
-        ctaDoor: "founding_supporter",
+        ctaDoor: "app_download_supporter",
       },
       {
         working_title: "Build The Map Quietly",
@@ -902,7 +902,7 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
         do_not_repeat: "Do not make a city-versus-city point.",
         rallioTemplateType: "rallio_manifesto",
         contentType: "bts_story_sequence",
-        ctaDoor: "founding_supporter",
+        ctaDoor: "app_download_supporter",
       },
     ],
   },
@@ -1521,7 +1521,7 @@ export function normalizeRallioMetadata(
     fallback?.contentType || fields.content_type || "regular_quote";
   const ctaDoor = normalizeRallioCtaDoor(
     contentType,
-    fallback?.ctaDoor || fields.cta_door || "founding_supporter",
+    fallback?.ctaDoor || fields.cta_door || "app_download_supporter",
   );
   const rallioTemplateType: RallioTemplateType =
     fallback?.templateType ||
@@ -1593,15 +1593,21 @@ export function normalizeRallioCtaDoor(
     return "claim_your_business";
   }
 
-  if (ctaDoor === "app_download_owner") {
-    return "founding_supporter";
+  // Post-launch: the founding_supporter door is retired. Supporter-facing
+  // discovery and community posts drive app downloads by default.
+  if (!ctaDoor || ctaDoor === "founding_supporter") {
+    return "app_download_supporter";
   }
 
-  if (ctaDoor === "claim_your_business") {
-    return "founding_supporter";
+  // Owner-only doors do not belong on supporter-facing content; route them to
+  // the supporter download door rather than the dead founding door.
+  if (ctaDoor === "app_download_owner" || ctaDoor === "claim_your_business") {
+    return "app_download_supporter";
   }
 
-  return ctaDoor || "founding_supporter";
+  // Honor an intentional supporter-side door (app_download_supporter,
+  // city_request, local_guide, ossington_30_guide).
+  return ctaDoor;
 }
 
 const NEIGHBORHOOD_PLACEHOLDERS = new Set([

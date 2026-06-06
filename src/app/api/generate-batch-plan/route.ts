@@ -131,7 +131,6 @@ export async function POST(request: Request) {
               allowed_rallio_template_types: rallioTemplateTypes,
               allowed_rallio_content_types: rallioContentTypes,
               allowed_cta_doors: [
-                "founding_supporter",
                 "local_guide",
                 "claim_your_business",
                 "app_download_supporter",

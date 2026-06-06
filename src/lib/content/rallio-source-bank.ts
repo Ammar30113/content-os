@@ -29,7 +29,7 @@ export const rallioSourceSignals = [
     regular_name: "Chloe",
     regular_since_year: "2021",
     participation_prompt: "What dipping sauce ratio is favorite",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -74,7 +74,7 @@ export const rallioSourceSignals = [
     regular_name: "Priya",
     regular_since_year: "2016",
     participation_prompt: "What side dish completes this order",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -119,7 +119,7 @@ export const rallioSourceSignals = [
     regular_name: "Maria",
     regular_since_year: "2016",
     participation_prompt: "What dish carries the most history",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -164,7 +164,7 @@ export const rallioSourceSignals = [
     regular_name: "Emma",
     regular_since_year: "2020",
     participation_prompt: "Where do locals get their caffeine",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -209,7 +209,7 @@ export const rallioSourceSignals = [
     regular_name: "Antoine",
     regular_since_year: "2017",
     participation_prompt: "Which morning pastry rules this street",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -254,7 +254,7 @@ export const rallioSourceSignals = [
     regular_name: "Omar",
     regular_since_year: "2018",
     participation_prompt: "Which late night food is essential",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -299,7 +299,7 @@ export const rallioSourceSignals = [
     regular_name: "Marta",
     regular_since_year: "2019",
     participation_prompt: "What wine fits a coastal evening",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -344,7 +344,7 @@ export const rallioSourceSignals = [
     regular_name: "Laura",
     regular_since_year: "2017",
     participation_prompt: "Which aperitif is proper here",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -389,7 +389,7 @@ export const rallioSourceSignals = [
     regular_name: "Ali",
     regular_since_year: "2017",
     participation_prompt: "Which late night order is supreme",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -434,7 +434,7 @@ export const rallioSourceSignals = [
     regular_name: "Emre",
     regular_since_year: "2016",
     participation_prompt: "What street sandwich is local law",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -479,7 +479,7 @@ export const rallioSourceSignals = [
     regular_name: "Burak",
     regular_since_year: "2020",
     participation_prompt: "Which drink keeps you going",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -524,7 +524,7 @@ export const rallioSourceSignals = [
     regular_name: "Ananya",
     regular_since_year: "2018",
     participation_prompt: "What dumpling filling works favorite",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -569,7 +569,7 @@ export const rallioSourceSignals = [
     regular_name: "Sneha",
     regular_since_year: "2018",
     participation_prompt: "What bread snack is standard",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -614,7 +614,7 @@ export const rallioSourceSignals = [
     regular_name: "Rohan",
     regular_since_year: "2016",
     participation_prompt: "Which heavy meal is worth it",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -659,7 +659,7 @@ export const rallioSourceSignals = [
     regular_name: "Manish",
     regular_since_year: "2020",
     participation_prompt: "What chaat dish is your standard",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -704,7 +704,7 @@ export const rallioSourceSignals = [
     regular_name: "Kanya",
     regular_since_year: "2019",
     participation_prompt: "Where is the favorite iced tea hiding",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -749,7 +749,7 @@ export const rallioSourceSignals = [
     regular_name: "Yumi",
     regular_since_year: "2017",
     participation_prompt: "What skewer defines this alley",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -794,7 +794,7 @@ export const rallioSourceSignals = [
     regular_name: "Minho",
     regular_since_year: "2017",
     participation_prompt: "What noodle bowl is a must",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -839,7 +839,7 @@ export const rallioSourceSignals = [
     regular_name: "Donghae",
     regular_since_year: "2020",
     participation_prompt: "What cold dessert is unbeatable",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -884,7 +884,7 @@ export const rallioSourceSignals = [
     regular_name: "Kumar",
     regular_since_year: "2020",
     participation_prompt: "Which crab preparation wins here",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -929,7 +929,7 @@ export const rallioSourceSignals = [
     regular_name: "Olivia",
     regular_since_year: "2021",
     participation_prompt: "What wine pour do you defend",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -974,7 +974,7 @@ export const rallioSourceSignals = [
     regular_name: "Mia",
     regular_since_year: "2019",
     participation_prompt: "Which slice is true to tradition",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -1019,7 +1019,7 @@ export const rallioSourceSignals = [
     regular_name: "Chidi",
     regular_since_year: "2018",
     participation_prompt: "Which street grill is widely defended",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
@@ -1064,7 +1064,7 @@ export const rallioSourceSignals = [
     regular_name: "Aisha",
     regular_since_year: "2021",
     participation_prompt: "Which seafood grill belongs on the map",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "operator_seed_for_review",
   },
   {
@@ -1109,7 +1109,7 @@ export const rallioSourceSignals = [
     regular_name: "Sophie",
     regular_since_year: "2017",
     participation_prompt: "What wine glass starts the night",
-    cta_door: "founding_supporter",
+    cta_door: "app_download_supporter",
     source_status: "community_submitted_draft",
   },
   {
