@@ -5,6 +5,9 @@ import type {
   RallioContentType,
   RallioCtaDoor,
   RallioLocalSignal,
+  RallioPillar,
+  RallioPrimaryGoal,
+  RallioSecondaryGoal,
   RallioTemplateType,
   TemplateType,
   Tone,
@@ -1527,6 +1530,13 @@ export function normalizeRallioMetadata(
     fallback?.templateType ||
     fields.rallio_template_type ||
     templateForContentType(contentType);
+  const pillar: RallioPillar =
+    fields.rallio_pillar || pillarForContentType(contentType);
+  const defaultGoals = defaultGoalsForContentType(contentType);
+  const primaryGoal: RallioPrimaryGoal =
+    fields.primary_goal || defaultGoals.primary;
+  const secondaryGoal: RallioSecondaryGoal =
+    fields.secondary_goal || defaultGoals.secondary;
   const launchStepFields = buildLaunchStepTemplateDefaults(contentType, fields);
 
   return {
@@ -1538,6 +1548,9 @@ export function normalizeRallioMetadata(
     category_focus: fields.category_focus || RALLIO_BRAND.category_focus,
     content_type: contentType,
     cta_door: ctaDoor,
+    rallio_pillar: pillar,
+    primary_goal: primaryGoal,
+    secondary_goal: secondaryGoal,
     rallio_template_type: rallioTemplateType,
     visual_style: fallback?.visualStyle || fields.visual_style || RALLIO_BRAND.visual_style,
     kpi_intent: fallback?.kpiIntent || fields.kpi_intent || "manual_review",
@@ -1575,6 +1588,56 @@ function buildLaunchStepTemplateDefaults(
   }
 
   return {};
+}
+
+// v2 Phase 1: map each existing content type onto a strategy pillar. Debate and
+// ranking pillars have no content types yet (they arrive in Phase 3) but are part
+// of the enum for forward-compatibility.
+export function pillarForContentType(
+  contentType: RallioContentType | null | undefined,
+): RallioPillar {
+  switch (contentType) {
+    case "spot_carousel":
+    case "receipt_single":
+    case "regular_quote":
+      return "discovery";
+    case "supporter_steps_carousel":
+    case "owner_steps_carousel":
+    case "owner_claim_carousel":
+      return "product";
+    case "participation_single":
+    case "manifesto_reel":
+    case "bts_story_sequence":
+      return "community";
+    default:
+      return "discovery";
+  }
+}
+
+// v2 Phase 1: deterministic default engagement goals per content type. Phase 2
+// will make the generation prompt strategy vary by the primary goal; for now we
+// only assign and persist it so the framework is in place and queryable.
+export function defaultGoalsForContentType(
+  contentType: RallioContentType | null | undefined,
+): { primary: RallioPrimaryGoal; secondary: RallioSecondaryGoal } {
+  switch (contentType) {
+    case "spot_carousel":
+    case "receipt_single":
+    case "regular_quote":
+      return { primary: "save", secondary: "community_building" };
+    case "participation_single":
+      return { primary: "comment", secondary: "user_submission" };
+    case "manifesto_reel":
+    case "bts_story_sequence":
+      return { primary: "share", secondary: "brand_awareness" };
+    case "supporter_steps_carousel":
+      return { primary: "download", secondary: "community_building" };
+    case "owner_steps_carousel":
+    case "owner_claim_carousel":
+      return { primary: "download", secondary: "user_submission" };
+    default:
+      return { primary: "save", secondary: "community_building" };
+  }
 }
 
 export function normalizeRallioCtaDoor(

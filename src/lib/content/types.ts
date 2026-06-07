@@ -46,6 +46,29 @@ export const rallioTemplateTypes = [
   "rallio_owner_claim",
   "rallio_steps",
 ] as const;
+// v2 growth-engine taxonomy: a Rallio strategy pillar, decoupled from the
+// generic templateTypes/template_type enum (which is a visual-format taxonomy).
+export const rallioPillars = [
+  "discovery",
+  "debate",
+  "community",
+  "ranking",
+  "product",
+] as const;
+// Engagement framework: every Rallio post declares one primary engagement goal
+// and one secondary goal. Phase 1 assigns these deterministically per content
+// type; Phase 2 will make generation strategy vary by primary goal.
+export const rallioPrimaryGoals = [
+  "save",
+  "share",
+  "comment",
+  "download",
+] as const;
+export const rallioSecondaryGoals = [
+  "brand_awareness",
+  "user_submission",
+  "community_building",
+] as const;
 export const imageModes = ["template", "uploaded"] as const;
 export const postStatuses = [
   "draft",
@@ -170,6 +193,9 @@ export const templateFieldsSchema = z
     door_label: z.string().optional(),
     bio_rotation_hint: z.string().optional(),
     kpi_intent: z.string().optional(),
+    rallio_pillar: z.enum(rallioPillars).optional(),
+    primary_goal: z.enum(rallioPrimaryGoals).optional(),
+    secondary_goal: z.enum(rallioSecondaryGoals).optional(),
     business_name: z.string().optional(),
     spot_category: z.string().optional(),
     spot_address: z.string().optional(),
@@ -260,6 +286,9 @@ export type TemplateType = (typeof templateTypes)[number];
 export type RallioCtaDoor = (typeof rallioCtaDoors)[number];
 export type RallioContentType = (typeof rallioContentTypes)[number];
 export type RallioTemplateType = (typeof rallioTemplateTypes)[number];
+export type RallioPillar = (typeof rallioPillars)[number];
+export type RallioPrimaryGoal = (typeof rallioPrimaryGoals)[number];
+export type RallioSecondaryGoal = (typeof rallioSecondaryGoals)[number];
 export type RallioLocalSignal = z.infer<typeof rallioLocalSignalSchema>;
 
 export function normalizeHashtags(value: string | string[] | null | undefined) {

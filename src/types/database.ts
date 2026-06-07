@@ -45,6 +45,9 @@ export type Database = {
           tone: string;
           pillar: string | null;
           template_type: string | null;
+          rallio_pillar: string | null;
+          primary_goal: string | null;
+          secondary_goal: string | null;
           hook: string | null;
           headline: string | null;
           subhead: string | null;
@@ -76,6 +79,9 @@ export type Database = {
           tone?: string;
           pillar?: string | null;
           template_type?: string | null;
+          rallio_pillar?: string | null;
+          primary_goal?: string | null;
+          secondary_goal?: string | null;
           hook?: string | null;
           headline?: string | null;
           subhead?: string | null;
