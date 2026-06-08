@@ -111,6 +111,23 @@ export function getSupabaseServiceEnv() {
   return { ...publicEnv, serviceRoleKey };
 }
 
+export function getCodexServiceEnv() {
+  const serviceToken = process.env.CODEX_SERVICE_ROLE_KEY;
+  const ownerUserId = process.env.CODEX_POST_OWNER_USER_ID;
+
+  if (!serviceToken) {
+    throw new Error("CODEX_SERVICE_ROLE_KEY is required for Codex API access.");
+  }
+
+  if (!ownerUserId) {
+    throw new Error(
+      "CODEX_POST_OWNER_USER_ID is required so Codex writes are owned by a real user.",
+    );
+  }
+
+  return { serviceToken, ownerUserId };
+}
+
 export function getOpenAIEnv() {
   const apiKey = process.env.OPENAI_API_KEY;
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
