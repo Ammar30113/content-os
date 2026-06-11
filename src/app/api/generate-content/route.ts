@@ -504,6 +504,81 @@ function normalizeFallbackHashtags(hashtags: string[]) {
   return uniqueStrings([...normalized, ...rallioFallbackHashtags]).slice(0, 20);
 }
 
+// Built once so every request sends a byte-identical system message, letting
+// OpenAI prompt caching discount the prefix across attempts and batch slots.
+const RALLIO_GENERATION_SYSTEM_PROMPT = [
+  RALLIO_SYSTEM_PROMPT,
+  "Generate one complete Rallio Instagram post package.",
+  "Treat Rallio as live in the App Store, with Toronto + Rajkot as first active markets and a soft city-request invitation for everyone else.",
+  "Do not copy hooks, headlines, or template fields from generated_so_far.",
+  "Use one funnel CTA door only. Prefer app_download_supporter for supporter launch/action posts, app_download_owner for owner setup posts, city_request for next-city asks, local_guide for taste-map saves, and claim_your_business only when the requested content type is owner_claim_carousel.",
+  "Caption shape: 1-line hook, 1-2 lines of tension, 3-5 short bullets describing concrete local behavior or launch steps, one strong reframe ending, then hashtags.",
+  "Do not reuse copy across platforms. Instagram is spaced, X is compressed, LinkedIn is slightly expanded.",
+  "Never use exclamation points, download-now copy, coupon/cashback/reward language, reservations, Moments, perks, full-global claims, or 'tag a friend' bait.",
+  "If a repair_pass block is present in the request, fix exactly those issues while keeping everything else aligned with the contract.",
+].join(" ");
+
+const RICH_FIELD_GUIDE_SPOT =
+  "For rallio_spot_carousel: set business_name to the place name; spot_category to specific cuisine; spot_address to street/intersection (e.g. '93 Ossington Ave'); spot_list_name to the collection title in uppercase (e.g. 'THE OSSINGTON 30'); spot_list_position and spot_list_total as zero-padded strings (e.g. '04', '30'); recommender_quote to one short italic line from a believable regular; recommender_name to a first-name handle (e.g. '@mayachen' or 'Maya'); recommender_neighborhood to a lowercase short area label (e.g. 'ossington'); recommender_since to a two-digit year like \"'22\"; carousel_page and carousel_total to numeric strings like '1' and '6'.";
+const RICH_FIELD_GUIDE_QUOTE =
+  "For rallio_regular_quote: set regular_quote to the full quote; attribution to the regular's first name; regular_neighborhood to the neighborhood they regular at (e.g. 'Little Italy'); regular_since_year to a four-digit year (e.g. '2019'); business_name to the spot they're a regular of.";
+const RICH_FIELD_GUIDE_RECEIPT =
+  "For rallio_receipt: set receipt_lines as 'label · value' rows; subtotal to the final number; launch_neighborhood to the neighborhood context for the receipt.";
+const RICH_FIELD_GUIDE_SUPPORTER_STEPS =
+  "For rallio_steps with supporter_steps_carousel: set step_audience to 'supporter'; set supporter_steps to exactly these six short steps unless the assigned angle requires shorter phrasing: Download or open Rallio; Choose Supporter and select your city; Browse or search local food and drink spots; Follow places you trust; Create a support post with a real recommendation, photo, or social link; Build Your Taste from picks, live posts, places, and areas. Set cta_door to app_download_supporter.";
+const RICH_FIELD_GUIDE_OWNER_STEPS =
+  "For rallio_steps with owner_steps_carousel: set step_audience to 'owner'; set owner_steps to exactly these six short steps unless the assigned angle requires shorter phrasing: Download or open Rallio; Choose Business Owner; Add or claim a free business profile; Keep profile details accurate; Review and approve supporter posts; Track posts, profile clicks, and visits from owner home. Set cta_door to app_download_owner.";
+const RICH_FIELD_GUIDE_PARTICIPATION =
+  "For participation_single feed posts: set headline to the concrete question, set participation_prompt to the same answerable question, use the assigned local signal as the example context, and make the caption invite comments or replies without tag-a-friend bait.";
+const RICH_FIELD_GUIDE_COMMON = [
+  "When a required_local_signal is provided, copy its local_signal_id/source_status into template fields and use its spot_name, category, street, signature_order, sensory_detail, regular_quote, regular_name, regular_since_year, and participation_prompt.",
+  "Return null for any rich field you cannot fill with a concrete, believable value. Never invent stock placeholder addresses, fake handles ending in numbers like @user123, or generic neighborhoods.",
+];
+
+// Only ship the field guide for the template actually being generated; the
+// full set is reserved for manual posts where the template is still open.
+function getRichFieldGuide(
+  templateType: RallioTemplateType | null | undefined,
+  contentType: RallioContentType | null | undefined,
+) {
+  const specific =
+    contentType === "supporter_steps_carousel"
+      ? [RICH_FIELD_GUIDE_SUPPORTER_STEPS]
+      : contentType === "owner_steps_carousel"
+        ? [RICH_FIELD_GUIDE_OWNER_STEPS]
+        : contentType === "participation_single"
+          ? [RICH_FIELD_GUIDE_PARTICIPATION]
+          : templateType === "rallio_spot_carousel"
+            ? [RICH_FIELD_GUIDE_SPOT]
+            : templateType === "rallio_regular_quote"
+              ? [RICH_FIELD_GUIDE_QUOTE]
+              : templateType === "rallio_receipt"
+                ? [RICH_FIELD_GUIDE_RECEIPT]
+                : templateType === "rallio_steps"
+                  ? [RICH_FIELD_GUIDE_SUPPORTER_STEPS, RICH_FIELD_GUIDE_OWNER_STEPS]
+                  : templateType === "rallio_manifesto" ||
+                      templateType === "rallio_owner_claim"
+                    ? []
+                    : [
+                        RICH_FIELD_GUIDE_SPOT,
+                        RICH_FIELD_GUIDE_QUOTE,
+                        RICH_FIELD_GUIDE_RECEIPT,
+                        RICH_FIELD_GUIDE_SUPPORTER_STEPS,
+                        RICH_FIELD_GUIDE_OWNER_STEPS,
+                        RICH_FIELD_GUIDE_PARTICIPATION,
+                      ];
+
+  return [...specific, ...RICH_FIELD_GUIDE_COMMON].join(" ");
+}
+
+function compactPromptText(value: string | null | undefined, max = 120) {
+  if (!value) {
+    return undefined;
+  }
+
+  return value.length > max ? `${value.slice(0, max)}…` : value;
+}
+
 type NoveltyItem = {
   headline?: string | null;
   hook?: string | null;
@@ -820,12 +895,22 @@ export async function POST(request: Request) {
       .order("created_at", { ascending: false })
       .limit(20);
     const recentHistory = (recentPosts || []).map(recentPostToNoveltyItem);
-    const recentPostsToAvoid = recentHistory.map((post) => ({
-      headline: post.headline || null,
-      hook: post.hook || null,
-      business_name: post.business_name || null,
-      regular_quote: post.regular_quote || null,
-      participation_prompt: post.participation_prompt || null,
+    // The novelty gate checks the full window; the model only needs a compact
+    // sample, so cap and truncate what gets sent as prompt tokens.
+    const recentPostsToAvoid = recentHistory.slice(0, 12).map((post) => ({
+      headline: compactPromptText(post.headline),
+      hook: compactPromptText(post.hook),
+      business_name: compactPromptText(post.business_name),
+      regular_quote: compactPromptText(post.regular_quote),
+      participation_prompt: compactPromptText(post.participation_prompt),
+    }));
+    const generatedSoFarForPrompt = generatedSoFar.map((post) => ({
+      headline: compactPromptText(post.headline),
+      hook: compactPromptText(post.hook),
+      business_name: compactPromptText(post.business_name),
+      spot_category: compactPromptText(post.spot_category),
+      launch_neighborhood: compactPromptText(post.launch_neighborhood),
+      participation_prompt: compactPromptText(post.participation_prompt),
     }));
     const usedHeadlines = new Set(
       [...generatedSoFar, ...recentHistory]
@@ -833,9 +918,17 @@ export async function POST(request: Request) {
         .filter(Boolean),
     );
     const duplicateHeadlinesToAvoid = [
-      ...generatedSoFar.map((post) => post.headline),
-      ...recentHistory.map((post) => post.headline),
-    ].filter(Boolean);
+      ...new Set(
+        [
+          ...generatedSoFar.map((post) => post.headline),
+          ...recentHistory.map((post) => post.headline),
+        ].filter((value): value is string => Boolean(value)),
+      ),
+    ].slice(0, 24);
+    const richFieldGuide = getRichFieldGuide(
+      input.batch_angle?.rallio_template_type || input.rallio_template_type,
+      input.batch_angle?.rallio_content_type || input.rallio_content_type,
+    );
     // Only force the planned working title onto the headline while it is still
     // novel. Re-forcing a title that already shipped made the novelty gate
     // reject every attempt for a reason the model could never fix.
@@ -853,46 +946,71 @@ export async function POST(request: Request) {
     let fallbackCandidate: GeneratedContentPackage | null = null;
     let fallbackAttempt = 0;
 
-    for (let attempt = 1; attempt <= 4; attempt += 1) {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
       const isRepairPass = qualityFailures.length > 0;
       const response = await openai.responses.parse({
         model,
         input: [
           {
             role: "system",
-            content: [
-              RALLIO_SYSTEM_PROMPT,
-              "Generate one complete Rallio Instagram post package.",
-              "Treat Rallio as live in the App Store, with Toronto + Rajkot as first active markets and a soft city-request invitation for everyone else.",
-              "Do not copy hooks, headlines, or template fields from generated_so_far.",
-              "Use one funnel CTA door only. Prefer app_download_supporter for supporter launch/action posts, app_download_owner for owner setup posts, city_request for next-city asks, local_guide for taste-map saves, and claim_your_business only when the requested content type is owner_claim_carousel.",
-              "Caption shape: 1-line hook, 1-2 lines of tension, 3-5 short bullets describing concrete local behavior or launch steps, one strong reframe ending, then hashtags.",
-              "Do not reuse copy across platforms. Instagram is spaced, X is compressed, LinkedIn is slightly expanded.",
-              "Never use exclamation points, download-now copy, coupon/cashback/reward language, reservations, Moments, perks, full-global claims, or 'tag a friend' bait.",
-              isRepairPass
-                ? `Repair pass: previous attempt failed quality. Fix these issues: ${qualityFailures.join(" ")}`
-                : "",
-            ]
-              .filter(Boolean)
-              .join(" "),
+            content: RALLIO_GENERATION_SYSTEM_PROMPT,
           },
           {
             role: "user",
+            // Static rule blocks lead the payload and dynamic post context
+            // trails it, so prompt caching can reuse the shared prefix.
             content: JSON.stringify(
               {
+                caption_rules: {
+                  instagram:
+                    "Strong first line, 1-2 line tension, 3-5 action bullets, strong final reframe/filter/insight, then 15-25 varied hashtags. 1-3 emojis max.",
+                  x:
+                    "Under 280 characters, sharper than Instagram, 0-1 hashtag.",
+                  linkedin:
+                    "Slightly expanded, still structured, no corporate tone, no long paragraphs.",
+                },
+                cta_rotation:
+                  "Use one Rallio funnel door only. Prefer app_download_supporter for supporter launch posts, app_download_owner for owner setup posts, city_request for next-city asks, local_guide for taste-map saves/requests, and claim_your_business only for owner_claim_carousel. No download-now, instant-access, perks, rewards, reservations, Moments, or full-global CTA.",
+                visual_system: {
+                  style:
+                    "Rallio local editorial system. Cream/ink/amber/wheat/moss, Fraunces-style quote cards, spot carousel cards, receipt details, black manifesto tiles, dark owner-utility phone/profile cards.",
+                  thumbnail_rule:
+                    "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
+                  rallio_copy_rule:
+                    "No exclamation points. Do not use instant, perks, rewards, discounts, tag-a-friend bait, reservations, Moments, full-global claims, or generic launch/product hooks. Do not repeat Toronto + Rajkot in the same package.",
+                  rallio_field_specificity:
+                    "spot_category must be specific cuisine or shop type (pizza, ramen, natural wine bar, third-wave coffee, biryani, dive bar). Never return generic words like food, drink, restaurant, place, spot, or eatery. launch_neighborhood must be a real neighborhood, intersection, or street name. Never put brand catchphrases like 'taste map', 'local', or 'community' into launch_neighborhood. Return null if unknown.",
+                  template_fields:
+                    "Return every template field; use null when a field is not applicable to this template.",
+                  rallio_rich_field_guide: richFieldGuide,
+                },
+                output_economy: {
+                  reel_script:
+                    input.post_type === "reel"
+                      ? "Write a short reel script."
+                      : "Rallio is feed-only in this phase: set reel_script to an empty string.",
+                  carousel_slides:
+                    input.post_type === "carousel"
+                      ? "Write 5-7 concise carousel slides."
+                      : "Set carousel_slides to an empty array for this single-image post.",
+                },
                 task: input.batch_angle
                   ? "Generate this specific planned post from the batch campaign."
                   : "Generate a complete Rallio Instagram post package.",
                 title: idea.title || input.title,
-                brief: idea.brief || input.brief,
+                brief: input.batch_angle ? undefined : idea.brief || input.brief,
                 source_url: idea.source_url || input.source_url || null,
                 source_summary: sourceSummary || "No source URL provided.",
                 tone: input.tone,
                 rallio_context: {
                   brand: RALLIO_BRAND,
                   roulette_seed_id: input.roulette_seed_id || null,
-                  local_signal:
-                    input.batch_angle?.rallio_signal || input.rallio_signal || null,
+                  // For batch posts the signal already travels in
+                  // batch_slot_contract.required_local_signal; don't pay for
+                  // a second copy.
+                  local_signal: input.batch_angle
+                    ? undefined
+                    : input.rallio_signal || null,
                   participation_prompt:
                     input.batch_angle?.participation_prompt ||
                     input.participation_prompt ||
@@ -931,7 +1049,9 @@ export async function POST(request: Request) {
                           : "Use this as source/reference context only.",
                     }
                   : null,
-                batch_angle: input.batch_angle || null,
+                batch_angle: input.batch_angle
+                  ? { ...input.batch_angle, rallio_signal: undefined }
+                  : null,
                 batch_generation:
                   generationCount > 1
                     ? {
@@ -960,40 +1080,8 @@ export async function POST(request: Request) {
                         : "The planned working title was already used recently, so write a fresh headline with the same intent that does not appear in duplicate_headlines_to_avoid. Use required_local_signal as the source of truth for the spot, category, neighborhood, order/detail, regular quote, and participation prompt.",
                     }
                   : null,
-                generated_so_far: generatedSoFar,
+                generated_so_far: generatedSoFarForPrompt,
                 recent_posts_to_avoid: recentPostsToAvoid,
-                caption_rules: {
-                  instagram:
-                    "Strong first line, 1-2 line tension, 3-5 action bullets, strong final reframe/filter/insight, then 15-25 varied hashtags. 1-3 emojis max.",
-                  x:
-                    "Under 280 characters, sharper than Instagram, 0-1 hashtag.",
-                  linkedin:
-                    "Slightly expanded, still structured, no corporate tone, no long paragraphs.",
-                },
-                visual_system: {
-                  style:
-                    "Rallio local editorial system. Cream/ink/amber/wheat/moss, Fraunces-style quote cards, spot carousel cards, receipt details, black manifesto tiles, dark owner-utility phone/profile cards.",
-                  template_fields:
-                    "Use headline, subhead, brand_handle, launch_neighborhood, category_focus, cta_door, content_type, visual_style, rallio_template_type, door_label, bio_rotation_hint, kpi_intent, business_name, spot_category, spot_address, spot_list_name, spot_list_position, spot_list_total, recommender_quote, recommender_name, recommender_neighborhood, recommender_since, regular_quote, regular_neighborhood, regular_since_year, carousel_page, carousel_total, quote, attribution, info_rows, receipt_lines, subtotal, supporter_steps, owner_steps, step_audience, bottom_label, local_signal_id, source_status, signature_order, sensory_detail, participation_prompt, and review_notes. Return every template field; use null when unavailable.",
-                  thumbnail_rule:
-                    "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
-                  rallio_copy_rule:
-                    "No exclamation points. Do not use instant, perks, rewards, discounts, tag-a-friend bait, reservations, Moments, full-global claims, or generic launch/product hooks. Do not repeat Toronto + Rajkot in the same package.",
-                  rallio_field_specificity:
-                    "spot_category must be specific cuisine or shop type (pizza, ramen, natural wine bar, third-wave coffee, biryani, dive bar). Never return generic words like food, drink, restaurant, place, spot, or eatery. launch_neighborhood must be a real neighborhood, intersection, or street name. Never put brand catchphrases like 'taste map', 'local', or 'community' into launch_neighborhood. Return null if unknown.",
-                  rallio_rich_field_guide: [
-                    "For rallio_spot_carousel: set business_name to the place name; spot_category to specific cuisine; spot_address to street/intersection (e.g. '93 Ossington Ave'); spot_list_name to the collection title in uppercase (e.g. 'THE OSSINGTON 30'); spot_list_position and spot_list_total as zero-padded strings (e.g. '04', '30'); recommender_quote to one short italic line from a believable regular; recommender_name to a first-name handle (e.g. '@mayachen' or 'Maya'); recommender_neighborhood to a lowercase short area label (e.g. 'ossington'); recommender_since to a two-digit year like \"'22\"; carousel_page and carousel_total to numeric strings like '1' and '6'.",
-                    "For rallio_regular_quote: set regular_quote to the full quote; attribution to the regular's first name; regular_neighborhood to the neighborhood they regular at (e.g. 'Little Italy'); regular_since_year to a four-digit year (e.g. '2019'); business_name to the spot they're a regular of.",
-                    "For rallio_receipt: set receipt_lines as 'label · value' rows; subtotal to the final number; launch_neighborhood to the neighborhood context for the receipt.",
-                    "For rallio_steps with supporter_steps_carousel: set step_audience to 'supporter'; set supporter_steps to exactly these six short steps unless the assigned angle requires shorter phrasing: Download or open Rallio; Choose Supporter and select your city; Browse or search local food and drink spots; Follow places you trust; Create a support post with a real recommendation, photo, or social link; Build Your Taste from picks, live posts, places, and areas. Set cta_door to app_download_supporter.",
-                    "For rallio_steps with owner_steps_carousel: set step_audience to 'owner'; set owner_steps to exactly these six short steps unless the assigned angle requires shorter phrasing: Download or open Rallio; Choose Business Owner; Add or claim a free business profile; Keep profile details accurate; Review and approve supporter posts; Track posts, profile clicks, and visits from owner home. Set cta_door to app_download_owner.",
-                    "For participation_single feed posts: set headline to the concrete question, set participation_prompt to the same answerable question, use the assigned local signal as the example context, and make the caption invite comments or replies without tag-a-friend bait.",
-                    "When a required_local_signal is provided, copy its local_signal_id/source_status into template fields and use its spot_name, category, street, signature_order, sensory_detail, regular_quote, regular_name, regular_since_year, and participation_prompt.",
-                    "Return null for any rich field you cannot fill with a concrete, believable value. Never invent stock placeholder addresses, fake handles ending in numbers like @user123, or generic neighborhoods.",
-                  ].join(" "),
-                },
-                cta_rotation:
-                  "Use one Rallio funnel door only. Prefer app_download_supporter for supporter launch posts, app_download_owner for owner setup posts, city_request for next-city asks, local_guide for taste-map saves/requests, and claim_your_business only for owner_claim_carousel. No download-now, instant-access, perks, rewards, reservations, Moments, or full-global CTA.",
                 planned_output_contract: input.batch_angle
                   ? {
                       pillar_must_equal: input.batch_angle.pillar,
@@ -1002,9 +1090,13 @@ export async function POST(request: Request) {
                         input.batch_angle.rallio_cta_door || input.rallio_cta_door,
                     }
                   : null,
+                repair_pass: isRepairPass
+                  ? {
+                      attempt,
+                      fix_these_issues: qualityFailures,
+                    }
+                  : undefined,
               },
-              null,
-              2,
             ),
           },
         ],
@@ -1012,6 +1104,12 @@ export async function POST(request: Request) {
           format: zodTextFormat(openAIContentSchema, "content_os_post_package"),
         },
       });
+
+      if (response.usage) {
+        console.log(
+          `[generate-content] idea=${idea.id} attempt=${attempt} model=${model} input=${response.usage.input_tokens} cached=${response.usage.input_tokens_details?.cached_tokens ?? 0} output=${response.usage.output_tokens}`,
+        );
+      }
 
       const parsed = response.output_parsed;
 
