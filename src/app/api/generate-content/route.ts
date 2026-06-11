@@ -102,11 +102,9 @@ const openAIContentSchema = z.object({
   template_fields: openAITemplateFieldsSchema,
 });
 
-const recentPostSchema = z.object({
-  headline: z.string().nullable(),
-  hook: z.string().nullable(),
-  pillar: z.string().nullable(),
-});
+// Generation can run several OpenAI attempts per post; give the function
+// room on Vercel instead of dying mid-batch on the default duration.
+export const maxDuration = 300;
 
 type GeneratedContentPackage = z.infer<typeof generatedContentSchema>;
 
@@ -219,29 +217,146 @@ function getRallioFallbackMetadata(
   };
 }
 
-function createQualityFallbackContent({
+const rallioFallbackSignalHooks = [
+  (signal: RallioLocalSignal) => `${signal.spot_name} keeps showing up for a reason.`,
+  (signal: RallioLocalSignal) =>
+    `Regulars at ${signal.spot_name} already know the order.`,
+  (signal: RallioLocalSignal) =>
+    `${signal.neighborhood} keeps recommending ${signal.spot_name} without being asked.`,
+];
+
+const rallioFallbackTensionLines = [
+  (signal: RallioLocalSignal) => [
+    `${signal.regular_name} has been a ${signal.neighborhood} regular since ${signal.regular_since_year}.`,
+    `The signal: ${signal.regular_quote}`,
+  ],
+  (signal: RallioLocalSignal) => [
+    `${signal.spot_name} sits on ${signal.street} in ${signal.neighborhood}.`,
+    `${signal.regular_name} puts it simply: ${signal.regular_quote}`,
+  ],
+  (signal: RallioLocalSignal) => [
+    `The order regulars repeat: ${signal.signature_order}.`,
+    `${sentenceCase(signal.sensory_detail)}.`,
+  ],
+];
+
+const rallioFallbackXBridges = [
+  "The useful local signal is specific: regulars, owner context, repeat visits, and taste notes.",
+  "A taste map runs on specifics: the spot, the order, and the reason a regular returns.",
+  "Rankings flatten rooms. Regulars remember them.",
+];
+
+const rallioFallbackLinkedinLines = [
+  [
+    "The local discovery problem is not a lack of listings.",
+    "It is a lack of useful signal.",
+  ],
+  [
+    "Listings tell you a place exists.",
+    "Regulars tell you why it is worth returning.",
+  ],
+  ["Most feeds collect places.", "A taste map collects reasons."],
+];
+
+const rallioFallbackFinalLines = [
+  "This isn't a promo feed. It's a taste map people can help build.",
+  "The map gets sharper every time a regular writes down the reason.",
+  "Local taste survives when someone saves the why, not just the where.",
+];
+
+function hashString(value: string) {
+  return Array.from(value).reduce(
+    (total, character) => (total * 31 + character.charCodeAt(0)) >>> 0,
+    7,
+  );
+}
+
+function sanitizeFallbackCopy(value: string | null | undefined) {
+  return (value || "").replace(/!+/g, ".").replace(/\.{2,}/g, ".").trim();
+}
+
+function pickFallbackHeadline({
+  rallioFallback,
+  candidate,
+  usedHeadlines,
+  useModelCopy,
+}: {
+  rallioFallback?: RallioFallbackMetadata;
+  candidate: GeneratedContentPackage;
+  usedHeadlines: Set<string>;
+  useModelCopy: boolean;
+}) {
+  const signal = rallioFallback?.localSignal || null;
+  const options = [
+    rallioFallback?.batchWorkingTitle,
+    useModelCopy ? sanitizeFallbackCopy(candidate.headline) : null,
+    ...(signal
+      ? [
+          `${signal.spot_name} Belongs On The Map`,
+          `What Regulars Save In ${signal.neighborhood}`,
+          `The ${signal.spot_name} Signal`,
+          `Why ${signal.neighborhood} Recommends Twice`,
+        ]
+      : []),
+    "Local Discovery Needs Better Signal",
+  ].filter((value): value is string => Boolean(value && value.trim()));
+  const fresh = options.find(
+    (value) => !usedHeadlines.has(normalizeForNovelty(value)),
+  );
+
+  if (fresh) {
+    return fresh;
+  }
+
+  return signal ? `${options[0]} — ${signal.neighborhood}` : options[0];
+}
+
+function createQualityFallbackContent(args: {
+  candidate: GeneratedContentPackage;
+  failures: string[];
+  attempt: number;
+  rallioFallback?: RallioFallbackMetadata;
+  usedHeadlines: Set<string>;
+}) {
+  try {
+    return assembleFallbackContent({ ...args, useModelCopy: true });
+  } catch {
+    // The model copy reused in the fallback tripped the Rallio safety gate.
+    // Rebuild from deterministic bank copy only, which is audited safe.
+    return assembleFallbackContent({ ...args, useModelCopy: false });
+  }
+}
+
+function assembleFallbackContent({
   candidate,
   failures,
   attempt,
   rallioFallback,
+  usedHeadlines,
+  useModelCopy,
 }: {
   candidate: GeneratedContentPackage;
   failures: string[];
   attempt: number;
   rallioFallback?: RallioFallbackMetadata;
+  usedHeadlines: Set<string>;
+  useModelCopy: boolean;
 }) {
   const signal = rallioFallback?.localSignal || null;
+  const headline = pickFallbackHeadline({
+    rallioFallback,
+    candidate,
+    usedHeadlines,
+    useModelCopy,
+  });
+  const variant = hashString(`${signal?.id || ""}:${headline}`);
+  const signalHook = signal
+    ? rallioFallbackSignalHooks[variant % rallioFallbackSignalHooks.length](signal)
+    : "Local discovery needs a better signal than another five-star average.";
   const hook =
-    candidate.hook ||
-    (signal
-      ? `${signal.spot_name} keeps showing up for a reason.`
-      : candidate.headline);
-  const headline =
-    rallioFallback?.batchWorkingTitle ||
-    candidate.headline ||
-    "Local Discovery Needs Better Signal";
+    (useModelCopy ? sanitizeFallbackCopy(candidate.hook) : "") || signalHook;
   const subhead =
-    candidate.subhead ||
+    (useModelCopy ? sanitizeFallbackCopy(candidate.subhead) : "") ||
     (signal
       ? `${signal.signature_order} is the kind of local signal a taste map should keep.`
       : "Local discovery should start with taste, regulars, and owner context.");
@@ -258,9 +373,9 @@ function createQualityFallbackContent({
   ]).slice(0, 4);
   const finalLine =
     signal?.participation_prompt ||
-    "This isn't a promo feed. It's a taste map people can help build.";
+    rallioFallbackFinalLines[variant % rallioFallbackFinalLines.length];
   const hashtags = normalizeFallbackHashtags([
-    ...(candidate.hashtags || []),
+    ...(useModelCopy ? candidate.hashtags || [] : []),
     ...rallioFallbackHashtags,
   ]).slice(0, 16);
   const ctaDoor = normalizeRallioCtaDoor(
@@ -279,15 +394,16 @@ function createQualityFallbackContent({
             : ctaDoor === "local_guide" || ctaDoor === "ossington_30_guide"
               ? "Save this and use the link in bio to request the taste map."
               : "Link in bio to download Rallio and help build the taste map.";
+  const tensionLines = signal
+    ? rallioFallbackTensionLines[variant % rallioFallbackTensionLines.length](signal)
+    : [
+        "The weak local app turns every place into the same card.",
+        "The useful one captures why people actually return.",
+      ];
   const caption = [
     hook,
     "",
-    signal
-      ? `${signal.regular_name} has been a ${signal.neighborhood} regular since ${signal.regular_since_year}.`
-      : "The weak local app turns every place into the same card.",
-    signal
-      ? `The signal: ${signal.regular_quote}`
-      : "The useful one captures why people actually return.",
+    ...tensionLines,
     "",
     ...bullets.map((bullet) => `- ${bullet}`),
     "",
@@ -295,12 +411,13 @@ function createQualityFallbackContent({
     "",
     hashtags.join(" "),
   ].join("\n");
-  const xVersion = `${hook} The useful local signal is specific: regulars, owner context, repeat visits, and taste notes. ${finalLine}`;
+  const xVersion = `${hook} ${
+    rallioFallbackXBridges[variant % rallioFallbackXBridges.length]
+  } ${finalLine}`;
   const linkedinVersion = [
     hook,
     "",
-    "The local discovery problem is not a lack of listings.",
-    "It is a lack of useful signal.",
+    ...rallioFallbackLinkedinLines[variant % rallioFallbackLinkedinLines.length],
     "",
     ...bullets.map((bullet) => `- ${sentenceCase(bullet)}`),
     "",
@@ -347,6 +464,9 @@ function createQualityFallbackContent({
         failures,
         notes: [
           "OpenAI did not pass the quality gate. Rallio fallback was used.",
+          ...(useModelCopy
+            ? []
+            : ["Model copy tripped the safety gate; deterministic copy used."]),
         ],
       },
     },
@@ -400,6 +520,7 @@ function validateBatchNovelty(
   content: GeneratedContentPackage,
   generatedSoFar: NoveltyItem[],
   history: NoveltyItem[] = [],
+  hasPlannedSignal = false,
 ) {
   if (!generatedSoFar.length && !history.length) {
     return [];
@@ -409,6 +530,10 @@ function validateBatchNovelty(
   // Similarity and category/neighborhood pairing stay batch-only so legitimately
   // recurring spots across days are not blocked.
   const dedupeScope = [...generatedSoFar, ...history];
+  // When the signal is assigned by the plan, the model cannot swap the spot,
+  // quote, or signal id, so those checks only apply within the current batch.
+  // Plan-time selection is responsible for keeping signals fresh across days.
+  const signalScope = hasPlannedSignal ? generatedSoFar : dedupeScope;
   const currentHeadline = normalizeForNovelty(content.headline);
   const currentHook = normalizeForNovelty(content.hook);
   const currentQuote = normalizeForNovelty(
@@ -432,9 +557,9 @@ function validateBatchNovelty(
   ) => items.map((item) => normalizeForNovelty(item[key])).filter(Boolean);
   const previousHeadlines = collectNormalized(dedupeScope, "headline");
   const previousHooks = collectNormalized(dedupeScope, "hook");
-  const previousQuotes = collectNormalized(dedupeScope, "regular_quote");
-  const previousSignalIds = collectNormalized(dedupeScope, "local_signal_id");
-  const previousBusinesses = collectNormalized(dedupeScope, "business_name");
+  const previousQuotes = collectNormalized(signalScope, "regular_quote");
+  const previousSignalIds = collectNormalized(signalScope, "local_signal_id");
+  const previousBusinesses = collectNormalized(signalScope, "business_name");
   const batchHooks = collectNormalized(generatedSoFar, "hook");
   const batchParticipationPrompts = collectNormalized(
     generatedSoFar,
@@ -691,10 +816,35 @@ export async function POST(request: Request) {
     const { data: recentPosts } = await supabase
       .from("generated_posts")
       .select("headline, hook, pillar, template_fields")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(10);
-    const safeRecentPosts = z.array(recentPostSchema).parse(recentPosts || []);
+      .limit(20);
     const recentHistory = (recentPosts || []).map(recentPostToNoveltyItem);
+    const recentPostsToAvoid = recentHistory.map((post) => ({
+      headline: post.headline || null,
+      hook: post.hook || null,
+      business_name: post.business_name || null,
+      regular_quote: post.regular_quote || null,
+      participation_prompt: post.participation_prompt || null,
+    }));
+    const usedHeadlines = new Set(
+      [...generatedSoFar, ...recentHistory]
+        .map((post) => normalizeForNovelty(post.headline))
+        .filter(Boolean),
+    );
+    const duplicateHeadlinesToAvoid = [
+      ...generatedSoFar.map((post) => post.headline),
+      ...recentHistory.map((post) => post.headline),
+    ].filter(Boolean);
+    // Only force the planned working title onto the headline while it is still
+    // novel. Re-forcing a title that already shipped made the novelty gate
+    // reject every attempt for a reason the model could never fix.
+    const plannedWorkingTitle = input.batch_angle?.working_title?.trim() || null;
+    const forcedHeadline =
+      plannedWorkingTitle &&
+      !usedHeadlines.has(normalizeForNovelty(plannedWorkingTitle))
+        ? plannedWorkingTitle
+        : null;
     const { apiKey, model } = getOpenAIEnv();
     const openai = new OpenAI({ apiKey, timeout: 90_000, maxRetries: 1 });
 
@@ -794,24 +944,24 @@ export async function POST(request: Request) {
                 batch_slot_contract: input.batch_angle
                   ? {
                       index: input.batch_angle.index,
-                      required_working_title: input.batch_angle.working_title,
+                      required_working_title: forcedHeadline,
+                      planned_working_title: input.batch_angle.working_title,
                       required_content_type: input.batch_angle.rallio_content_type,
                       required_template_type: input.batch_angle.rallio_template_type,
                       required_visual_style: input.batch_angle.rallio_visual_style,
-                      duplicate_headlines_to_avoid: generatedSoFar
-                        .map((post) => post.headline)
-                        .filter(Boolean),
+                      duplicate_headlines_to_avoid: duplicateHeadlinesToAvoid,
                       required_local_signal: input.batch_angle.rallio_signal || null,
                       required_participation_prompt:
                         input.batch_angle.participation_prompt ||
                         input.batch_angle.rallio_signal?.participation_prompt ||
                         null,
-                      instruction:
-                        "Use the required working title as the post headline/template headline. Use required_local_signal as the source of truth for the spot, category, neighborhood, order/detail, regular quote, and participation prompt. Do not use a headline from duplicate_headlines_to_avoid.",
+                      instruction: forcedHeadline
+                        ? "Use the required working title as the post headline/template headline. Use required_local_signal as the source of truth for the spot, category, neighborhood, order/detail, regular quote, and participation prompt. Do not use a headline from duplicate_headlines_to_avoid."
+                        : "The planned working title was already used recently, so write a fresh headline with the same intent that does not appear in duplicate_headlines_to_avoid. Use required_local_signal as the source of truth for the spot, category, neighborhood, order/detail, regular quote, and participation prompt.",
                     }
                   : null,
                 generated_so_far: generatedSoFar,
-                recent_posts_to_avoid: safeRecentPosts,
+                recent_posts_to_avoid: recentPostsToAvoid,
                 caption_rules: {
                   instagram:
                     "Strong first line, 1-2 line tension, 3-5 action bullets, strong final reframe/filter/insight, then 15-25 varied hashtags. 1-3 emojis max.",
@@ -890,7 +1040,7 @@ export async function POST(request: Request) {
       const templateFieldsWithWorkflow = normalizeRallioMetadata(
         {
           ...baseTemplateFieldsWithWorkflow,
-          headline: input.batch_angle?.working_title || baseTemplateFieldsWithWorkflow.headline,
+          headline: forcedHeadline || baseTemplateFieldsWithWorkflow.headline,
         },
         rallioFallback,
       );
@@ -902,7 +1052,7 @@ export async function POST(request: Request) {
 
       const parsedContent = generatedContentSchema.parse({
         ...parsed,
-        headline: input.batch_angle?.working_title || parsed.headline,
+        headline: forcedHeadline || parsed.headline,
         pillar: forcedTemplateType,
         template_type: forcedTemplateType,
         template_fields: templateFieldsWithWorkflow,
@@ -936,6 +1086,7 @@ export async function POST(request: Request) {
         candidate,
         generatedSoFar,
         recentHistory,
+        Boolean(input.batch_angle?.rallio_signal || input.rallio_signal),
       );
 
       if (noveltyFailures.length) {
@@ -971,6 +1122,7 @@ export async function POST(request: Request) {
         failures: qualityFailures,
         attempt: fallbackAttempt,
         rallioFallback: getRallioFallbackMetadata(input),
+        usedHeadlines,
       });
     }
 
