@@ -977,18 +977,26 @@ export function selectRallioSeed({
   const recent = normalizeRecentText(recentText);
   const fresh = pool.filter((seed) => !seedMatchesRecent(seed, recent));
 
-  return (fresh.length ? fresh : pool)[0];
+  return pickRandomItem(fresh.length ? fresh : pool);
 }
 
 export function selectRallioAngle(seed: RallioTopicSeed, recentText: string) {
   const recent = normalizeRecentText(recentText);
   const fresh = seed.angleVariants.filter((angle) => !angleMatchesRecent(angle, recent));
 
-  return (fresh.length ? fresh : seed.angleVariants)[0];
+  return pickRandomItem(fresh.length ? fresh : seed.angleVariants);
 }
 
-export function getRallioContentTypeForSlot(slot: number): RallioContentType {
-  const index = Math.max(0, slot - 1) % RALLIO_DEFAULT_FEED_RHYTHM.length;
+function pickRandomItem<T>(items: readonly T[]): T {
+  return items[Math.floor(Math.random() * items.length)] || items[0];
+}
+
+export function getRallioContentTypeForSlot(
+  slot: number,
+  rhythmOffset = 0,
+): RallioContentType {
+  const index =
+    (Math.max(0, slot - 1) + rhythmOffset) % RALLIO_DEFAULT_FEED_RHYTHM.length;
 
   return RALLIO_DEFAULT_FEED_RHYTHM[index];
 }
@@ -1004,12 +1012,25 @@ export function getRallioSignalOffset(seed?: string | null) {
   ) % rallioLocalSignals.length;
 }
 
-export function getRallioBatchSlotGuide(slot: number, signalOffset = 0) {
-  const contentType = getRallioContentTypeForSlot(slot);
-  const occurrenceIndex = countContentTypeOccurrences(contentType, slot) - 1;
+export function getRallioBatchSlotGuide(
+  slot: number,
+  signalOffset = 0,
+  excludeSignalIds?: ReadonlySet<string>,
+) {
+  // The offset rotates the feed rhythm, angle candidates, and title banks so
+  // consecutive batches do not start from the same slots and working titles.
+  const rhythmOffset = signalOffset % RALLIO_DEFAULT_FEED_RHYTHM.length;
+  const contentType = getRallioContentTypeForSlot(slot, rhythmOffset);
+  const occurrenceIndex =
+    countContentTypeOccurrences(contentType, slot, rhythmOffset) - 1;
   const candidates = getAngleVariantsForContentType(contentType);
-  const candidate = candidates[occurrenceIndex % candidates.length] || candidates[0];
-  const localSignal = getRallioLocalSignalForSlot(slot + signalOffset);
+  const candidate =
+    candidates[(occurrenceIndex + signalOffset) % candidates.length] ||
+    candidates[0];
+  const localSignal = getRallioLocalSignalForSlot(
+    slot + signalOffset,
+    excludeSignalIds,
+  );
 
   if (!candidate) {
     throw new Error(`No Rallio batch guide candidates found for ${contentType}.`);
@@ -1024,6 +1045,7 @@ export function getRallioBatchSlotGuide(slot: number, signalOffset = 0) {
     occurrenceIndex,
     localSignal,
     isCityRequestSlot,
+    signalOffset,
   );
   const participationPrompt = getParticipationPrompt(
     contentType,
@@ -1081,7 +1103,10 @@ function getBatchWorkingTitle(
   occurrenceIndex: number,
   localSignal: RallioLocalSignal,
   isCityRequestSlot = false,
+  variantOffset = 0,
 ) {
+  const variantIndex = occurrenceIndex + variantOffset;
+
   if (contentType === "participation_single" && isCityRequestSlot) {
     const cityRequestTitles = [
       "Which City Should We Map Next?",
@@ -1091,7 +1116,7 @@ function getBatchWorkingTitle(
       "Your City Can Be Next",
     ];
 
-    return cityRequestTitles[occurrenceIndex % cityRequestTitles.length] || fallback;
+    return cityRequestTitles[variantIndex % cityRequestTitles.length] || fallback;
   }
 
   const signalTitleBank: Record<RallioContentType, string[]> = {
@@ -1225,26 +1250,45 @@ function getBatchWorkingTitle(
     ],
   };
 
+  const signalTitles = signalTitleBank[contentType];
+  const fallbackTitles = fallbackTitleBank[contentType];
+
   return (
-    signalTitleBank[contentType][occurrenceIndex] ||
-    fallbackTitleBank[contentType][occurrenceIndex] ||
+    signalTitles[variantIndex % signalTitles.length] ||
+    fallbackTitles[variantIndex % fallbackTitles.length] ||
     fallback
   );
 }
 
-export function getRallioLocalSignalForSlot(slot: number): RallioLocalSignal {
-  const index = Math.max(0, slot - 1) % rallioLocalSignals.length;
+export function getRallioLocalSignalForSlot(
+  slot: number,
+  excludeSignalIds?: ReadonlySet<string>,
+): RallioLocalSignal {
+  const start = Math.max(0, slot - 1);
 
-  return rallioLocalSignals[index];
+  if (excludeSignalIds?.size) {
+    // Walk forward from the slot's natural position to the first signal that
+    // has not been used recently, so planned signals stay fresh across batches.
+    for (let step = 0; step < rallioLocalSignals.length; step += 1) {
+      const candidate =
+        rallioLocalSignals[(start + step) % rallioLocalSignals.length];
+
+      if (!excludeSignalIds.has(candidate.id)) {
+        return candidate;
+      }
+    }
+  }
+
+  return rallioLocalSignals[start % rallioLocalSignals.length];
 }
 
 export function selectRallioLocalSignal(recentText = ""): RallioLocalSignal {
   const recent = normalizeRecentText(recentText);
-  const fresh = rallioLocalSignals.find(
+  const fresh = rallioLocalSignals.filter(
     (signal) => !signalMatchesRecent(signal, recent),
   );
 
-  return fresh || rallioLocalSignals[0];
+  return pickRandomItem(fresh.length ? fresh : rallioLocalSignals);
 }
 
 function signalMatchesRecent(signal: RallioLocalSignal, recent: string) {
@@ -1351,9 +1395,13 @@ function shortNeighborhood(value: string) {
   return value.split(/\s+/).slice(0, 2).join(" ");
 }
 
-function countContentTypeOccurrences(contentType: RallioContentType, slot: number) {
+function countContentTypeOccurrences(
+  contentType: RallioContentType,
+  slot: number,
+  rhythmOffset = 0,
+) {
   return Array.from({ length: Math.max(1, slot) }, (_, index) =>
-    getRallioContentTypeForSlot(index + 1),
+    getRallioContentTypeForSlot(index + 1, rhythmOffset),
   ).filter((candidate) => candidate === contentType).length;
 }
 
