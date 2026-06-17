@@ -22,8 +22,8 @@ export default function Home() {
               R
             </div>
             <div>
-              <p className="text-sm font-semibold">Rallio Content OS</p>
-              <p className="text-xs text-zinc-500">@rallio workspace</p>
+              <p className="text-sm font-semibold">Content OS</p>
+              <p className="text-xs text-zinc-500">Rallio + Signal workspace</p>
             </div>
           </div>
           <Link
@@ -37,15 +37,15 @@ export default function Home() {
         <div className="grid flex-1 items-center gap-10 py-12 lg:grid-cols-[0.95fr_1.05fr] lg:py-16">
           <div className="max-w-2xl">
             <p className="mb-4 text-sm font-medium text-[#C8923A]">
-              Rallio content operating system
+              Brand content operating system
             </p>
             <h1 className="text-4xl font-semibold leading-tight text-white sm:text-6xl">
-              Rallio Content OS
+              Content OS
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-8 text-zinc-400">
-              Build the Rallio taste map one post at a time. Turn ideas,
-              briefs, and source links into Instagram-ready post packages with
-              branded 1080x1080 images.
+              Build Rallio and Signal one post at a time. Turn ideas, briefs,
+              and source notes into Instagram-ready packages with branded
+              1080x1080 images and brand-specific Buffer routing.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link

@@ -11,6 +11,7 @@ const bufferEnvVars = [
   "BUFFER_ACCESS_TOKEN",
   "BUFFER_ORGANIZATION_ID",
   "BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID",
+  "BUFFER_SIGNAL_INSTAGRAM_CHANNEL_ID",
 ];
 
 export default async function SettingsPage() {
@@ -95,8 +96,9 @@ export default async function SettingsPage() {
               </h2>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
                 Schedule posts in Content OS, then send them into the connected
-                Rallio Instagram Buffer queue. The handoff is intentionally
-                Instagram-only and does not fall back to legacy channels.
+                brand-specific Instagram Buffer queue. The handoff is
+                intentionally Instagram-only and does not fall back across
+                Rallio or Signal channels.
               </p>
             </div>
             <StatusBadge status={bufferStatus.ok ? "approved" : "draft"} />

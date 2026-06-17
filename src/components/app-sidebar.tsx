@@ -25,9 +25,9 @@ export function AppSidebar() {
           </span>
           <span>
             <span className="block text-sm font-semibold text-white">
-              Rallio
+              Content OS
             </span>
-            <span className="block text-xs text-zinc-500">@rallio</span>
+            <span className="block text-xs text-zinc-500">Rallio + Signal</span>
           </span>
         </Link>
       </div>
@@ -58,7 +58,7 @@ export function AppSidebar() {
             Idea to image to schedule
           </p>
           <p className="mt-2 text-xs leading-5 text-zinc-500">
-            Build the Rallio taste map one post at a time.
+            Build brand-specific Instagram queues without channel fallback.
           </p>
         </div>
       </div>

@@ -6,6 +6,7 @@ import {
   getAppUrl,
   getBufferChannelEnvName,
   getBufferEnv,
+  type BufferBrand,
   type BufferPlatform,
 } from "@/lib/env";
 
@@ -52,6 +53,7 @@ export type BufferPostResult = {
 type CreateBufferPostInput = {
   postId: string;
   platform: BufferPlatform;
+  brandSlug: BufferBrand;
   text: string;
   imageUrl: string | null;
   scheduledFor: string;
@@ -75,13 +77,13 @@ const createPostMutation = `
   }
 `;
 
-export function getBufferChannelId(platform: BufferPlatform) {
+export function getBufferChannelId(platform: BufferPlatform, brandSlug: BufferBrand) {
   const env = getBufferEnv();
-  const channelId = env.channels[platform];
+  const channelId = env.brandChannels[brandSlug]?.[platform] || null;
 
   if (!channelId) {
     throw new Error(
-      `Buffer channel for Rallio ${platform} is not configured. Add ${getBufferChannelEnvName(platform)} in Vercel.`,
+      `Buffer channel for ${formatBufferBrandName(brandSlug)} ${platform} is not configured. Add ${getBufferChannelEnvName(platform, brandSlug)} in Vercel.`,
     );
   }
 
@@ -91,12 +93,13 @@ export function getBufferChannelId(platform: BufferPlatform) {
 export async function createBufferPost({
   postId,
   platform,
+  brandSlug,
   text,
   imageUrl,
   scheduledFor,
 }: CreateBufferPostInput): Promise<BufferPostResult> {
   const env = getBufferEnv();
-  const channelId = getBufferChannelId(platform);
+  const channelId = getBufferChannelId(platform, brandSlug);
   const input: Record<string, unknown> = {
     channelId,
     text,
@@ -119,7 +122,7 @@ export async function createBufferPost({
         image: {
           url: bufferImageUrl,
           metadata: {
-            altText: "Rallio social post graphic",
+            altText: `${formatBufferBrandName(brandSlug)} social post graphic`,
             dimensions: {
               width: 1080,
               height: 1080,
@@ -180,6 +183,10 @@ export async function createBufferPost({
     id: success.post.id,
     dueAt: success.post.dueAt || null,
   };
+}
+
+function formatBufferBrandName(brandSlug: BufferBrand) {
+  return brandSlug === "signal" ? "Signal" : "Rallio";
 }
 
 function getBufferImageUrl({

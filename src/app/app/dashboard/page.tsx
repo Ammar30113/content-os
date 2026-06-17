@@ -22,9 +22,9 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Rallio"
+        eyebrow="Content OS"
         title="Dashboard"
-        description="Build the Rallio taste map one Instagram post at a time. Track ideas, drafts, scheduled posts, and recent packages."
+        description="Build Rallio and Signal Instagram systems from one workspace. Track ideas, drafts, scheduled posts, and recent packages."
         action={
           <Link
             href="/app/ideas"

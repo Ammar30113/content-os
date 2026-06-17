@@ -18,13 +18,16 @@ type EnvStatus = {
 };
 
 export type BufferPlatform = "instagram" | "x" | "linkedin";
+export type BufferBrand = "rallio" | "signal";
 type BufferChannelMap = Record<BufferPlatform, string | null>;
+type BufferBrandChannelMap = Record<BufferBrand, BufferChannelMap>;
 
 type BufferEnvStatus = {
   ok: boolean;
   accessTokenConfigured: boolean;
   organizationIdConfigured: boolean;
   channels: BufferChannelMap;
+  brandChannels: BufferBrandChannelMap;
   connectedChannels: BufferPlatform[];
   connectedTargets: string[];
   missing: string[];
@@ -126,21 +129,30 @@ export function getOpenAIEnv() {
 }
 
 export function getBufferEnvStatus(): BufferEnvStatus {
-  const channels: BufferChannelMap = {
-    instagram: process.env.BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID || null,
-    x: null,
-    linkedin: null,
+  const brandChannels: BufferBrandChannelMap = {
+    rallio: {
+      instagram: process.env.BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID || null,
+      x: null,
+      linkedin: null,
+    },
+    signal: {
+      instagram: process.env.BUFFER_SIGNAL_INSTAGRAM_CHANNEL_ID || null,
+      x: null,
+      linkedin: null,
+    },
   };
-  const connectedTargets = (
-    Object.entries(channels) as [BufferPlatform, string | null][]
-  )
-    .filter(([, value]) => Boolean(value))
-    .map(([platform]) => `Rallio ${platform}`);
-  const connectedChannels = (
-    Object.entries(channels) as [BufferPlatform, string | null][]
-  )
-    .filter(([, value]) => Boolean(value))
-    .map(([platform]) => platform);
+  const connectedEntries = Object.entries(brandChannels).flatMap(
+    ([brand, channels]) =>
+      (Object.entries(channels) as [BufferPlatform, string | null][])
+        .filter(([, value]) => Boolean(value))
+        .map(([platform]) => ({ brand: brand as BufferBrand, platform })),
+  );
+  const connectedTargets = connectedEntries.map(
+    ({ brand, platform }) => `${formatBufferBrandName(brand)} ${platform}`,
+  );
+  const connectedChannels = Array.from(
+    new Set(connectedEntries.map(({ platform }) => platform)),
+  );
   const required: [string, string | undefined][] = [
     ["BUFFER_ACCESS_TOKEN", process.env.BUFFER_ACCESS_TOKEN],
     ["BUFFER_ORGANIZATION_ID", process.env.BUFFER_ORGANIZATION_ID],
@@ -150,7 +162,7 @@ export function getBufferEnvStatus(): BufferEnvStatus {
     .map(([name]) => name);
 
   if (!connectedTargets.length) {
-    missing.push("BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID");
+    missing.push("BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID or BUFFER_SIGNAL_INSTAGRAM_CHANNEL_ID");
   }
 
   const ok =
@@ -162,7 +174,8 @@ export function getBufferEnvStatus(): BufferEnvStatus {
     ok,
     accessTokenConfigured: Boolean(process.env.BUFFER_ACCESS_TOKEN),
     organizationIdConfigured: Boolean(process.env.BUFFER_ORGANIZATION_ID),
-    channels,
+    channels: brandChannels.rallio,
+    brandChannels,
     connectedChannels,
     connectedTargets,
     missing,
@@ -209,13 +222,25 @@ export function getBufferEnv() {
     accessToken,
     organizationId,
     channels: status.channels,
+    brandChannels: status.brandChannels,
   };
 }
 
-export function getBufferChannelEnvName(platform: BufferPlatform) {
-  return platform === "instagram"
-    ? "BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID"
-    : `BUFFER_RALLIO_${platform.toUpperCase()}_CHANNEL_ID`;
+export function getBufferChannelEnvName(
+  platform: BufferPlatform,
+  brand: BufferBrand = "rallio",
+) {
+  if (platform === "instagram") {
+    return brand === "signal"
+      ? "BUFFER_SIGNAL_INSTAGRAM_CHANNEL_ID"
+      : "BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID";
+  }
+
+  return `BUFFER_${brand.toUpperCase()}_${platform.toUpperCase()}_CHANNEL_ID`;
+}
+
+function formatBufferBrandName(brand: BufferBrand) {
+  return brand === "signal" ? "Signal" : "Rallio";
 }
 
 export function assertContentOsSupabaseWriteSafety() {

@@ -3,7 +3,9 @@ import "server-only";
 import { platforms } from "@/lib/content/types";
 import {
   getBufferChannelQueueCap,
-  getConfiguredBufferPlatforms,
+  getBufferChannelEnvName,
+  getBufferEnvStatus,
+  type BufferBrand,
 } from "@/lib/env";
 import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database";
@@ -40,14 +42,24 @@ export async function ensurePublishingJobsForPost(
     post.template_fields,
     post.platform,
   );
-  const effectivePlatforms = getConfiguredPublishingPlatforms(selectedPlatforms);
+  const brandSlug = getPublishingBrandSlug(post.template_fields);
+  const effectivePlatforms = getConfiguredPublishingPlatforms(
+    selectedPlatforms,
+    brandSlug,
+  );
   const skippedPlatforms = selectedPlatforms.filter(
     (platform) => !effectivePlatforms.includes(platform),
   );
 
   if (!effectivePlatforms.length) {
+    const brandHint = brandSlug
+      ? `${formatBrandName(brandSlug)} requires ${selectedPlatforms
+          .map((platform) => getBufferChannelEnvName(platform, brandSlug))
+          .join(", ")}.`
+      : "Regenerate this post with template_fields.brand_slug set to rallio or signal.";
+
     throw new Error(
-      `No configured Buffer channel matches this post. Selected: ${selectedPlatforms.join(", ")}. Configure a Buffer channel or update the post channels.`,
+      `No configured Buffer channel matches this post. Selected: ${selectedPlatforms.join(", ")}. ${brandHint}`,
     );
   }
 
@@ -228,10 +240,33 @@ export function getSelectedPublishingPlatforms(
 
 export function getConfiguredPublishingPlatforms(
   selectedPlatforms: PublishPlatform[],
+  brandSlug?: BufferBrand | null,
 ): PublishPlatform[] {
-  const configured = getConfiguredBufferPlatforms();
+  const status = getBufferEnvStatus();
+
+  if (brandSlug) {
+    return selectedPlatforms.filter((platform) =>
+      Boolean(status.brandChannels[brandSlug]?.[platform]),
+    );
+  }
+
+  const configured = status.connectedChannels;
 
   return selectedPlatforms.filter((platform) => configured.includes(platform));
+}
+
+function getPublishingBrandSlug(templateFields: Json): BufferBrand | null {
+  if (!templateFields || typeof templateFields !== "object" || Array.isArray(templateFields)) {
+    return null;
+  }
+
+  const value = templateFields.brand_slug;
+
+  return value === "rallio" || value === "signal" ? value : null;
+}
+
+function formatBrandName(brandSlug: BufferBrand) {
+  return brandSlug === "signal" ? "Signal" : "Rallio";
 }
 
 export async function getNextManualSlotForUser(

@@ -83,6 +83,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     () => parseJsonField<Record<string, unknown>>(form.template_fields, {}),
     [form.template_fields],
   );
+  const brandName = getPostBrandName(parsedTemplateFields);
   const selectedChannels = useMemo(() => ["instagram"], []);
   const hashtagsText = normalizeHashtags(form.hashtags).join(" ");
   const instagramPackage = [form.caption.trim(), hashtagsText]
@@ -431,7 +432,10 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <code>brand_slug</code>, <code>cta_door</code>,{" "}
             <code>rallio_template_type</code>, <code>receipt_lines</code>,{" "}
             <code>regular_quote</code>, <code>supporter_steps</code>,{" "}
-            <code>owner_steps</code>, and <code>step_audience</code>. Leave URL fields
+            <code>owner_steps</code>, and <code>step_audience</code>. Signal posts can use{" "}
+            <code>brand_slug</code>, <code>signal_template_type</code>,{" "}
+            <code>signal_content_type</code>, <code>signal_protocol_steps</code>,{" "}
+            <code>signal_trigger</code>, and <code>signal_redirect_action</code>. Leave URL fields
             blank unless you have a real image URL.
           </p>
           <label className="block">
@@ -527,9 +531,9 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <p className="mt-1 text-zinc-500">{selectedChannels.join(", ")}</p>
           </div>
           <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm">
-            <p className="font-medium text-[#f5ebdc]">Rallio Buffer channel</p>
+            <p className="font-medium text-[#f5ebdc]">{brandName} Buffer channel</p>
             <p className="mt-1 leading-5 text-zinc-400">
-              This package routes to the Rallio Instagram Buffer channel when
+              This package routes to the {brandName} Instagram Buffer channel when
               sent.
             </p>
           </div>
@@ -882,6 +886,10 @@ function getBufferPosts(fields: Record<string, unknown>) {
     .filter(
       (entry): entry is { platform: string; status: string } => entry !== null,
     );
+}
+
+function getPostBrandName(fields: Record<string, unknown>) {
+  return fields.brand_slug === "signal" ? "Signal" : "Rallio";
 }
 
 function getNextManualSlot(platform: string) {

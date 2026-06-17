@@ -56,6 +56,7 @@ CRON_SECRET=
 BUFFER_ACCESS_TOKEN=
 BUFFER_ORGANIZATION_ID=
 BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID=
+BUFFER_SIGNAL_INSTAGRAM_CHANNEL_ID=
 BUFFER_CHANNEL_QUEUE_CAP=
 ```
 
@@ -145,12 +146,14 @@ Buffer environment variables:
 BUFFER_ACCESS_TOKEN=
 BUFFER_ORGANIZATION_ID=
 BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID=
+BUFFER_SIGNAL_INSTAGRAM_CHANNEL_ID=
 BUFFER_CHANNEL_QUEUE_CAP=
 ```
 
-`BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID` is the only publishing channel used by the
-current handoff. Rallio posts are Instagram-only, and Content OS does not fall
-back to legacy brand channels.
+`BUFFER_RALLIO_INSTAGRAM_CHANNEL_ID` and
+`BUFFER_SIGNAL_INSTAGRAM_CHANNEL_ID` are brand-specific Instagram queues. Rallio
+and Signal posts are Instagram-only, and Content OS does not fall back across
+brand channels.
 Leave `BUFFER_CHANNEL_QUEUE_CAP` unset for paid-plan scheduling. Set it only if
 you want Content OS to enforce a local queue ceiling before handing posts to
 Buffer.
