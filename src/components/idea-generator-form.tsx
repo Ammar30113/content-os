@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, FilePlus2, ImageUp, Save, Shuffle, Sparkles } from "lucide-react";
 
 import {
+  type BrandSlug,
   type BatchAngle,
   imageModes,
   postQuantities,
@@ -17,11 +18,12 @@ import type { RallioLocalSignal } from "@/lib/content/types";
 
 type ImageMode = (typeof imageModes)[number];
 
-const rallioFeedPostTypes = postTypes.filter((type) =>
+const feedPostTypes = postTypes.filter((type) =>
   type === "single" || type === "carousel",
 );
 
 type FormState = {
+  brand_slug: BrandSlug;
   auto_topic: boolean;
   title: string;
   brief: string;
@@ -39,10 +41,16 @@ type FormState = {
   rallio_kpi_intent?: string;
   rallio_signal?: RallioLocalSignal;
   participation_prompt?: string;
+  signal_content_type?: string;
+  signal_cta_door?: string;
+  signal_template_type?: string;
+  signal_visual_style?: string;
+  signal_kpi_intent?: string;
 };
 
 function createDefaultForm(): FormState {
   return {
+    brand_slug: "rallio",
     auto_topic: false,
     title: "",
     brief: "",
@@ -57,6 +65,7 @@ function createDefaultForm(): FormState {
 }
 
 type TopicRoulettePayload = {
+  brand_slug?: BrandSlug;
   title: string;
   brief: string;
   source_url: string;
@@ -70,9 +79,14 @@ type TopicRoulettePayload = {
   rallio_kpi_intent?: string;
   rallio_signal?: RallioLocalSignal;
   participation_prompt?: string;
+  signal_content_type?: string;
+  signal_cta_door?: string;
+  signal_template_type?: string;
+  signal_visual_style?: string;
+  signal_kpi_intent?: string;
   roulette: {
     seed_id: string;
-    source: "rallio_bank";
+    source: "rallio_bank" | "signal_bank";
     visual_direction: string;
     contrast_setup: string;
     anti_generic_notes: string;
@@ -141,9 +155,30 @@ export function IdeaGeneratorForm() {
     null,
   );
   const router = useRouter();
+  const brandCopy = getBrandFormCopy(form.brand_slug);
 
   function updateField<K extends keyof FormState>(name: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function updateBrand(brandSlug: BrandSlug) {
+    setForm((current) => ({
+      ...current,
+      brand_slug: brandSlug,
+      roulette_seed_id: "",
+      rallio_content_type: undefined,
+      rallio_cta_door: undefined,
+      rallio_template_type: undefined,
+      rallio_visual_style: undefined,
+      rallio_kpi_intent: undefined,
+      rallio_signal: undefined,
+      participation_prompt: undefined,
+      signal_content_type: undefined,
+      signal_cta_door: undefined,
+      signal_template_type: undefined,
+      signal_visual_style: undefined,
+      signal_kpi_intent: undefined,
+    }));
   }
 
   function handleReferenceFile(event: ChangeEvent<HTMLInputElement>) {
@@ -182,6 +217,7 @@ export function IdeaGeneratorForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        brand_slug: form.brand_slug,
         post_type: form.post_type,
         quantity,
       }),
@@ -191,7 +227,9 @@ export function IdeaGeneratorForm() {
     );
 
     if (!response.ok) {
-      throw new Error(getApiErrorMessage(payload.error, "Could not pick a Rallio topic."));
+      throw new Error(
+        getApiErrorMessage(payload.error, `Could not pick a ${brandCopy.name} topic.`),
+      );
     }
 
     return payload as TopicRoulettePayload;
@@ -204,13 +242,14 @@ export function IdeaGeneratorForm() {
 
     setState({
       loading: true,
-      message: "Picking a Rallio community topic...",
+      message: `Picking a ${brandCopy.topicBankName} topic...`,
       error: null,
     });
 
     const roulette = await pickAutoTopic(quantity);
     const nextForm: FormState = {
       ...form,
+      brand_slug: roulette.brand_slug || form.brand_slug,
       title: roulette.title,
       brief: roulette.brief,
       source_url: roulette.source_url || "",
@@ -224,6 +263,11 @@ export function IdeaGeneratorForm() {
       rallio_kpi_intent: roulette.rallio_kpi_intent,
       rallio_signal: roulette.rallio_signal,
       participation_prompt: roulette.participation_prompt,
+      signal_content_type: roulette.signal_content_type,
+      signal_cta_door: roulette.signal_cta_door,
+      signal_template_type: roulette.signal_template_type,
+      signal_visual_style: roulette.signal_visual_style,
+      signal_kpi_intent: roulette.signal_kpi_intent,
     };
 
     setForm(nextForm);
@@ -574,21 +618,43 @@ export function IdeaGeneratorForm() {
           <FilePlus2 size={18} />
         </span>
         <div>
-          <h2 className="text-lg font-semibold text-white">New Rallio post</h2>
+          <h2 className="text-lg font-semibold text-white">
+            New {brandCopy.name} post
+          </h2>
           <p className="text-sm text-zinc-500">
-            Generate community-first taste-map content for Instagram.
+            {brandCopy.subtitle}
           </p>
         </div>
       </div>
 
       <div className="mt-6 grid gap-4">
         <section className="rounded border border-zinc-800 bg-[#0a0a0b] p-4">
+          <p className="text-sm font-medium text-zinc-300">Brand</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <TopicSourceButton
+              active={form.brand_slug === "rallio"}
+              title="Rallio"
+              description="Taste-map posts, local recommendations, city requests, and owner/supporter setup."
+              icon={<Check size={15} className="text-[#f5ebdc]" />}
+              onClick={() => updateBrand("rallio")}
+            />
+            <TopicSourceButton
+              active={form.brand_slug === "signal"}
+              title="Signal"
+              description="Private urge reset, discipline systems, pattern awareness, and App Store download posts."
+              icon={<Check size={15} className="text-[#f5ebdc]" />}
+              onClick={() => updateBrand("signal")}
+            />
+          </div>
+        </section>
+
+        <section className="rounded border border-zinc-800 bg-[#0a0a0b] p-4">
           <p className="text-sm font-medium text-zinc-300">Topic source</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <TopicSourceButton
               active={form.auto_topic}
-              title="Generate from Rallio signal bank"
-              description="Uses source details, regular quotes, and participation prompts."
+              title={brandCopy.autoTopicTitle}
+              description={brandCopy.autoTopicDescription}
               icon={<Shuffle size={15} className="text-[#f5ebdc]" />}
               onClick={() => updateField("auto_topic", true)}
             />
@@ -611,7 +677,7 @@ export function IdeaGeneratorForm() {
                 value={form.title}
                 onChange={(event) => updateField("title", event.target.value)}
                 className="mt-2 h-11 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 text-sm text-white outline-none focus:border-[#C8923A]"
-                placeholder="Bang Bang Ice Cream, Ossington 30, Tuesday regular at Bar Isabel"
+                placeholder={brandCopy.topicPlaceholder}
               />
             </label>
             <label className="block">
@@ -623,16 +689,13 @@ export function IdeaGeneratorForm() {
                 value={form.brief}
                 onChange={(event) => updateField("brief", event.target.value)}
                 className="mt-2 min-h-32 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 py-3 text-sm leading-6 text-white outline-none focus:border-[#C8923A]"
-                placeholder="What's the angle? Who's the regular? Why does this spot belong on the taste map?"
+                placeholder={brandCopy.briefPlaceholder}
               />
             </label>
           </>
         ) : (
           <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
-            Auto-pick fills a feed-growth topic, taste-map source details,
-            participation prompt, funnel door, tone, template type, and visual
-            direction from the Rallio signal bank. Owner utility stays
-            occasional in batch planning.
+            {brandCopy.autoTopicExplainer}
           </div>
         )}
         {!form.auto_topic ? (
@@ -664,7 +727,7 @@ export function IdeaGeneratorForm() {
             <ImageModeButton
               active={form.image_mode === "template"}
               title="Render template"
-              description="Default Rallio image."
+              description={brandCopy.templateImageDescription}
               onClick={() => updateField("image_mode", "template")}
             />
             <ImageModeButton
@@ -687,7 +750,7 @@ export function IdeaGeneratorForm() {
           <SelectField
             label="Post type"
             value={form.post_type}
-            options={rallioFeedPostTypes}
+            options={feedPostTypes}
             onChange={(value) => updateField("post_type", value)}
           />
           <SelectField
@@ -710,10 +773,7 @@ export function IdeaGeneratorForm() {
           />
         </div>
         <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
-          Rallio posts are Instagram-only. They route to the Rallio Buffer
-          channel for App Store launch posts, supporter/owner setup steps,
-          city requests, and taste-map participation with no legacy-channel
-          fallback.
+          {brandCopy.routingNote}
         </div>
       </div>
 
@@ -753,6 +813,47 @@ export function IdeaGeneratorForm() {
       ) : null}
     </form>
   );
+}
+
+function getBrandFormCopy(brandSlug: BrandSlug) {
+  if (brandSlug === "signal") {
+    return {
+      name: "Signal",
+      subtitle:
+        "Generate private urge-reset, discipline, pattern-awareness, and App Store launch content for Instagram.",
+      topicBankName: "Signal discipline bank",
+      autoTopicTitle: "Generate from Signal discipline bank",
+      autoTopicDescription:
+        "Uses protocol steps, trigger patterns, identity anchors, privacy notes, and app-download CTAs.",
+      topicPlaceholder:
+        "10-minute reset, late-night phone loop, identity anchor, private check-in",
+      briefPlaceholder:
+        "What behavior loop, protocol step, privacy point, or app action should this post make concrete?",
+      autoTopicExplainer:
+        "Auto-pick fills a Signal feed topic, content type, CTA door, template style, and visual direction from the Signal discipline bank. Posts stay feed-only, practical, private, and App Store oriented.",
+      templateImageDescription: "Default Signal dark-mode image.",
+      routingNote:
+        "Signal posts are Instagram-only. They route to the Signal Buffer channel for App Store download, SOS protocol, pattern-map, privacy, and identity-anchor posts with no Rallio-channel fallback.",
+    };
+  }
+
+  return {
+    name: "Rallio",
+    subtitle: "Generate community-first taste-map content for Instagram.",
+    topicBankName: "Rallio community bank",
+    autoTopicTitle: "Generate from Rallio signal bank",
+    autoTopicDescription:
+      "Uses source details, regular quotes, and participation prompts.",
+    topicPlaceholder:
+      "Bang Bang Ice Cream, Ossington 30, Tuesday regular at Bar Isabel",
+    briefPlaceholder:
+      "What's the angle? Who's the regular? Why does this spot belong on the taste map?",
+    autoTopicExplainer:
+      "Auto-pick fills a feed-growth topic, taste-map source details, participation prompt, funnel door, tone, template type, and visual direction from the Rallio signal bank. Owner utility stays occasional in batch planning.",
+    templateImageDescription: "Default Rallio image.",
+    routingNote:
+      "Rallio posts are Instagram-only. They route to the Rallio Buffer channel for App Store launch posts, supporter/owner setup steps, city requests, and taste-map participation with no legacy-channel fallback.",
+  };
 }
 
 function SelectField({

@@ -14,11 +14,13 @@ import {
 } from "@/lib/content/rallio";
 import {
   batchAngleSchema,
+  type BatchAngle,
   ideaInputSchema,
   rallioContentTypes,
   rallioTemplateTypes,
   templateTypes,
 } from "@/lib/content/types";
+import { getSignalBatchSlotGuide, SIGNAL_BRAND } from "@/lib/content/signal";
 import {
   assertContentOsSupabaseWriteSafety,
   getOpenAIEnv,
@@ -73,6 +75,48 @@ export async function POST(request: Request) {
 
     if (ideaError || !idea) {
       throw new Error(ideaError?.message || "Could not create campaign idea.");
+    }
+
+    if (input.brand_slug === "signal") {
+      const angles: BatchAngle[] = Array.from({ length: quantity }, (_, index) => {
+        const guide = getSignalBatchSlotGuide(index + 1);
+
+        return {
+          index: guide.slot,
+          brand_slug: "signal",
+          working_title: guide.workingTitle,
+          pillar: guide.coreTemplateType,
+          template_type: guide.coreTemplateType,
+          hook_direction: guide.hookDirection,
+          audience_pain_point:
+            "The user notices a familiar urge loop, late-night phone pull, bargaining script, or loss of structure and wants a private reset before acting automatically.",
+          unique_takeaway: guide.uniqueTakeaway,
+          caption_structure: guide.captionStructure,
+          do_not_repeat: guide.doNotRepeat,
+          rallio_template_type: null,
+          rallio_content_type: null,
+          rallio_cta_door: null,
+          rallio_visual_style: null,
+          rallio_kpi_intent: null,
+          rallio_signal: null,
+          participation_prompt: null,
+          signal_template_type: guide.templateType,
+          signal_content_type: guide.contentType,
+          signal_cta_door: guide.ctaDoor,
+          signal_visual_style: guide.visualStyle,
+          signal_kpi_intent: guide.kpiIntent,
+        };
+      });
+
+      return jsonOk({
+        idea,
+        plan: {
+          campaign_title: `${SIGNAL_BRAND.name} Instagram launch system`,
+          strategy_summary:
+            "Signal posts are Instagram-only and focus on private urge interruption, discipline systems, pattern awareness, identity anchors, and app-download intent without explicit content, shame, surveillance, or book-quote copying.",
+          angles,
+        },
+      });
     }
 
     const { data: recentPosts } = await supabase

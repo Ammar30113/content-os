@@ -14,6 +14,13 @@ import {
   RALLIO_BRAND,
   RALLIO_SYSTEM_PROMPT,
 } from "@/lib/content/rallio";
+import {
+  enforceSignalCopySafety,
+  mapSignalTemplateToCoreType,
+  normalizeSignalMetadata,
+  SIGNAL_BRAND,
+  SIGNAL_SYSTEM_PROMPT,
+} from "@/lib/content/signal";
 import { validateGeneratedContentQuality } from "@/lib/content/quality";
 import {
   assertContentOsSupabaseWriteSafety,
@@ -22,9 +29,13 @@ import {
 import {
   generatedContentSchema,
   ideaInputSchema,
+  brandSlugs,
   rallioContentTypes,
   rallioCtaDoors,
   rallioTemplateTypes,
+  signalContentTypes,
+  signalCtaDoors,
+  signalTemplateTypes,
   templateTypes,
 } from "@/lib/content/types";
 import type {
@@ -32,6 +43,9 @@ import type {
   RallioCtaDoor,
   RallioLocalSignal,
   RallioTemplateType,
+  SignalContentType,
+  SignalCtaDoor,
+  SignalTemplateType,
 } from "@/lib/content/types";
 import type { Json } from "@/types/database";
 
@@ -43,6 +57,7 @@ const openAITemplateFieldsSchema = z.object({
   bottom_label: z.string().nullable(),
   info_rows: z.array(z.string()).nullable(),
   review_notes: z.string().nullable(),
+  brand_slug: z.enum(brandSlugs).nullable(),
   brand_handle: z.string().nullable(),
   launch_neighborhood: z.string().nullable(),
   category_focus: z.string().nullable(),
@@ -78,6 +93,19 @@ const openAITemplateFieldsSchema = z.object({
   signature_order: z.string().nullable(),
   sensory_detail: z.string().nullable(),
   participation_prompt: z.string().nullable(),
+  signal_template_type: z.enum(signalTemplateTypes).nullable(),
+  signal_content_type: z.enum(signalContentTypes).nullable(),
+  signal_cta_door: z.enum(signalCtaDoors).nullable(),
+  signal_visual_style: z.string().nullable(),
+  signal_kpi_intent: z.string().nullable(),
+  signal_state: z.enum(["green", "yellow", "red"]).nullable(),
+  signal_protocol_steps: z.array(z.string()).nullable(),
+  signal_trigger: z.string().nullable(),
+  signal_redirect_action: z.string().nullable(),
+  signal_identity_line: z.string().nullable(),
+  signal_privacy_line: z.string().nullable(),
+  signal_principle: z.string().nullable(),
+  signal_app_feature: z.string().nullable(),
 });
 
 const openAIContentSchema = z.object({
@@ -146,6 +174,7 @@ function normalizeTemplateFields(
     bottom_label: fields.bottom_label || undefined,
     info_rows: fields.info_rows || undefined,
     review_notes: fields.review_notes || undefined,
+    brand_slug: fields.brand_slug || undefined,
     brand_handle: fields.brand_handle || undefined,
     launch_neighborhood: fields.launch_neighborhood || undefined,
     category_focus: fields.category_focus || undefined,
@@ -181,6 +210,19 @@ function normalizeTemplateFields(
     signature_order: fields.signature_order || undefined,
     sensory_detail: fields.sensory_detail || undefined,
     participation_prompt: fields.participation_prompt || undefined,
+    signal_template_type: fields.signal_template_type || undefined,
+    signal_content_type: fields.signal_content_type || undefined,
+    signal_cta_door: fields.signal_cta_door || undefined,
+    signal_visual_style: fields.signal_visual_style || undefined,
+    signal_kpi_intent: fields.signal_kpi_intent || undefined,
+    signal_state: fields.signal_state || undefined,
+    signal_protocol_steps: fields.signal_protocol_steps || undefined,
+    signal_trigger: fields.signal_trigger || undefined,
+    signal_redirect_action: fields.signal_redirect_action || undefined,
+    signal_identity_line: fields.signal_identity_line || undefined,
+    signal_privacy_line: fields.signal_privacy_line || undefined,
+    signal_principle: fields.signal_principle || undefined,
+    signal_app_feature: fields.signal_app_feature || undefined,
   };
 }
 
@@ -193,6 +235,15 @@ type RallioFallbackMetadata = {
   batchWorkingTitle?: string;
   localSignal?: RallioLocalSignal | null;
   participationPrompt?: string | null;
+};
+
+type SignalFallbackMetadata = {
+  contentType?: SignalContentType;
+  ctaDoor?: SignalCtaDoor;
+  templateType?: SignalTemplateType;
+  visualStyle?: string;
+  kpiIntent?: string;
+  batchWorkingTitle?: string;
 };
 
 function getRallioFallbackMetadata(
@@ -216,6 +267,27 @@ function getRallioFallbackMetadata(
     localSignal: input.batch_angle?.rallio_signal || input.rallio_signal || null,
     participationPrompt:
       input.batch_angle?.participation_prompt || input.participation_prompt || null,
+  };
+}
+
+function getSignalFallbackMetadata(
+  input: z.infer<typeof ideaInputSchema>,
+): SignalFallbackMetadata {
+  return {
+    contentType:
+      input.batch_angle?.signal_content_type || input.signal_content_type || undefined,
+    ctaDoor: input.batch_angle?.signal_cta_door || input.signal_cta_door || undefined,
+    templateType:
+      input.batch_angle?.signal_template_type ||
+      input.signal_template_type ||
+      undefined,
+    visualStyle:
+      input.batch_angle?.signal_visual_style ||
+      input.signal_visual_style ||
+      SIGNAL_BRAND.visual_style,
+    kpiIntent:
+      input.batch_angle?.signal_kpi_intent || input.signal_kpi_intent || undefined,
+    batchWorkingTitle: input.batch_angle?.working_title,
   };
 }
 
@@ -567,6 +639,32 @@ function validateRallioSpecificity(
   return failures;
 }
 
+function validateSignalSpecificity(content: GeneratedContentPackage) {
+  const failures: string[] = [];
+  const fields = content.template_fields;
+  const concreteDetails = [
+    fields.signal_trigger,
+    fields.signal_redirect_action,
+    fields.signal_identity_line,
+    fields.signal_privacy_line,
+    fields.signal_principle,
+    fields.signal_app_feature,
+    ...(fields.signal_protocol_steps || []),
+  ].filter((value): value is string => typeof value === "string" && value.trim().length > 3);
+
+  if (!concreteDetails.length) {
+    failures.push(
+      "Signal post is missing a concrete app detail such as trigger, protocol step, redirect action, identity line, privacy line, or pattern cue.",
+    );
+  }
+
+  if (!fields.signal_content_type || !fields.signal_template_type) {
+    failures.push("Signal post is missing Signal content/template metadata.");
+  }
+
+  return failures;
+}
+
 function isGenericBusinessName(value: string) {
   const normalized = normalizeForNovelty(value);
 
@@ -698,6 +796,265 @@ export async function POST(request: Request) {
     const { apiKey, model } = getOpenAIEnv();
     const openai = new OpenAI({ apiKey, timeout: 90_000, maxRetries: 1 });
 
+    if (input.brand_slug === "signal") {
+      let signalContent: GeneratedContentPackage | null = null;
+      let signalQualityFailures: string[] = [];
+      const signalFallback = getSignalFallbackMetadata(input);
+
+      for (let attempt = 1; attempt <= 4; attempt += 1) {
+        const isRepairPass = signalQualityFailures.length > 0;
+        const response = await openai.responses.parse({
+          model,
+          input: [
+            {
+              role: "system",
+              content: [
+                SIGNAL_SYSTEM_PROMPT,
+                "Generate one complete Signal Instagram feed-post package.",
+                "Signal is a separate app from Rallio. Do not mention Rallio, taste maps, restaurants, city launches, owners, or local food discovery.",
+                "Use original discipline language only. Do not quote Atomic Habits, James Clear, or any book verbatim or by name.",
+                "Do not use explicit sexual language, medical claims, cure language, shame streaks, surveillance, blockers, or screenshots.",
+                "Caption shape: 1-line hook, one short tension line, 3-5 short bullets, one grounded closing line, then hashtags.",
+                "Return Instagram-only metadata: selected_platforms must be [\"instagram\"], brand_slug must be signal, and all Rallio-only fields must be null.",
+                "Never use exclamation points, guaranteed outcomes, perfect streak claims, download-now language, coupons, rewards, or tag-a-friend bait.",
+                isRepairPass
+                  ? `Repair pass: previous attempt failed quality. Fix these issues: ${signalQualityFailures.join(" ")}`
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" "),
+            },
+            {
+              role: "user",
+              content: JSON.stringify(
+                {
+                  task: input.batch_angle
+                    ? "Generate this specific planned Signal post from the batch campaign."
+                    : "Generate a complete Signal Instagram feed post package.",
+                  title: idea.title || input.title,
+                  brief: idea.brief || input.brief,
+                  source_url: idea.source_url || input.source_url || null,
+                  source_summary: sourceSummary || "No source URL provided.",
+                  tone: input.tone,
+                  signal_context: {
+                    brand: SIGNAL_BRAND,
+                    roulette_seed_id: input.roulette_seed_id || null,
+                    content_type: signalFallback.contentType || null,
+                    signal_template_type: signalFallback.templateType || null,
+                    cta_door: signalFallback.ctaDoor || null,
+                    visual_style: signalFallback.visualStyle || SIGNAL_BRAND.visual_style,
+                    kpi_intent: signalFallback.kpiIntent || null,
+                    instruction:
+                      "Return a Signal feed post about private urge awareness, interruption, redirection, pattern awareness, privacy, or app setup. Keep it dignified and practical. Store Signal metadata in template_fields.",
+                  },
+                  reference_image: referenceImageUrl
+                    ? {
+                        url: referenceImageUrl,
+                        mode:
+                          input.image_mode === "uploaded"
+                            ? "Use this uploaded image as the final image. Still generate strong copy and editable template fields."
+                            : "Use this as source/reference context only.",
+                      }
+                    : null,
+                  batch_angle: input.batch_angle || null,
+                  batch_generation:
+                    generationCount > 1
+                      ? {
+                          current_package: generationIndex,
+                          total_packages: generationCount,
+                          instruction:
+                            "Obey the planned batch angle. This post must be distinct from other batch items in hook, headline, takeaway, CTA, examples, caption shape, and template fields.",
+                        }
+                      : null,
+                  batch_slot_contract: input.batch_angle
+                    ? {
+                        index: input.batch_angle.index,
+                        required_working_title: input.batch_angle.working_title,
+                        required_content_type: input.batch_angle.signal_content_type,
+                        required_template_type: input.batch_angle.signal_template_type,
+                        required_visual_style: input.batch_angle.signal_visual_style,
+                        duplicate_headlines_to_avoid: generatedSoFar
+                          .map((post) => post.headline)
+                          .filter(Boolean),
+                        instruction:
+                          "Use the required working title as the post headline/template headline. Do not use a headline from duplicate_headlines_to_avoid.",
+                      }
+                    : null,
+                  generated_so_far: generatedSoFar,
+                  recent_posts_to_avoid: safeRecentPosts,
+                  caption_rules: {
+                    instagram:
+                      "Strong first line, one tension line, 3-5 action bullets, one grounded final line, then 8-15 varied hashtags. No explicit terms and no motivational poster tone.",
+                    x: "Under 280 characters, sharper than Instagram, no hashtags unless truly needed.",
+                    linkedin:
+                      "Slightly expanded, still private and practical, no long paragraphs and no clinical framing.",
+                  },
+                  visual_system: {
+                    style:
+                      "Signal dark-mode behavioral control system. Ink surfaces, off-white type, green/yellow/red state accents, quiet protocol cards, identity anchors, privacy cards, and no shame aesthetic.",
+                    template_fields:
+                      "Use headline, subhead, quote, attribution, bottom_label, info_rows, review_notes, brand_slug, brand_handle, signal_template_type, signal_content_type, signal_cta_door, signal_visual_style, signal_kpi_intent, signal_state, signal_protocol_steps, signal_trigger, signal_redirect_action, signal_identity_line, signal_privacy_line, signal_principle, signal_app_feature, door_label, bio_rotation_hint. Return every template field; use null when unavailable. Return null for all Rallio-only fields.",
+                    field_specificity:
+                      "signal_trigger should be a concrete cue like late-night phone, boredom, isolation, stress, or purposeless scrolling. signal_redirect_action should be a concrete action like walk without phone, cold water, leave the room, pushups, write it down, or text someone. signal_protocol_steps should be 4-6 short actions when the template is protocol or steps.",
+                    thumbnail_rule:
+                      "The image must work as a small Instagram grid thumbnail. Use short, direct headlines and avoid tiny dense copy.",
+                  },
+                  cta_rotation:
+                    "Use one Signal door only: app_download for download/open Signal, sos_protocol for the 10-minute reset, check_in for slip review or reflection, pattern_map for trigger awareness, privacy_first for privacy/trust, identity_anchor for identity posts.",
+                  planned_output_contract: input.batch_angle
+                    ? {
+                        pillar_must_equal: input.batch_angle.pillar,
+                        template_type_must_equal: input.batch_angle.template_type,
+                        cta_should_match:
+                          input.batch_angle.signal_cta_door || input.signal_cta_door,
+                      }
+                    : null,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+          text: {
+            format: zodTextFormat(openAIContentSchema, "content_os_signal_package"),
+          },
+        });
+
+        const parsed = response.output_parsed;
+
+        if (!parsed) {
+          throw new Error("OpenAI did not return a structured Signal package.");
+        }
+
+        const normalizedTemplateFields = normalizeTemplateFields(parsed.template_fields);
+        const templateFieldsWithWorkflow = normalizeSignalMetadata(
+          {
+            ...normalizedTemplateFields,
+            headline:
+              signalFallback.batchWorkingTitle || normalizedTemplateFields.headline,
+            reference_image_url: referenceImageUrl,
+            reference_image_asset_id: input.reference_image_asset_id,
+            selected_platforms: ["instagram" as const],
+            image_mode: input.image_mode,
+          },
+          signalFallback,
+        );
+        const forcedTemplateType = mapSignalTemplateToCoreType(
+          templateFieldsWithWorkflow.signal_template_type ||
+            input.batch_angle?.signal_template_type ||
+            input.signal_template_type,
+        );
+        const parsedContent = generatedContentSchema.parse({
+          ...parsed,
+          headline: signalFallback.batchWorkingTitle || parsed.headline,
+          pillar: forcedTemplateType,
+          template_type: forcedTemplateType,
+          template_fields: templateFieldsWithWorkflow,
+        });
+
+        let candidate: GeneratedContentPackage;
+
+        try {
+          candidate = enforceSignalCopySafety(parsedContent);
+        } catch (safetyError) {
+          signalQualityFailures = [
+            safetyError instanceof Error
+              ? safetyError.message
+              : "Signal safety gate rejected the generated copy.",
+          ];
+          continue;
+        }
+
+        const specificityFailures = validateSignalSpecificity(candidate);
+
+        if (specificityFailures.length) {
+          signalQualityFailures = specificityFailures;
+          continue;
+        }
+
+        const noveltyFailures = validateBatchNovelty(
+          candidate,
+          generatedSoFar,
+          recentHistory,
+        );
+
+        if (noveltyFailures.length) {
+          signalQualityFailures = noveltyFailures;
+          continue;
+        }
+
+        const qualityResult = validateGeneratedContentQuality({
+          content: candidate,
+        });
+
+        if (qualityResult.ok) {
+          signalContent = {
+            ...candidate,
+            template_fields: {
+              ...candidate.template_fields,
+              quality_gate: {
+                passed: true,
+                attempt,
+                notes: qualityResult.notes,
+              },
+            },
+          };
+          break;
+        }
+
+        signalQualityFailures = qualityResult.failures;
+      }
+
+      if (!signalContent) {
+        throw new Error(
+          `Signal quality gate rejected generated output: ${signalQualityFailures.join(" ")}`,
+        );
+      }
+
+      const { data: post, error: postError } = await supabase
+        .from("generated_posts")
+        .insert({
+          user_id: user.id,
+          idea_id: idea.id,
+          platform: "instagram",
+          post_type: input.post_type,
+          tone: input.tone,
+          pillar: signalContent.pillar,
+          template_type: signalContent.template_type,
+          rallio_pillar: signalContent.template_fields.rallio_pillar ?? null,
+          primary_goal: signalContent.template_fields.primary_goal ?? null,
+          secondary_goal: signalContent.template_fields.secondary_goal ?? null,
+          hook: signalContent.hook,
+          headline: signalContent.headline,
+          subhead: signalContent.subhead,
+          caption: signalContent.caption,
+          hashtags: signalContent.hashtags,
+          cta: signalContent.cta,
+          carousel_slides: signalContent.carousel_slides,
+          reel_script: signalContent.reel_script,
+          x_version: signalContent.x_version,
+          linkedin_version: signalContent.linkedin_version,
+          image_prompt: signalContent.image_prompt,
+          template_fields: signalContent.template_fields as Json,
+          image_url: input.image_mode === "uploaded" ? referenceImageUrl : null,
+          status: "draft",
+          image_status: input.image_mode === "uploaded" ? "generated" : "not_generated",
+        })
+        .select()
+        .single();
+
+      if (postError || !post) {
+        throw new Error(postError?.message || "Could not create generated post.");
+      }
+
+      await supabase
+        .from("content_ideas")
+        .update({ status: "generated" })
+        .eq("id", idea.id);
+
+      return jsonOk({ idea, post, content: signalContent });
+    }
+
     let content: GeneratedContentPackage | null = null;
     let qualityFailures: string[] = [];
     let fallbackCandidate: GeneratedContentPackage | null = null;
@@ -824,7 +1181,7 @@ export async function POST(request: Request) {
                   style:
                     "Rallio local editorial system. Cream/ink/amber/wheat/moss, Fraunces-style quote cards, spot carousel cards, receipt details, black manifesto tiles, dark owner-utility phone/profile cards.",
                   template_fields:
-                    "Use headline, subhead, brand_handle, launch_neighborhood, category_focus, cta_door, content_type, visual_style, rallio_template_type, door_label, bio_rotation_hint, kpi_intent, business_name, spot_category, spot_address, spot_list_name, spot_list_position, spot_list_total, recommender_quote, recommender_name, recommender_neighborhood, recommender_since, regular_quote, regular_neighborhood, regular_since_year, carousel_page, carousel_total, quote, attribution, info_rows, receipt_lines, subtotal, supporter_steps, owner_steps, step_audience, bottom_label, local_signal_id, source_status, signature_order, sensory_detail, participation_prompt, and review_notes. Return every template field; use null when unavailable.",
+                    "Use headline, subhead, brand_slug, brand_handle, launch_neighborhood, category_focus, cta_door, content_type, visual_style, rallio_template_type, door_label, bio_rotation_hint, kpi_intent, business_name, spot_category, spot_address, spot_list_name, spot_list_position, spot_list_total, recommender_quote, recommender_name, recommender_neighborhood, recommender_since, regular_quote, regular_neighborhood, regular_since_year, carousel_page, carousel_total, quote, attribution, info_rows, receipt_lines, subtotal, supporter_steps, owner_steps, step_audience, bottom_label, local_signal_id, source_status, signature_order, sensory_detail, participation_prompt, and review_notes. Return every template field; use null when unavailable.",
                   thumbnail_rule:
                     "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
                   rallio_copy_rule:

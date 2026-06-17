@@ -23,7 +23,7 @@ export default async function PostsPage() {
       <PageHeader
         eyebrow="Review"
         title="Posts"
-        description="Generated Rallio Instagram packages, branded images, approvals, and schedules."
+        description="Generated Rallio and Signal Instagram packages, branded images, approvals, and schedules."
         action={
           <Link
             href="/app/ideas"

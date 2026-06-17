@@ -2,7 +2,7 @@ import "server-only";
 
 import { createBufferPost } from "@/lib/buffer/client";
 import { normalizeHashtags, platforms } from "@/lib/content/types";
-import { getConfiguredBufferPlatforms } from "@/lib/env";
+import { getConfiguredBufferPlatforms, type BufferBrand } from "@/lib/env";
 import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database";
 
@@ -72,7 +72,7 @@ export async function sendPublishingJobToBuffer(
   const nextAttempts = job.attempts + 1;
 
   try {
-    validateBufferReadyPost(post, platform, job);
+    const brandSlug = validateBufferReadyPost(post, platform, job);
 
     await supabase
       .from("publishing_jobs")
@@ -82,6 +82,7 @@ export async function sendPublishingJobToBuffer(
     const bufferPost = await createBufferPost({
       postId: post.id,
       platform,
+      brandSlug,
       text: buildPlatformText(post, platform),
       imageUrl: post.image_url,
       scheduledFor: new Date(job.scheduled_for).toISOString(),
@@ -220,17 +221,18 @@ function validateBufferReadyPost(
   post: GeneratedPost,
   platform: PublishPlatform,
   job: PublishingJob,
-) {
+): BufferBrand {
   const scheduledDate = new Date(job.scheduled_for);
+  const brandSlug = getPostBrandSlug(post.template_fields);
 
-  if (platform !== "instagram") {
-    throw new Error("Rallio Buffer handoff is Instagram-only.");
+  if (!brandSlug) {
+    throw new Error(
+      "Buffer handoff requires template_fields.brand_slug to be either rallio or signal.",
+    );
   }
 
-  if (getTemplateFieldString(post.template_fields, "brand_slug") !== "rallio") {
-    throw new Error(
-      "Buffer handoff is configured for Rallio posts only. Regenerate this post with brand_slug = rallio before sending.",
-    );
+  if (platform !== "instagram") {
+    throw new Error(`${formatBrandName(brandSlug)} Buffer handoff is Instagram-only.`);
   }
 
   if (Number.isNaN(scheduledDate.getTime())) {
@@ -248,6 +250,8 @@ function validateBufferReadyPost(
   if (!buildPlatformText(post, platform).trim()) {
     throw new Error(`${platform} copy is empty.`);
   }
+
+  return brandSlug;
 }
 
 function buildPlatformText(post: GeneratedPost, platform: PublishPlatform) {
@@ -318,4 +322,14 @@ function getTemplateFieldString(templateFields: Json, key: string) {
   const value = templateFields[key];
 
   return typeof value === "string" ? value : null;
+}
+
+function getPostBrandSlug(templateFields: Json): BufferBrand | null {
+  const value = getTemplateFieldString(templateFields, "brand_slug");
+
+  return value === "rallio" || value === "signal" ? value : null;
+}
+
+function formatBrandName(brandSlug: BufferBrand) {
+  return brandSlug === "signal" ? "Signal" : "Rallio";
 }

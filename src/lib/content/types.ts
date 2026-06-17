@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const platforms = ["instagram", "x", "linkedin"] as const;
+export const brandSlugs = ["rallio", "signal"] as const;
 export const postTypes = ["single", "carousel", "reel", "thread"] as const;
 export const tones = [
   "educational",
@@ -45,6 +46,31 @@ export const rallioTemplateTypes = [
   "rallio_regular_quote",
   "rallio_owner_claim",
   "rallio_steps",
+] as const;
+export const signalCtaDoors = [
+  "app_download",
+  "sos_protocol",
+  "check_in",
+  "pattern_map",
+  "privacy_first",
+  "identity_anchor",
+] as const;
+export const signalContentTypes = [
+  "discipline_quote",
+  "urge_reset_protocol",
+  "pattern_awareness",
+  "identity_anchor",
+  "privacy_first",
+  "slip_review",
+  "app_feature_steps",
+] as const;
+export const signalTemplateTypes = [
+  "signal_quote",
+  "signal_protocol",
+  "signal_state",
+  "signal_pattern",
+  "signal_privacy",
+  "signal_steps",
 ] as const;
 // v2 growth-engine taxonomy: a Rallio strategy pillar, decoupled from the
 // generic templateTypes/template_type enum (which is a visual-format taxonomy).
@@ -98,6 +124,7 @@ export const rallioLocalSignalSchema = z.object({
 
 export const batchAngleSchema = z.object({
   index: z.number().int().min(1).max(20),
+  brand_slug: z.enum(brandSlugs).optional().default("rallio"),
   working_title: z.string(),
   pillar: z.enum(templateTypes),
   template_type: z.enum(templateTypes),
@@ -113,6 +140,11 @@ export const batchAngleSchema = z.object({
   rallio_kpi_intent: z.string().nullable(),
   rallio_signal: rallioLocalSignalSchema.nullable().optional(),
   participation_prompt: z.string().nullable().optional(),
+  signal_template_type: z.enum(signalTemplateTypes).nullable().optional(),
+  signal_content_type: z.enum(signalContentTypes).nullable().optional(),
+  signal_cta_door: z.enum(signalCtaDoors).nullable().optional(),
+  signal_visual_style: z.string().nullable().optional(),
+  signal_kpi_intent: z.string().nullable().optional(),
 });
 
 export const recentContextSchema = z.object({
@@ -137,6 +169,7 @@ export const recentContextSchema = z.object({
 export const ideaInputSchema = z
   .object({
     idea_id: z.string().uuid().optional(),
+    brand_slug: z.enum(brandSlugs).optional().default("rallio"),
     title: z.string().trim().min(3, "Add a sharper idea title."),
     brief: z.string().trim().default(""),
     source_url: z.string().trim().url().optional().or(z.literal("")),
@@ -163,6 +196,11 @@ export const ideaInputSchema = z
     rallio_kpi_intent: z.string().trim().optional().or(z.literal("")),
     rallio_signal: rallioLocalSignalSchema.optional(),
     participation_prompt: z.string().trim().optional().or(z.literal("")),
+    signal_content_type: z.enum(signalContentTypes).optional(),
+    signal_cta_door: z.enum(signalCtaDoors).optional(),
+    signal_template_type: z.enum(signalTemplateTypes).optional(),
+    signal_visual_style: z.string().trim().optional().or(z.literal("")),
+    signal_kpi_intent: z.string().trim().optional().or(z.literal("")),
     batch_angle: batchAngleSchema.optional(),
     recent_context: recentContextSchema.optional(),
   })
@@ -183,6 +221,7 @@ export const templateFieldsSchema = z
     reference_image_url: z.string().optional(),
     reference_image_asset_id: z.string().optional(),
     selected_platforms: z.array(z.enum(platforms)).optional(),
+    brand_slug: z.enum(brandSlugs).optional(),
     brand_handle: z.string().optional(),
     launch_neighborhood: z.string().optional(),
     category_focus: z.string().optional(),
@@ -226,6 +265,19 @@ export const templateFieldsSchema = z
     signature_order: z.string().optional(),
     sensory_detail: z.string().optional(),
     participation_prompt: z.string().optional(),
+    signal_template_type: z.enum(signalTemplateTypes).optional(),
+    signal_content_type: z.enum(signalContentTypes).optional(),
+    signal_cta_door: z.enum(signalCtaDoors).optional(),
+    signal_visual_style: z.string().optional(),
+    signal_kpi_intent: z.string().optional(),
+    signal_state: z.enum(["green", "yellow", "red"]).optional(),
+    signal_protocol_steps: z.array(z.string()).optional(),
+    signal_trigger: z.string().optional(),
+    signal_redirect_action: z.string().optional(),
+    signal_identity_line: z.string().optional(),
+    signal_privacy_line: z.string().optional(),
+    signal_principle: z.string().optional(),
+    signal_app_feature: z.string().optional(),
     image_mode: z.enum(imageModes).optional(),
   })
   .passthrough();
@@ -280,12 +332,16 @@ export type BatchAngle = z.infer<typeof batchAngleSchema>;
 export type GeneratedContent = z.infer<typeof generatedContentSchema>;
 export type TemplateFields = z.infer<typeof templateFieldsSchema>;
 export type Platform = (typeof platforms)[number];
+export type BrandSlug = (typeof brandSlugs)[number];
 export type PostType = (typeof postTypes)[number];
 export type Tone = (typeof tones)[number];
 export type TemplateType = (typeof templateTypes)[number];
 export type RallioCtaDoor = (typeof rallioCtaDoors)[number];
 export type RallioContentType = (typeof rallioContentTypes)[number];
 export type RallioTemplateType = (typeof rallioTemplateTypes)[number];
+export type SignalCtaDoor = (typeof signalCtaDoors)[number];
+export type SignalContentType = (typeof signalContentTypes)[number];
+export type SignalTemplateType = (typeof signalTemplateTypes)[number];
 export type RallioPillar = (typeof rallioPillars)[number];
 export type RallioPrimaryGoal = (typeof rallioPrimaryGoals)[number];
 export type RallioSecondaryGoal = (typeof rallioSecondaryGoals)[number];

@@ -8,9 +8,11 @@ import {
   selectRallioLocalSignal,
   selectRallioSeed,
 } from "@/lib/content/rallio";
-import { postTypes } from "@/lib/content/types";
+import { getSignalTopicSeed } from "@/lib/content/signal";
+import { brandSlugs, postTypes } from "@/lib/content/types";
 
 const inputSchema = z.object({
+  brand_slug: z.enum(brandSlugs).optional().default("rallio"),
   post_type: z.enum(postTypes).default("single"),
   quantity: z.coerce.number().int().min(1).max(20).default(1),
   recent_titles: z.array(z.string()).optional().default([]),
@@ -27,6 +29,11 @@ export async function POST(request: Request) {
   try {
     const { supabase, user } = await requireApiUser();
     const input = inputSchema.parse(await request.json());
+
+    if (input.brand_slug === "signal") {
+      return jsonOk(getSignalTopicSeed(input.quantity));
+    }
+
     const { data: recentPosts } = await supabase
       .from("generated_posts")
       .select("headline, hook, template_type, template_fields")
@@ -58,6 +65,7 @@ export async function POST(request: Request) {
     const signal = selectRallioLocalSignal(recentText);
 
     return jsonOk({
+      brand_slug: "rallio" as const,
       title: angle.working_title,
       brief: [
         buildRallioRouletteBrief(seed, input.quantity),
