@@ -5,7 +5,11 @@ import {
 } from "@/lib/content/rallio";
 import { ideaInputSchema } from "@/lib/content/types";
 import type { BatchAngle, RallioContentType } from "@/lib/content/types";
-import { getSignalBatchSlotGuide, SIGNAL_BRAND } from "@/lib/content/signal";
+import {
+  getSignalBatchSlotGuide,
+  getSignalRhythmOffset,
+  SIGNAL_BRAND,
+} from "@/lib/content/signal";
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
 import { requireApiUser } from "@/lib/auth";
 import { summarizeSourceUrl } from "@/lib/content/source";
@@ -59,8 +63,9 @@ export async function POST(request: Request) {
     }
 
     if (input.brand_slug === "signal") {
+      const signalOffset = getSignalRhythmOffset(idea.id);
       const angles: BatchAngle[] = Array.from({ length: quantity }, (_, index) => {
-        const guide = getSignalBatchSlotGuide(index + 1);
+        const guide = getSignalBatchSlotGuide(index + 1, signalOffset);
 
         return {
           index: guide.slot,

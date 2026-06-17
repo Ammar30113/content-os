@@ -19,36 +19,51 @@ export const SIGNAL_BRAND = {
 };
 
 export const SIGNAL_SYSTEM_PROMPT = [
-  "You are generating Instagram feed-post content for Signal: Urge Reset.",
-  "Signal is a private 10-minute urge interruption system for adults who want to notice, interrupt, and redirect unwanted behavioral loops.",
-  "Position Signal as private, local-first/on-device, practical, and dignified: no surveillance, no blockers, no shame streaks, no medical claims.",
-  "Do not use explicit sexual content. Say urge, loop, pull, late-night phone, bargaining, reset, cue, pattern, redirect, privacy, and identity instead.",
-  "Do not quote Atomic Habits, James Clear, or other books verbatim. Use original discipline principles inspired by cue, friction, identity, environment, and compounding behavior.",
-  "Feed posts only for now. Instagram is the primary channel. Keep copy direct, calm, and useful.",
+  "You are the Signal content writer. You write Instagram feed posts for Signal: Urge Reset, a private 10-minute tool that helps adults notice, interrupt, and redirect an unwanted behavioral loop before it takes over.",
+  "Write to one person at the moment a pull is building: late at night, alone, tired, already bargaining with themselves. Speak like a calm, direct friend who has been there - never a coach, a clinician, or a hype account.",
+  "The core promise is dignity. Signal is private, local-first, and on-device: no surveillance, no accountability screenshots, no blockers, no shame streaks, no medical claims, no guarantees. Never imply the reader is broken.",
+  "Voice: plain, grounded, quiet, confident. Short sentences. Second person. Concrete over abstract - name the cue, the room, the action, the 10-minute window. No motivational-poster lines, no therapy-speak, no buzzwords, no hype.",
+  "One idea per post. Earn the first line so it stops the scroll without clickbait or fake urgency. Leave the reader with one usable action, not a lecture.",
+  "Never use explicit sexual language. Use the shared vocabulary instead: urge, loop, pull, late-night phone, bargaining, cue, trigger, pattern, reset, redirect, distance, privacy, identity.",
+  "Do not quote books, authors, studies, or named experts. Use original discipline principles drawn from cue, friction, environment, identity, and compounding behavior.",
+  "Instagram feed posts only. No exclamation points. No download-now urgency, coupons, rewards, or tag-a-friend bait. Close with one calm, specific call to action that fits the post.",
 ].join(" ");
 
 const SIGNAL_DEFAULT_FEED_RHYTHM: SignalContentType[] = [
-  "discipline_quote",
   "urge_reset_protocol",
   "pattern_awareness",
-  "identity_anchor",
-  "privacy_first",
-  "app_feature_steps",
   "discipline_quote",
+  "app_feature_steps",
+  "privacy_first",
+  "pattern_awareness",
+  "urge_reset_protocol",
+  "identity_anchor",
+  "pattern_awareness",
+  "discipline_quote",
+  "app_feature_steps",
+  "urge_reset_protocol",
   "slip_review",
   "pattern_awareness",
-  "urge_reset_protocol",
-  "identity_anchor",
-  "discipline_quote",
   "privacy_first",
+  "urge_reset_protocol",
+  "discipline_quote",
   "app_feature_steps",
-  "pattern_awareness",
-  "slip_review",
-  "discipline_quote",
-  "urge_reset_protocol",
   "identity_anchor",
-  "privacy_first",
+  "slip_review",
 ];
+
+// Rotates the feed rhythm, seeds, and titles per batch so consecutive
+// campaigns don't start from the same slot/headline order.
+export function getSignalRhythmOffset(seed?: string | null) {
+  if (!seed) {
+    return 0;
+  }
+
+  return Array.from(seed).reduce(
+    (total, character) => total + character.charCodeAt(0),
+    0,
+  ) % SIGNAL_DEFAULT_FEED_RHYTHM.length;
+}
 
 type SignalTopicSeed = {
   contentType: SignalContentType;
@@ -62,19 +77,62 @@ type SignalTopicSeed = {
 };
 
 const signalTopicSeeds: SignalTopicSeed[] = [
+  // ===== discipline_quote (4) =====
   {
     contentType: "discipline_quote",
     title: "Move First, Think Second",
     hookDirection:
-      "A short original discipline line about interrupting the loop before negotiating with it.",
+      "An original discipline line about creating distance before the mind starts bargaining with the urge.",
     uniqueTakeaway:
-      "The first win is creating distance before the mind starts bargaining.",
+      "The first win is opening space between the cue and the action, not winning an argument.",
     captionStructure:
-      "Quote hook, one-line tension, 3-5 practical bullets, identity reframe, app CTA.",
+      "Severe one-line hook, one tension line, 3-5 practical bullets on distance over willpower, identity reframe, app CTA.",
     ctaDoor: "app_download",
     kpiIntent: "saves_shares_app_download",
-    visualDirection: "Dark quote card with one severe line and a small Signal mark.",
+    visualDirection:
+      "Dark quote card, one severe line, small Signal mark, muted accent.",
   },
+  {
+    contentType: "discipline_quote",
+    title: "Don't Debate The Loop",
+    hookDirection:
+      "Frame the urge as an argument you cannot win by reasoning; you win by leaving the situation.",
+    uniqueTakeaway:
+      "You do not out-argue a pull. You change the room and let the timer run.",
+    captionStructure:
+      "Hook on the trap of negotiating, one tension line, 3 bullets on exit over debate, short reframe, app CTA.",
+    ctaDoor: "app_download",
+    kpiIntent: "saves_shares_app_download",
+    visualDirection:
+      "Dark quote card with a single line and quiet red-to-green accent.",
+  },
+  {
+    contentType: "discipline_quote",
+    title: "Friction Is A Feature",
+    hookDirection:
+      "Make the case that adding friction to the next step beats trying to grow more willpower.",
+    uniqueTakeaway:
+      "Design the moment so the easy path is the one you actually want.",
+    captionStructure:
+      "Hook on friction over willpower, one tension line, 3-4 concrete friction bullets, reframe, app CTA.",
+    ctaDoor: "app_download",
+    kpiIntent: "saves_app_feature_interest",
+    visualDirection:
+      "Dark quote card with a structural, almost architectural feel.",
+  },
+  {
+    contentType: "discipline_quote",
+    title: "The Cue Is Just Information",
+    hookDirection:
+      "Reframe the urge as data about your state, not a command you must obey.",
+    uniqueTakeaway: "Noticing the cue early turns a reflex into a choice.",
+    captionStructure:
+      "Hook on cue-as-data, one tension line, 3 bullets on reading the signal, reframe, app CTA.",
+    ctaDoor: "app_download",
+    kpiIntent: "saves_shares_app_download",
+    visualDirection: "Dark quote card with a small yellow state dot.",
+  },
+  // ===== urge_reset_protocol (4) =====
   {
     contentType: "urge_reset_protocol",
     title: "The 10-Minute Reset",
@@ -83,11 +141,54 @@ const signalTopicSeeds: SignalTopicSeed[] = [
     uniqueTakeaway:
       "Signal is built for the 10-minute window between cue and action.",
     captionStructure:
-      "Protocol hook, why the window matters, 5-6 steps, calm app CTA.",
+      "Protocol hook, why the window matters, 5-6 steps, calm Start SOS CTA.",
     ctaDoor: "sos_protocol",
     kpiIntent: "app_download_feature_understanding",
     visualDirection: "Protocol card with numbered steps and yellow state accent.",
   },
+  {
+    contentType: "urge_reset_protocol",
+    title: "Interrupt Before The Bargain",
+    hookDirection:
+      "Show why starting the timer the instant you notice beats waiting until the pull is loud.",
+    uniqueTakeaway:
+      "The reset works best before negotiation starts, not after.",
+    captionStructure:
+      "Hook on timing, one tension line, 4-5 steps that begin at first notice, Start SOS CTA.",
+    ctaDoor: "sos_protocol",
+    kpiIntent: "app_download_feature_understanding",
+    visualDirection:
+      "Protocol card emphasizing the first step, yellow accent.",
+  },
+  {
+    contentType: "urge_reset_protocol",
+    title: "Outlast The Spike",
+    hookDirection:
+      "Explain that an urge is a wave that peaks and falls; the protocol is how you ride the ten minutes.",
+    uniqueTakeaway:
+      "You do not have to resist forever, only outlast a short spike.",
+    captionStructure:
+      "Wave hook, one line on why it passes, 5 steps for the peak, calm Start SOS CTA.",
+    ctaDoor: "sos_protocol",
+    kpiIntent: "app_download_feature_understanding",
+    visualDirection:
+      "Protocol card with a rising-then-falling line motif, yellow accent.",
+  },
+  {
+    contentType: "urge_reset_protocol",
+    title: "Change The Room, Start The Clock",
+    hookDirection:
+      "Pair a physical location change with starting the timer as the very first move.",
+    uniqueTakeaway:
+      "Moving your body and your location is what makes the next ten minutes work.",
+    captionStructure:
+      "Hook on environment shift, one tension line, 5 steps starting with a room change, Start SOS CTA.",
+    ctaDoor: "sos_protocol",
+    kpiIntent: "app_download_feature_understanding",
+    visualDirection:
+      "Protocol card with a location-change first step and yellow accent.",
+  },
+  // ===== pattern_awareness (4) =====
   {
     contentType: "pattern_awareness",
     title: "Your Pattern Has A Shape",
@@ -99,8 +200,51 @@ const signalTopicSeeds: SignalTopicSeed[] = [
       "Pattern hook, common trigger tension, 3-5 observed signals, pattern-map CTA.",
     ctaDoor: "pattern_map",
     kpiIntent: "saves_app_feature_interest",
-    visualDirection: "Dark map card with trigger rows and green/yellow/red state indicators.",
+    visualDirection:
+      "Dark map card with trigger rows and green/yellow/red indicators.",
   },
+  {
+    contentType: "pattern_awareness",
+    title: "Track The Danger Window",
+    hookDirection:
+      "Point out that most pulls cluster in a predictable hour and place.",
+    uniqueTakeaway:
+      "When you know your window, you can plan the redirect in advance.",
+    captionStructure:
+      "Hook on timing clusters, one tension line, 3-4 window examples, pattern-map CTA.",
+    ctaDoor: "pattern_map",
+    kpiIntent: "saves_app_feature_interest",
+    visualDirection:
+      "Dark map card with an hour-by-hour strip and a highlighted window.",
+  },
+  {
+    contentType: "pattern_awareness",
+    title: "The Loop Leaves Clues",
+    hookDirection:
+      "Show the small tells that precede a slip: last app opened, posture, mood, time.",
+    uniqueTakeaway: "The setup is more trackable than the slip itself.",
+    captionStructure:
+      "Hook on tells, one tension line, 4 clue bullets, pattern-map CTA.",
+    ctaDoor: "pattern_map",
+    kpiIntent: "saves_app_feature_interest",
+    visualDirection:
+      "Dark map card with subtle clue rows and a green resolve state.",
+  },
+  {
+    contentType: "pattern_awareness",
+    title: "Map The Trigger, Not The Guilt",
+    hookDirection:
+      "Redirect attention from feeling bad to recording the conditions around the pull.",
+    uniqueTakeaway:
+      "What you can map, you can plan for; guilt maps nothing.",
+    captionStructure:
+      "Hook on mapping over guilt, one tension line, 3-4 condition bullets, pattern-map CTA.",
+    ctaDoor: "pattern_map",
+    kpiIntent: "saves_app_feature_interest",
+    visualDirection:
+      "Dark map card contrasting a guilt row with mapped condition rows.",
+  },
+  // ===== identity_anchor (3) =====
   {
     contentType: "identity_anchor",
     title: "Become The Person Who Notices Earlier",
@@ -112,8 +256,37 @@ const signalTopicSeeds: SignalTopicSeed[] = [
       "Identity hook, willpower reframe, 3-5 anchoring bullets, app CTA.",
     ctaDoor: "identity_anchor",
     kpiIntent: "shares_saves_identity",
-    visualDirection: "Dark identity card with a single anchor line and muted green accent.",
+    visualDirection:
+      "Dark identity card with a single anchor line and muted green accent.",
   },
+  {
+    contentType: "identity_anchor",
+    title: "Protect What You're Building",
+    hookDirection:
+      "Anchor the reset to the concrete thing the loop quietly costs the person.",
+    uniqueTakeaway:
+      "Naming what you protect makes the redirect feel worth it.",
+    captionStructure:
+      "Hook on what's at stake, one tension line, 3 anchoring bullets, app CTA.",
+    ctaDoor: "identity_anchor",
+    kpiIntent: "shares_saves_identity",
+    visualDirection:
+      "Dark identity card with one line and a small green accent.",
+  },
+  {
+    contentType: "identity_anchor",
+    title: "Identity Before Impulse",
+    hookDirection:
+      "Make the case that you act like who you decide to be, not how you feel in the moment.",
+    uniqueTakeaway:
+      "A small decided action in the window is a vote for the person you are becoming.",
+    captionStructure:
+      "Identity hook, feeling-vs-decision tension, 3-4 bullets, quiet reframe, app CTA.",
+    ctaDoor: "identity_anchor",
+    kpiIntent: "shares_saves_identity",
+    visualDirection: "Dark identity card with a decisive single line.",
+  },
+  // ===== privacy_first (3) =====
   {
     contentType: "privacy_first",
     title: "Private Means Private",
@@ -125,8 +298,80 @@ const signalTopicSeeds: SignalTopicSeed[] = [
       "Privacy hook, trust tension, 3-5 no-surveillance bullets, download CTA.",
     ctaDoor: "privacy_first",
     kpiIntent: "trust_download",
-    visualDirection: "Minimal privacy card with lock motif and no noisy decoration.",
+    visualDirection:
+      "Minimal privacy card with lock motif and no noisy decoration.",
   },
+  {
+    contentType: "privacy_first",
+    title: "Nothing Leaves Your Phone",
+    hookDirection:
+      "State plainly that data stays on-device: no accounts, no cloud, no audience.",
+    uniqueTakeaway:
+      "On-device is not a feature line; it is what makes the worst moment usable.",
+    captionStructure:
+      "Plain privacy hook, one tension line, 3 on-device bullets, trust CTA.",
+    ctaDoor: "privacy_first",
+    kpiIntent: "trust_download",
+    visualDirection:
+      "Minimal privacy card, single lock glyph, deep ink background.",
+  },
+  {
+    contentType: "privacy_first",
+    title: "Help Without An Audience",
+    hookDirection:
+      "Contrast shame-based accountability with quiet, private support.",
+    uniqueTakeaway:
+      "You do not need a watcher to change; you need a tool you trust.",
+    captionStructure:
+      "Hook on no-audience, trust tension, 3 bullets, download CTA.",
+    ctaDoor: "privacy_first",
+    kpiIntent: "trust_download",
+    visualDirection:
+      "Minimal privacy card with one quiet line and muted accent.",
+  },
+  // ===== app_feature_steps (3) =====
+  {
+    contentType: "app_feature_steps",
+    title: "What To Do When The Signal Turns Yellow",
+    hookDirection:
+      "Give step-by-step app actions without overpromising or sounding clinical.",
+    uniqueTakeaway:
+      "Signal turns a vague urge into a short sequence: name it, move, redirect, reflect.",
+    captionStructure:
+      "Step hook, one-line context, 5-6 steps, app CTA.",
+    ctaDoor: "app_download",
+    kpiIntent: "download_feature_understanding",
+    visualDirection: "App steps card with green/yellow/red status language.",
+  },
+  {
+    contentType: "app_feature_steps",
+    title: "From Cue To Redirect In Six Taps",
+    hookDirection:
+      "Walk through the exact in-app flow from the first tap to logging what helped.",
+    uniqueTakeaway:
+      "The flow is short on purpose so it works when focus is low.",
+    captionStructure:
+      "Flow hook, one-line context, 6 numbered in-app steps, app CTA.",
+    ctaDoor: "app_download",
+    kpiIntent: "download_feature_understanding",
+    visualDirection:
+      "App steps card showing a six-step flow with state accents.",
+  },
+  {
+    contentType: "app_feature_steps",
+    title: "Set Up The Yellow Alert",
+    hookDirection:
+      "Show how to configure Signal before the danger window so it is ready in advance.",
+    uniqueTakeaway:
+      "The work is done before the urge, so the app is ready when focus is low.",
+    captionStructure:
+      "Setup hook, one-line context, 5-6 setup steps, app CTA.",
+    ctaDoor: "app_download",
+    kpiIntent: "download_feature_understanding",
+    visualDirection:
+      "App setup card with a configured yellow-state alert and state accents.",
+  },
+  // ===== slip_review (2) =====
   {
     contentType: "slip_review",
     title: "No Shame Spiral",
@@ -141,22 +386,26 @@ const signalTopicSeeds: SignalTopicSeed[] = [
     visualDirection: "Quiet review card with red-to-green recovery posture.",
   },
   {
-    contentType: "app_feature_steps",
-    title: "What To Do When The Signal Turns Yellow",
+    contentType: "slip_review",
+    title: "Review The Sequence, Not Yourself",
     hookDirection:
-      "Give step-by-step app actions without overpromising or sounding clinical.",
+      "Separate the event from identity: study what happened right before, calmly.",
     uniqueTakeaway:
-      "Signal turns a vague urge into a short sequence: name it, move, redirect, reflect.",
+      "One slip is data about the setup, not proof about the person.",
     captionStructure:
-      "Step hook, one-line context, 5-6 steps, app CTA.",
-    ctaDoor: "app_download",
-    kpiIntent: "download_feature_understanding",
-    visualDirection: "App steps card with green/yellow/red status language.",
+      "Hook on sequence over self, one tension line, 3-4 calm review prompts, check-in CTA.",
+    ctaDoor: "check_in",
+    kpiIntent: "saves_trust",
+    visualDirection: "Quiet review card moving from red to green, no harsh language.",
   },
 ];
 
-export function getSignalContentTypeForSlot(slot: number): SignalContentType {
-  const index = Math.max(0, slot - 1) % SIGNAL_DEFAULT_FEED_RHYTHM.length;
+export function getSignalContentTypeForSlot(
+  slot: number,
+  rhythmOffset = 0,
+): SignalContentType {
+  const index =
+    (Math.max(0, slot - 1) + rhythmOffset) % SIGNAL_DEFAULT_FEED_RHYTHM.length;
 
   return SIGNAL_DEFAULT_FEED_RHYTHM[index];
 }
@@ -205,12 +454,13 @@ export function mapSignalTemplateToCoreType(
   return "creator_economy";
 }
 
-export function getSignalBatchSlotGuide(slot: number) {
-  const contentType = getSignalContentTypeForSlot(slot);
-  const occurrenceIndex = countOccurrences(contentType, slot) - 1;
-  const seed = getSeedForContentType(contentType, occurrenceIndex);
+export function getSignalBatchSlotGuide(slot: number, offset = 0) {
+  const rhythmOffset = offset % SIGNAL_DEFAULT_FEED_RHYTHM.length;
+  const contentType = getSignalContentTypeForSlot(slot, rhythmOffset);
+  const occurrenceIndex = countOccurrences(contentType, slot, rhythmOffset) - 1;
+  const seed = getSeedForContentType(contentType, occurrenceIndex + offset);
   const templateType = templateForSignalContentType(contentType);
-  const title = getSignalWorkingTitle(contentType, occurrenceIndex, seed.title);
+  const title = getSignalWorkingTitle(contentType, occurrenceIndex, seed.title, offset);
 
   return {
     slot,
@@ -231,8 +481,8 @@ export function getSignalBatchSlotGuide(slot: number) {
   };
 }
 
-export function getSignalTopicSeed(slot = 1) {
-  const guide = getSignalBatchSlotGuide(slot);
+export function getSignalTopicSeed(slot = 1, offset = 0) {
+  const guide = getSignalBatchSlotGuide(slot, offset);
 
   return {
     brand_slug: "signal" as const,
@@ -252,7 +502,7 @@ export function getSignalTopicSeed(slot = 1) {
     signal_visual_style: guide.visualStyle,
     signal_kpi_intent: guide.kpiIntent,
     roulette: {
-      seed_id: `signal-${slot}-${guide.contentType}`,
+      seed_id: `signal-${slot}-${offset}-${guide.contentType}`,
       source: "signal_bank" as const,
       visual_direction: guide.visualStyle,
       contrast_setup:
@@ -398,11 +648,15 @@ function getSeedForContentType(
   return matches[occurrenceIndex % matches.length] || signalTopicSeeds[0];
 }
 
-function countOccurrences(contentType: SignalContentType, slot: number) {
+function countOccurrences(
+  contentType: SignalContentType,
+  slot: number,
+  rhythmOffset = 0,
+) {
   let count = 0;
 
   for (let index = 1; index <= slot; index += 1) {
-    if (getSignalContentTypeForSlot(index) === contentType) {
+    if (getSignalContentTypeForSlot(index, rhythmOffset) === contentType) {
       count += 1;
     }
   }
@@ -414,14 +668,18 @@ function getSignalWorkingTitle(
   contentType: SignalContentType,
   occurrenceIndex: number,
   fallback: string,
+  variantOffset = 0,
 ) {
   const bank: Record<SignalContentType, string[]> = {
     discipline_quote: [
       "Move First, Think Second",
       "Distance Beats Willpower",
-      "Do Not Debate The Loop",
-      "The Cue Is Information",
+      "Don't Debate The Loop",
+      "The Cue Is Just Information",
       "Friction Is A Feature",
+      "You Can't Argue The Urge Down",
+      "Leave The Room, Not The Argument",
+      "Win The First Ten Seconds",
     ],
     urge_reset_protocol: [
       "The 10-Minute Reset",
@@ -429,6 +687,9 @@ function getSignalWorkingTitle(
       "When The Signal Turns Yellow",
       "The SOS Window",
       "Interrupt Before The Bargain",
+      "Ten Minutes Buys The Choice",
+      "Outlast The Spike",
+      "Start The Timer First",
     ],
     pattern_awareness: [
       "Your Pattern Has A Shape",
@@ -436,6 +697,9 @@ function getSignalWorkingTitle(
       "Boredom Has A Pattern",
       "Track The Danger Window",
       "The Loop Leaves Clues",
+      "Same Hour, Same Room",
+      "Map The Trigger, Not The Guilt",
+      "Notice The Setup, Not Just The Slip",
     ],
     identity_anchor: [
       "Protect The Person You Are Becoming",
@@ -443,6 +707,9 @@ function getSignalWorkingTitle(
       "Identity Before Impulse",
       "Choose The Next Visible Action",
       "Structure Is Self-Respect",
+      "Remember What It Costs You",
+      "Act On The Decision, Not The Feeling",
+      "You Are Not The Urge",
     ],
     privacy_first: [
       "Private Means Private",
@@ -450,13 +717,19 @@ function getSignalWorkingTitle(
       "A Tool You Can Actually Open",
       "Dignity Is Part Of The System",
       "No Surveillance Needed",
+      "Nothing Leaves Your Phone",
+      "Help Without An Audience",
+      "On-Device, On Your Side",
     ],
     slip_review: [
       "No Shame Spiral",
       "Review The Sequence",
       "Information, Not Identity",
       "The Next Reset Starts Earlier",
-      "Do Not Turn One Slip Into A Story",
+      "Don't Turn One Slip Into A Story",
+      "Study The Tape, Skip The Verdict",
+      "What Happened Right Before",
+      "One Slip Is Data, Not Proof",
     ],
     app_feature_steps: [
       "What To Do First",
@@ -464,10 +737,15 @@ function getSignalWorkingTitle(
       "From Cue To Redirect",
       "The App Flow In Six Steps",
       "Check In Before You Spiral",
+      "Six Taps, One Reset",
+      "Your First 10 Minutes In Signal",
+      "Set Up The Yellow Alert",
     ],
   };
+  const titles = bank[contentType];
+  const index = (occurrenceIndex + variantOffset) % titles.length;
 
-  return bank[contentType][occurrenceIndex] || fallback;
+  return titles[index] || fallback;
 }
 
 function protocolStepsForContentType(contentType: SignalContentType) {
