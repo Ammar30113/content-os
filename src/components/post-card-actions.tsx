@@ -8,12 +8,14 @@ import type { Json } from "@/types/database";
 
 type PostCardActionsProps = {
   postId: string;
+  postType: string;
   templateType: string | null;
   templateFields: Json;
 };
 
 export function PostCardActions({
   postId,
+  postType,
   templateType,
   templateFields,
 }: PostCardActionsProps) {
@@ -21,6 +23,7 @@ export function PostCardActions({
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const canRegenerateImage = postType !== "reel" && Boolean(templateType);
 
   async function runAction(action: string, request: () => Promise<Response>) {
     setLoadingAction(action);
@@ -60,27 +63,29 @@ export function PostCardActions({
           <Check size={15} />
           {loadingAction === "Approve" ? "Approving..." : "Approve"}
         </button>
-        <button
-          type="button"
-          disabled={Boolean(loadingAction) || !templateType}
-          onClick={() =>
-            runAction("Regenerate image", () =>
-              fetch("/api/render-template", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  post_id: postId,
-                  template_type: templateType,
-                  template_fields: templateFields,
+        {canRegenerateImage ? (
+          <button
+            type="button"
+            disabled={Boolean(loadingAction)}
+            onClick={() =>
+              runAction("Regenerate image", () =>
+                fetch("/api/render-template", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    post_id: postId,
+                    template_type: templateType,
+                    template_fields: templateFields,
+                  }),
                 }),
-              }),
-            )
-          }
-          className="inline-flex h-9 items-center gap-2 rounded border border-zinc-700 px-3 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
-        >
-          <RefreshCw size={15} />
-          {loadingAction === "Regenerate image" ? "Rendering..." : "Regenerate"}
-        </button>
+              )
+            }
+            className="inline-flex h-9 items-center gap-2 rounded border border-zinc-700 px-3 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
+          >
+            <RefreshCw size={15} />
+            {loadingAction === "Regenerate image" ? "Rendering..." : "Regenerate"}
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={Boolean(loadingAction)}

@@ -85,6 +85,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   );
   const brandName = getPostBrandName(parsedTemplateFields);
   const selectedChannels = useMemo(() => ["instagram"], []);
+  const isReel = post.post_type === "reel";
   const hashtagsText = normalizeHashtags(form.hashtags).join(" ");
   const instagramPackage = [form.caption.trim(), hashtagsText]
     .filter(Boolean)
@@ -93,6 +94,8 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     status: form.status,
     hasImage: Boolean(form.image_url),
     hasCopy: Boolean(form.caption || form.x_version || form.linkedin_version),
+    hasReelScript: Boolean(form.reel_script.trim()),
+    isReel,
     scheduledFor: form.scheduled_for,
   });
   const bufferPosts = getBufferPosts(parsedTemplateFields);
@@ -197,6 +200,15 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   }
 
   async function handleRegenerateImage() {
+    if (isReel) {
+      setState({
+        loading: null,
+        message: null,
+        error: "Reel packages do not render static images in this phase.",
+      });
+      return;
+    }
+
     const payload = buildPayload();
     await runAction(
       "Rendering",
@@ -215,6 +227,15 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   }
 
   async function handleUploadImage() {
+    if (isReel) {
+      setState({
+        loading: null,
+        message: null,
+        error: "Reel packages do not accept final image uploads in this phase.",
+      });
+      return;
+    }
+
     if (!uploadFile) {
       setState({ loading: null, message: null, error: "Choose an image first." });
       return;
@@ -260,6 +281,15 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   }
 
   async function handleSendToBuffer({ resendReady = false } = {}) {
+    if (isReel) {
+      setState({
+        loading: null,
+        message: null,
+        error: "Reel packages are manual-publish only until video media support is enabled.",
+      });
+      return;
+    }
+
     if (
       resendReady &&
       !window.confirm(
@@ -463,66 +493,75 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
       </section>
 
       <aside className="space-y-5">
-        <Panel title="Image preview">
-          <div className="aspect-square overflow-hidden rounded border border-zinc-800 bg-black">
-            {form.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={form.image_url}
-                alt={form.headline || "Generated post image"}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="grid h-full place-items-center px-6 text-center text-sm leading-6 text-zinc-500">
-                No image yet. Regenerate from template fields or upload one.
+        <Panel title={isReel ? "Reel package" : "Image preview"}>
+          {isReel ? (
+            <div className="rounded border border-zinc-800 bg-[#0a0a0b] p-3 text-sm leading-6 text-zinc-400">
+              Script-only reel package. Video upload, rendering, and Buffer handoff
+              are not enabled for this phase.
+            </div>
+          ) : (
+            <>
+              <div className="aspect-square overflow-hidden rounded border border-zinc-800 bg-black">
+                {form.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={form.image_url}
+                    alt={form.headline || "Generated post image"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="grid h-full place-items-center px-6 text-center text-sm leading-6 text-zinc-500">
+                    No image yet. Regenerate from template fields or upload one.
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <InputField
-            label="Image URL"
-            value={form.image_url}
-            onChange={(value) => updateField("image_url", value)}
-          />
-          <div className="rounded border border-zinc-800 bg-[#0a0a0b] p-3 text-sm">
-            <p className="text-zinc-400">
-              Image status:{" "}
-              <span className="font-semibold text-white">{post.image_status}</span>
-            </p>
-            {post.image_error ? (
-              <p className="mt-2 text-red-300">{post.image_error}</p>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={handleRegenerateImage}
-            disabled={Boolean(state.loading)}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
-          >
-            <RefreshCw size={16} />
-            {state.loading === "Rendering" ? "Rendering..." : "Regenerate image"}
-          </button>
-          <label className="block">
-            <span className="text-sm font-medium text-zinc-300">
-              Upload own image
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                setUploadFile(event.target.files?.[0] || null)
-              }
-              className="mt-2 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 py-2 text-sm text-zinc-300"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={handleUploadImage}
-            disabled={Boolean(state.loading)}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
-          >
-            <ImageUp size={16} />
-            {state.loading === "Uploading" ? "Uploading..." : "Upload image"}
-          </button>
+              <InputField
+                label="Image URL"
+                value={form.image_url}
+                onChange={(value) => updateField("image_url", value)}
+              />
+              <div className="rounded border border-zinc-800 bg-[#0a0a0b] p-3 text-sm">
+                <p className="text-zinc-400">
+                  Image status:{" "}
+                  <span className="font-semibold text-white">{post.image_status}</span>
+                </p>
+                {post.image_error ? (
+                  <p className="mt-2 text-red-300">{post.image_error}</p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={handleRegenerateImage}
+                disabled={Boolean(state.loading)}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
+              >
+                <RefreshCw size={16} />
+                {state.loading === "Rendering" ? "Rendering..." : "Regenerate image"}
+              </button>
+              <label className="block">
+                <span className="text-sm font-medium text-zinc-300">
+                  Upload own image
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    setUploadFile(event.target.files?.[0] || null)
+                  }
+                  className="mt-2 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 py-2 text-sm text-zinc-300"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleUploadImage}
+                disabled={Boolean(state.loading)}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
+              >
+                <ImageUp size={16} />
+                {state.loading === "Uploading" ? "Uploading..." : "Upload image"}
+              </button>
+            </>
+          )}
         </Panel>
 
         <Panel title="Publish kit">
@@ -530,14 +569,23 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <p className="font-medium text-white">Prepared channels</p>
             <p className="mt-1 text-zinc-500">{selectedChannels.join(", ")}</p>
           </div>
-          <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm">
-            <p className="font-medium text-[#f5ebdc]">{brandName} Buffer channel</p>
-            <p className="mt-1 leading-5 text-zinc-400">
-              This package routes to the {brandName} Instagram Buffer channel when
-              sent.
-            </p>
-          </div>
-          {bufferPosts.length ? (
+          {isReel ? (
+            <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm">
+              <p className="font-medium text-[#f5ebdc]">Manual reel handoff</p>
+              <p className="mt-1 leading-5 text-zinc-400">
+                Copy the reel script and caption for manual video production.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm">
+              <p className="font-medium text-[#f5ebdc]">{brandName} Buffer channel</p>
+              <p className="mt-1 leading-5 text-zinc-400">
+                This package routes to the {brandName} Instagram Buffer channel when
+                sent.
+              </p>
+            </div>
+          )}
+          {!isReel && bufferPosts.length ? (
             <div className="space-y-2 rounded border border-[#b8c28a]/30 bg-[#b8c28a]/10 p-3 text-sm">
               <p className="font-medium text-[#eef7c5]">Buffer handoff</p>
               {bufferPosts.map((entry) => (
@@ -572,11 +620,13 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             value={hashtagsText}
             onCopy={copyToClipboard}
           />
-          <CopyButton
-            label="Copy image URL"
-            value={form.image_url}
-            onCopy={copyToClipboard}
-          />
+          {!isReel ? (
+            <CopyButton
+              label="Copy image URL"
+              value={form.image_url}
+              onCopy={copyToClipboard}
+            />
+          ) : null}
         </Panel>
 
         <Panel title="Workflow">
@@ -628,7 +678,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <Save size={16} />
             {state.loading === "Saving" ? "Saving..." : "Save changes"}
           </button>
-          {bufferPosts.length ? (
+          {!isReel && bufferPosts.length ? (
             <button
               type="button"
               onClick={() => handleSendToBuffer({ resendReady: true })}
@@ -665,17 +715,19 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <CalendarPlus size={16} />
             {state.loading === "Scheduling" ? "Scheduling..." : "Schedule"}
           </button>
-          <button
-            type="button"
-            onClick={() => handleSendToBuffer()}
-            disabled={Boolean(state.loading)}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded bg-[#d4ff00] px-3 text-sm font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68] disabled:opacity-50"
-          >
-            <Send size={16} />
-            {state.loading === "Sending to Buffer"
-              ? "Sending..."
-              : "Save and send to Buffer"}
-          </button>
+          {!isReel ? (
+            <button
+              type="button"
+              onClick={() => handleSendToBuffer()}
+              disabled={Boolean(state.loading)}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded bg-[#d4ff00] px-3 text-sm font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68] disabled:opacity-50"
+            >
+              <Send size={16} />
+              {state.loading === "Sending to Buffer"
+                ? "Sending..."
+                : "Save and send to Buffer"}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() =>
@@ -812,11 +864,15 @@ function getWorkflowReadiness({
   status,
   hasImage,
   hasCopy,
+  hasReelScript,
+  isReel,
   scheduledFor,
 }: {
   status: string;
   hasImage: boolean;
   hasCopy: boolean;
+  hasReelScript: boolean;
+  isReel: boolean;
   scheduledFor: string;
 }) {
   if (status === "published") {
@@ -831,11 +887,20 @@ function getWorkflowReadiness({
     return {
       title: "Ready for manual publishing",
       description:
-        "Copy the publish kit when the scheduled slot arrives, then mark the post published.",
+        isReel
+          ? "Copy the reel script and caption when the scheduled slot arrives, then mark it published."
+          : "Copy the publish kit when the scheduled slot arrives, then mark the post published.",
     };
   }
 
-  if (status === "approved" && hasImage && hasCopy) {
+  if (isReel && status === "approved" && hasReelScript && hasCopy) {
+    return {
+      title: "Approved and ready to schedule",
+      description: "Pick a manual publishing time or use the next suggested slot.",
+    };
+  }
+
+  if (!isReel && status === "approved" && hasImage && hasCopy) {
     return {
       title: "Approved and ready to schedule",
       description:
@@ -843,7 +908,14 @@ function getWorkflowReadiness({
     };
   }
 
-  if (!hasImage) {
+  if (isReel && !hasReelScript) {
+    return {
+      title: "Needs reel script",
+      description: "Add the reel script before approving or scheduling.",
+    };
+  }
+
+  if (!isReel && !hasImage) {
     return {
       title: "Needs image",
       description: "Regenerate the template image or upload your own image.",
@@ -859,7 +931,9 @@ function getWorkflowReadiness({
 
   return {
     title: "Draft",
-    description: "Review the copy and image, then approve the post.",
+    description: isReel
+      ? "Review the script and copy, then approve the reel package."
+      : "Review the copy and image, then approve the post.",
   };
 }
 

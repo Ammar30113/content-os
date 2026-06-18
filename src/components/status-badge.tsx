@@ -7,6 +7,7 @@ const statusClasses: Record<string, string> = {
   published: "border-sky-400/30 bg-sky-400/10 text-sky-100",
   reviewing: "border-violet-400/30 bg-violet-400/10 text-violet-100",
   scheduled: "border-[#ff6b4a]/30 bg-[#ff6b4a]/10 text-[#ffb7a7]",
+  script_only: "border-[#C8923A]/30 bg-[#C8923A]/10 text-[#f5ebdc]",
 };
 
 export function StatusBadge({ status }: { status: string | null | undefined }) {

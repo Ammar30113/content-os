@@ -22,6 +22,10 @@ const feedPostTypes = postTypes.filter((type) =>
   type === "single" || type === "carousel",
 );
 
+const rallioPostTypes = postTypes.filter(
+  (type) => type === "single" || type === "carousel" || type === "reel",
+);
+
 type FormState = {
   brand_slug: BrandSlug;
   auto_topic: boolean;
@@ -156,6 +160,7 @@ export function IdeaGeneratorForm() {
   );
   const router = useRouter();
   const brandCopy = getBrandFormCopy(form.brand_slug);
+  const isReel = isReelForm(form);
 
   function updateField<K extends keyof FormState>(name: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -165,6 +170,9 @@ export function IdeaGeneratorForm() {
     setForm((current) => ({
       ...current,
       brand_slug: brandSlug,
+      post_type: "single",
+      quantity: "1",
+      image_mode: "template",
       roulette_seed_id: "",
       rallio_content_type: undefined,
       rallio_cta_door: undefined,
@@ -181,13 +189,26 @@ export function IdeaGeneratorForm() {
     }));
   }
 
+  function updatePostType(value: string) {
+    setForm((current) => ({
+      ...current,
+      post_type: value,
+      quantity: value === "reel" ? "1" : current.quantity,
+      image_mode: value === "reel" ? "template" : current.image_mode,
+    }));
+  }
+
   function handleReferenceFile(event: ChangeEvent<HTMLInputElement>) {
     setReferenceFile(event.target.files?.[0] || null);
     setReferenceImage(null);
   }
 
-  function getQuantity() {
-    const parsed = Number(form.quantity);
+  function getQuantity(targetForm = form) {
+    if (isReelForm(targetForm)) {
+      return 1;
+    }
+
+    const parsed = Number(targetForm.quantity);
 
     if (!Number.isFinite(parsed)) {
       return 1;
@@ -201,14 +222,18 @@ export function IdeaGeneratorForm() {
     quantity?: number,
     targetForm = form,
   ) {
+    const effectiveQuantity = quantity || getQuantity(targetForm);
+    const targetIsReel = isReelForm(targetForm);
+
     return {
       ...targetForm,
+      image_mode: targetIsReel ? "template" : targetForm.image_mode,
       platform: "instagram" as const,
       selected_platforms: ["instagram" as const],
       reference_image_url: reference?.image_url || "",
       reference_image_asset_id: reference?.asset_id,
-      quantity: quantity || getQuantity(),
-      generation_count: quantity || getQuantity(),
+      quantity: effectiveQuantity,
+      generation_count: effectiveQuantity,
     };
   }
 
@@ -459,7 +484,7 @@ export function IdeaGeneratorForm() {
       const activeForm = await resolveGenerationForm(quantity);
       const reference = await uploadReferenceImage();
 
-      if (activeForm.image_mode === "uploaded" && !reference) {
+      if (!isReelForm(activeForm) && activeForm.image_mode === "uploaded" && !reference) {
         throw new Error("Choose a reference image before using it as the final image.");
       }
 
@@ -478,7 +503,7 @@ export function IdeaGeneratorForm() {
         });
         createdPostIds.push(payload.post.id);
 
-        if (activeForm.image_mode === "template") {
+        if (shouldRenderImage(activeForm)) {
           setState({
             loading: true,
             message: "Rendering branded template image...",
@@ -548,7 +573,7 @@ export function IdeaGeneratorForm() {
                 : null,
           });
 
-          if (activeForm.image_mode === "template") {
+          if (shouldRenderImage(activeForm)) {
             setState({
               loading: true,
               message: `Rendering ${angle.index}/${quantity}: ${angle.working_title}`,
@@ -567,8 +592,11 @@ export function IdeaGeneratorForm() {
       const failureMessage = imageFailures.length
         ? ` ${imageFailures.length} image${imageFailures.length === 1 ? "" : "s"} failed and can be regenerated from the post editor.`
         : "";
+      const isReelPackage = isReelForm(activeForm);
       const imageModeMessage =
-        form.image_mode === "uploaded"
+        isReelPackage
+          ? " Reel script is ready for manual video production."
+          : activeForm.image_mode === "uploaded"
           ? " Uploaded image was used as the final image."
           : "";
 
@@ -715,7 +743,7 @@ export function IdeaGeneratorForm() {
 
         <section className="rounded border border-zinc-800 bg-[#0a0a0b] p-4">
           <p className="text-sm font-medium text-zinc-300">
-            Reference / final image
+            {isReel ? "Reference image" : "Reference / final image"}
           </p>
           <input
             type="file"
@@ -723,20 +751,26 @@ export function IdeaGeneratorForm() {
             onChange={handleReferenceFile}
             className="mt-3 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 py-2 text-sm text-zinc-300"
           />
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <ImageModeButton
-              active={form.image_mode === "template"}
-              title="Render template"
-              description={brandCopy.templateImageDescription}
-              onClick={() => updateField("image_mode", "template")}
-            />
-            <ImageModeButton
-              active={form.image_mode === "uploaded"}
-              title="Use uploaded"
-              description="Bypass template image."
-              onClick={() => updateField("image_mode", "uploaded")}
-            />
-          </div>
+          {isReel ? (
+            <p className="mt-3 rounded border border-zinc-800 bg-zinc-950 p-3 text-sm leading-6 text-zinc-400">
+              Reel packages use the image as optional visual reference only.
+            </p>
+          ) : (
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <ImageModeButton
+                active={form.image_mode === "template"}
+                title="Render template"
+                description={brandCopy.templateImageDescription}
+                onClick={() => updateField("image_mode", "template")}
+              />
+              <ImageModeButton
+                active={form.image_mode === "uploaded"}
+                title="Use uploaded"
+                description="Bypass template image."
+                onClick={() => updateField("image_mode", "uploaded")}
+              />
+            </div>
+          )}
           {referenceFile || referenceImage ? (
             <p className="mt-3 text-xs text-zinc-500">
               {referenceImage
@@ -750,8 +784,8 @@ export function IdeaGeneratorForm() {
           <SelectField
             label="Post type"
             value={form.post_type}
-            options={feedPostTypes}
-            onChange={(value) => updateField("post_type", value)}
+            options={form.brand_slug === "rallio" ? rallioPostTypes : feedPostTypes}
+            onChange={updatePostType}
           />
           <SelectField
             label="Tone"
@@ -768,12 +802,14 @@ export function IdeaGeneratorForm() {
           <SelectField
             label="Posts"
             value={form.quantity}
-            options={postQuantities}
+            options={isReel ? ["1"] : postQuantities}
             onChange={(value) => updateField("quantity", value)}
           />
         </div>
         <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
-          {brandCopy.routingNote}
+          {isReel
+            ? "Rallio reels generate a script-only package for manual video production and publishing."
+            : brandCopy.routingNote}
         </div>
       </div>
 
@@ -796,7 +832,9 @@ export function IdeaGeneratorForm() {
           {state.loading
             ? "Working..."
             : getQuantity() === 1
-              ? "Generate content package"
+              ? isReel
+                ? "Generate reel script"
+                : "Generate content package"
               : `Generate ${getQuantity()} packages`}
         </button>
       </div>
@@ -854,6 +892,16 @@ function getBrandFormCopy(brandSlug: BrandSlug) {
     routingNote:
       "Rallio posts are Instagram-only. They route to the Rallio Buffer channel for App Store launch posts, supporter/owner setup steps, city requests, and taste-map participation with no legacy-channel fallback.",
   };
+}
+
+function isReelForm(form: Pick<FormState, "brand_slug" | "post_type">) {
+  return form.brand_slug === "rallio" && form.post_type === "reel";
+}
+
+function shouldRenderImage(
+  form: Pick<FormState, "brand_slug" | "post_type" | "image_mode">,
+) {
+  return !isReelForm(form) && form.image_mode === "template";
 }
 
 function SelectField({
