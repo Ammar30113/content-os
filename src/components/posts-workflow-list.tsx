@@ -300,6 +300,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
         {visiblePosts.map((post) => {
           const clearAt =
             activeTab === "scheduled" ? getBufferScheduledClearAt(post) : null;
+          const isReel = post.post_type === "reel";
 
           return (
             <article
@@ -332,7 +333,9 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                       />
                     ) : (
                       <div className="grid h-full place-items-center p-4 text-center text-xs leading-5 text-zinc-500">
-                        {post.image_status === "failed"
+                        {isReel
+                          ? "Reel script"
+                          : post.image_status === "failed"
                           ? "Image failed"
                           : "No image yet"}
                       </div>
@@ -341,7 +344,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                   <div className="p-5">
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge status={post.status} />
-                      <StatusBadge status={post.image_status} />
+                      <StatusBadge status={isReel ? "script_only" : post.image_status} />
                     </div>
                     <h2 className="mt-4 text-xl font-semibold leading-tight text-white">
                       {post.headline || post.hook || "Untitled post"}
@@ -396,6 +399,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
               <div className="p-5">
                 <PostCardActions
                   postId={post.id}
+                  postType={post.post_type}
                   templateType={post.template_type}
                   templateFields={post.template_fields}
                 />

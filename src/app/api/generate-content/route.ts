@@ -106,6 +106,14 @@ const openAITemplateFieldsSchema = z.object({
   signal_privacy_line: z.string().nullable(),
   signal_principle: z.string().nullable(),
   signal_app_feature: z.string().nullable(),
+  reel_hook: z.string().nullable(),
+  reel_duration_seconds: z.number().nullable(),
+  reel_beats: z.array(z.string()).nullable(),
+  reel_shot_list: z.array(z.string()).nullable(),
+  reel_on_screen_text: z.array(z.string()).nullable(),
+  reel_voiceover: z.array(z.string()).nullable(),
+  reel_audio_direction: z.string().nullable(),
+  reel_cover_text: z.string().nullable(),
 });
 
 const openAIContentSchema = z.object({
@@ -221,6 +229,14 @@ function normalizeTemplateFields(
     signal_privacy_line: fields.signal_privacy_line || undefined,
     signal_principle: fields.signal_principle || undefined,
     signal_app_feature: fields.signal_app_feature || undefined,
+    reel_hook: fields.reel_hook || undefined,
+    reel_duration_seconds: fields.reel_duration_seconds || undefined,
+    reel_beats: fields.reel_beats || undefined,
+    reel_shot_list: fields.reel_shot_list || undefined,
+    reel_on_screen_text: fields.reel_on_screen_text || undefined,
+    reel_voiceover: fields.reel_voiceover || undefined,
+    reel_audio_direction: fields.reel_audio_direction || undefined,
+    reel_cover_text: fields.reel_cover_text || undefined,
   };
 }
 
@@ -590,6 +606,18 @@ const RALLIO_GENERATION_SYSTEM_PROMPT = [
   "If a repair_pass block is present in the request, fix exactly those issues while keeping everything else aligned with the contract.",
 ].join(" ");
 
+const RALLIO_REEL_GENERATION_SYSTEM_PROMPT = [
+  RALLIO_SYSTEM_PROMPT,
+  "Generate one complete Rallio Instagram reel script package.",
+  "Treat Rallio as live in the App Store, with Toronto + Rajkot as first active markets and a soft city-request invitation for everyone else.",
+  "Do not copy hooks, headlines, or template fields from generated_so_far.",
+  "Use one funnel CTA door only. Prefer app_download_supporter for supporter launch/action posts, app_download_owner for owner setup posts, city_request for next-city asks, and local_guide for taste-map saves.",
+  "Reel shape: a 15-30 second script with a sharp first-frame hook, 4-6 beats, on-screen text, optional voiceover, a cover-text line, a caption, and one CTA. This phase creates the script only, not a video asset.",
+  "Do not reuse copy across platforms. Instagram is spaced, X is compressed, LinkedIn is slightly expanded.",
+  "Never use exclamation points, download-now copy, coupon/cashback/reward language, reservations, Moments, perks, full-global claims, or 'tag a friend' bait.",
+  "If a repair_pass block is present in the request, fix exactly those issues while keeping everything else aligned with the contract.",
+].join(" ");
+
 const RICH_FIELD_GUIDE_SPOT =
   "For rallio_spot_carousel: set business_name to the place name; spot_category to specific cuisine; spot_address to street/intersection (e.g. '93 Ossington Ave'); spot_list_name to the collection title in uppercase (e.g. 'THE OSSINGTON 30'); spot_list_position and spot_list_total as zero-padded strings (e.g. '04', '30'); recommender_quote to one short italic line from a believable regular; recommender_name to a first-name handle (e.g. '@mayachen' or 'Maya'); recommender_neighborhood to a lowercase short area label (e.g. 'ossington'); recommender_since to a two-digit year like \"'22\"; carousel_page and carousel_total to numeric strings like '1' and '6'.";
 const RICH_FIELD_GUIDE_QUOTE =
@@ -602,6 +630,8 @@ const RICH_FIELD_GUIDE_OWNER_STEPS =
   "For rallio_steps with owner_steps_carousel: set step_audience to 'owner'; set owner_steps to exactly these six short steps unless the assigned angle requires shorter phrasing: Download or open Rallio; Choose Business Owner; Add or claim a free business profile; Keep profile details accurate; Review and approve supporter posts; Track posts, profile clicks, and visits from owner home. Set cta_door to app_download_owner.";
 const RICH_FIELD_GUIDE_PARTICIPATION =
   "For participation_single feed posts: set headline to the concrete question, set participation_prompt to the same answerable question, use the assigned local signal as the example context, and make the caption invite comments or replies without tag-a-friend bait.";
+const RICH_FIELD_GUIDE_REEL =
+  "For reel packages: write reel_script as timestamped beats. Set reel_duration_seconds between 15 and 30, reel_beats to 4-6 concise beats, reel_shot_list to concrete shots or screen moments, reel_on_screen_text to short overlays, reel_voiceover to optional narration lines, reel_audio_direction to a practical audio/motion note, and reel_cover_text to the cover line.";
 const RICH_FIELD_GUIDE_COMMON = [
   "When a required_local_signal is provided, copy its local_signal_id/source_status into template fields and use its spot_name, category, street, signature_order, sensory_detail, regular_quote, regular_name, regular_since_year, and participation_prompt.",
   "Return null for any rich field you cannot fill with a concrete, believable value. Never invent stock placeholder addresses, fake handles ending in numbers like @user123, or generic neighborhoods.",
@@ -612,10 +642,13 @@ const RICH_FIELD_GUIDE_COMMON = [
 function getRichFieldGuide(
   templateType: RallioTemplateType | null | undefined,
   contentType: RallioContentType | null | undefined,
+  isReelPackage = false,
 ) {
   const specific =
-    contentType === "supporter_steps_carousel"
-      ? [RICH_FIELD_GUIDE_SUPPORTER_STEPS]
+    isReelPackage || contentType === "manifesto_reel" || contentType === "bts_story_sequence"
+      ? [RICH_FIELD_GUIDE_REEL]
+      : contentType === "supporter_steps_carousel"
+        ? [RICH_FIELD_GUIDE_SUPPORTER_STEPS]
       : contentType === "owner_steps_carousel"
         ? [RICH_FIELD_GUIDE_OWNER_STEPS]
         : contentType === "participation_single"
@@ -926,15 +959,21 @@ export async function POST(request: Request) {
   try {
     assertContentOsSupabaseWriteSafety();
     const input = ideaInputSchema.parse(await request.json());
+    const isReelPackage = input.brand_slug === "rallio" && input.post_type === "reel";
     const { supabase, user } = await requireApiUser();
     const referenceImageUrl = input.reference_image_url || undefined;
 
-    if (input.image_mode === "uploaded" && !referenceImageUrl) {
+    if (!isReelPackage && input.image_mode === "uploaded" && !referenceImageUrl) {
       throw new Error("Upload a reference image before using it as the final image.");
     }
 
     const generationCount = input.generation_count || input.quantity || 1;
     const generationIndex = Math.min(input.generation_index || 1, generationCount);
+
+    if (isReelPackage && (generationCount > 1 || input.batch_angle)) {
+      throw new Error("Rallio reel generation is single-package only in this phase.");
+    }
+
     const generatedSoFar = input.recent_context?.generated_so_far || [];
     let sourceSummary: string | null = null;
     let idea: {
@@ -1026,6 +1065,7 @@ export async function POST(request: Request) {
     const richFieldGuide = getRichFieldGuide(
       input.batch_angle?.rallio_template_type || input.rallio_template_type,
       input.batch_angle?.rallio_content_type || input.rallio_content_type,
+      isReelPackage,
     );
     // Only force the planned working title onto the headline while it is still
     // novel. Re-forcing a title that already shipped made the novelty gate
@@ -1307,7 +1347,9 @@ export async function POST(request: Request) {
         input: [
           {
             role: "system",
-            content: RALLIO_GENERATION_SYSTEM_PROMPT,
+            content: isReelPackage
+              ? RALLIO_REEL_GENERATION_SYSTEM_PROMPT
+              : RALLIO_GENERATION_SYSTEM_PROMPT,
           },
           {
             role: "user",
@@ -1328,8 +1370,9 @@ export async function POST(request: Request) {
                 visual_system: {
                   style:
                     "Rallio local editorial system. Cream/ink/amber/wheat/moss, Fraunces-style quote cards, spot carousel cards, receipt details, black manifesto tiles, dark owner-utility phone/profile cards.",
-                  thumbnail_rule:
-                    "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
+                  thumbnail_rule: isReelPackage
+                    ? "The reel cover text should work as a small Instagram grid thumbnail if a cover is created manually. Keep reel_cover_text short, direct, and visually punchy."
+                    : "The image must still work as a small Instagram grid thumbnail. Keep headline short, direct, and visually punchy.",
                   rallio_copy_rule:
                     "No exclamation points. Do not use instant, perks, rewards, discounts, tag-a-friend bait, reservations, Moments, full-global claims, or generic launch/product hooks. Do not repeat Toronto + Rajkot in the same package.",
                   rallio_field_specificity:
@@ -1339,18 +1382,31 @@ export async function POST(request: Request) {
                   rallio_rich_field_guide: richFieldGuide,
                 },
                 output_economy: {
-                  reel_script:
-                    input.post_type === "reel"
-                      ? "Write a short reel script."
-                      : "Rallio is feed-only in this phase: set reel_script to an empty string.",
-                  carousel_slides:
-                    input.post_type === "carousel"
+                  reel_script: isReelPackage
+                    ? "Write a timestamped 15-30 second reel script with 4-6 beats."
+                    : "Rallio is feed-only in this phase: set reel_script to an empty string.",
+                  carousel_slides: isReelPackage
+                    ? "Set carousel_slides to an empty array for this script-only reel package."
+                    : input.post_type === "carousel"
                       ? "Write 5-7 concise carousel slides."
                       : "Set carousel_slides to an empty array for this single-image post.",
                 },
-                task: input.batch_angle
-                  ? "Generate this specific planned post from the batch campaign."
-                  : "Generate a complete Rallio Instagram post package.",
+                reel_output_contract: isReelPackage
+                  ? {
+                      media_status:
+                        "Script only. No video file, upload, render, or Buffer handoff exists in this phase.",
+                      reel_script:
+                        "Use timestamp labels or beat labels so the editor can hand it to a video creator.",
+                      image_prompt:
+                        "Return only an optional manual cover-image direction. Do not describe a generated video.",
+                      carousel_slides: "Return an empty array.",
+                    }
+                  : null,
+                task: isReelPackage
+                  ? "Generate a complete Rallio Instagram reel script package."
+                  : input.batch_angle
+                    ? "Generate this specific planned post from the batch campaign."
+                    : "Generate a complete Rallio Instagram post package.",
                 title: idea.title || input.title,
                 brief: input.batch_angle ? undefined : idea.brief || input.brief,
                 source_url: idea.source_url || input.source_url || null,
@@ -1392,13 +1448,17 @@ export async function POST(request: Request) {
                     input.rallio_kpi_intent ||
                     null,
                   instruction:
-                    "Return Instagram-ready Rallio feed-post content only. Set selected_platforms to instagram. Use exactly one funnel CTA door. Launch batches should mix local recommendation posts, supporter_steps_carousel, owner_steps_carousel, participation_single city requests, and occasional owner_claim_carousel. Do not write Reels or Stories for Rallio in this phase. Use claim_your_business only when the requested content type is owner_claim_carousel. Store Rallio metadata, launch steps, and local signal fields in template_fields.",
+                    isReelPackage
+                      ? "Return Instagram-ready Rallio reel script content only. Set selected_platforms to instagram. Use exactly one funnel CTA door. Prefer manifesto_reel or bts_story_sequence metadata. Store reel_hook, reel_duration_seconds, reel_beats, reel_shot_list, reel_on_screen_text, reel_voiceover, reel_audio_direction, and reel_cover_text in template_fields. Set carousel_slides to an empty array. Do not imply a video was generated."
+                      : "Return Instagram-ready Rallio feed-post content only. Set selected_platforms to instagram. Use exactly one funnel CTA door. Launch batches should mix local recommendation posts, supporter_steps_carousel, owner_steps_carousel, participation_single city requests, and occasional owner_claim_carousel. Do not write Reels or Stories for Rallio in this phase. Use claim_your_business only when the requested content type is owner_claim_carousel. Store Rallio metadata, launch steps, and local signal fields in template_fields.",
                 },
                 reference_image: referenceImageUrl
                   ? {
                       url: referenceImageUrl,
                       mode:
-                        input.image_mode === "uploaded"
+                        isReelPackage
+                          ? "Use this as optional visual reference only. Do not treat it as a final reel asset."
+                          : input.image_mode === "uploaded"
                           ? "Use this uploaded image as the final image. Still generate strong copy and editable template fields."
                           : "Use this as source/reference context only.",
                     }
@@ -1407,7 +1467,7 @@ export async function POST(request: Request) {
                   ? { ...input.batch_angle, rallio_signal: undefined }
                   : null,
                 batch_generation:
-                  generationCount > 1
+                  !isReelPackage && generationCount > 1
                     ? {
                         current_package: generationIndex,
                         total_packages: generationCount,
@@ -1415,7 +1475,7 @@ export async function POST(request: Request) {
                           "Obey the planned batch angle. This post must be distinct from other batch items in hook, headline, takeaway, CTA, examples, caption shape, and template fields.",
                       }
                     : null,
-                batch_slot_contract: input.batch_angle
+                batch_slot_contract: !isReelPackage && input.batch_angle
                   ? {
                       index: input.batch_angle.index,
                       required_working_title: forcedHeadline,
@@ -1606,9 +1666,13 @@ export async function POST(request: Request) {
         linkedin_version: content.linkedin_version,
         image_prompt: content.image_prompt,
         template_fields: content.template_fields as Json,
-        image_url: input.image_mode === "uploaded" ? referenceImageUrl : null,
+        image_url:
+          !isReelPackage && input.image_mode === "uploaded" ? referenceImageUrl : null,
         status: "draft",
-        image_status: input.image_mode === "uploaded" ? "generated" : "not_generated",
+        image_status:
+          !isReelPackage && input.image_mode === "uploaded"
+            ? "generated"
+            : "not_generated",
       })
       .select()
       .single();

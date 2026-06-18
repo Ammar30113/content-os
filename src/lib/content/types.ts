@@ -182,6 +182,14 @@ export const ideaInputSchema = z
     recent_context: recentContextSchema.optional(),
   })
   .superRefine((input, ctx) => {
+    if (input.post_type === "reel" && input.brand_slug !== "rallio") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["post_type"],
+        message: "Reels are only available for Rallio.",
+      });
+    }
+
     if (input.brief.trim().length < 10) {
       ctx.addIssue({
         code: "custom",
@@ -252,6 +260,14 @@ export const templateFieldsSchema = z
     signal_privacy_line: z.string().optional(),
     signal_principle: z.string().optional(),
     signal_app_feature: z.string().optional(),
+    reel_hook: z.string().optional(),
+    reel_duration_seconds: z.number().optional(),
+    reel_beats: z.array(z.string()).optional(),
+    reel_shot_list: z.array(z.string()).optional(),
+    reel_on_screen_text: z.array(z.string()).optional(),
+    reel_voiceover: z.array(z.string()).optional(),
+    reel_audio_direction: z.string().optional(),
+    reel_cover_text: z.string().optional(),
     image_mode: z.enum(imageModes).optional(),
   })
   .passthrough();

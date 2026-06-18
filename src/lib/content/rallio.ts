@@ -158,7 +158,12 @@ const RALLIO_POST_TYPE_PRIORITY: Record<PostType, RallioContentType[]> = {
     "receipt_single",
     "participation_single",
   ],
-  reel: ["participation_single", "regular_quote", "spot_carousel", "receipt_single"],
+  reel: [
+    "manifesto_reel",
+    "bts_story_sequence",
+    "regular_quote",
+    "participation_single",
+  ],
   thread: [
     "supporter_steps_carousel",
     "regular_quote",

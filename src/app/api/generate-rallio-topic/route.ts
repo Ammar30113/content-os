@@ -31,6 +31,10 @@ export async function POST(request: Request) {
     const { supabase, user } = await requireApiUser();
     const input = inputSchema.parse(await request.json());
 
+    if (input.post_type === "reel" && input.brand_slug !== "rallio") {
+      throw new Error("Reel topic generation is only available for Rallio.");
+    }
+
     if (input.brand_slug === "signal") {
       const offset = getSignalRhythmOffset(
         input.roulette_seed_id || crypto.randomUUID(),

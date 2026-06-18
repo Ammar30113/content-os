@@ -40,6 +40,11 @@ export async function POST(request: Request) {
     assertContentOsSupabaseWriteSafety();
     const input = ideaInputSchema.parse(await request.json());
     const quantity = input.quantity || 1;
+
+    if (input.post_type === "reel") {
+      throw new Error("Rallio reel generation is single-package only in this phase.");
+    }
+
     const { supabase, user } = await requireApiUser();
     const sourceSummary = input.source_url
       ? await summarizeSourceUrl(input.source_url)

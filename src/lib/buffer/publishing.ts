@@ -235,6 +235,12 @@ function validateBufferReadyPost(
     throw new Error(`${formatBrandName(brandSlug)} Buffer handoff is Instagram-only.`);
   }
 
+  if (brandSlug === "rallio" && post.post_type === "reel") {
+    throw new Error(
+      "Rallio reels are script-only in this phase. Publish them manually after creating the video asset.",
+    );
+  }
+
   if (Number.isNaN(scheduledDate.getTime())) {
     throw new Error("Scheduled time is invalid.");
   }
