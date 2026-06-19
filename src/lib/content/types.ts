@@ -73,6 +73,13 @@ export const signalTemplateTypes = [
   "signal_steps",
 ] as const;
 export const imageModes = ["template", "uploaded"] as const;
+export const videoStatuses = [
+  "not_required",
+  "missing",
+  "uploaded",
+  "failed",
+] as const;
+export const videoSources = ["manual_url", "upload"] as const;
 export const postStatuses = [
   "draft",
   "reviewing",
@@ -313,6 +320,10 @@ export const postUpdateSchema = z.object({
   template_type: z.enum(templateTypes).nullable().optional(),
   template_fields: templateFieldsSchema,
   image_url: z.string().nullable().optional(),
+  video_url: z.string().trim().url().nullable().optional().or(z.literal("")),
+  video_status: z.enum(videoStatuses).optional(),
+  video_error: z.string().nullable().optional(),
+  video_source: z.enum(videoSources).nullable().optional(),
   status: z.enum(postStatuses),
   scheduled_for: z.string().nullable().optional(),
 });
@@ -333,6 +344,8 @@ export type SignalCtaDoor = (typeof signalCtaDoors)[number];
 export type SignalContentType = (typeof signalContentTypes)[number];
 export type SignalTemplateType = (typeof signalTemplateTypes)[number];
 export type RallioLocalSignal = z.infer<typeof rallioLocalSignalSchema>;
+export type VideoStatus = (typeof videoStatuses)[number];
+export type VideoSource = (typeof videoSources)[number];
 
 export function normalizeHashtags(value: string | string[] | null | undefined) {
   if (Array.isArray(value)) {

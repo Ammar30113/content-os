@@ -60,6 +60,10 @@ export type Database = {
           image_url: string | null;
           image_status: string;
           image_error: string | null;
+          video_url: string | null;
+          video_status: string;
+          video_error: string | null;
+          video_source: string | null;
           status: string;
           scheduled_for: string | null;
           published_at: string | null;
@@ -91,6 +95,10 @@ export type Database = {
           image_url?: string | null;
           image_status?: string;
           image_error?: string | null;
+          video_url?: string | null;
+          video_status?: string;
+          video_error?: string | null;
+          video_source?: string | null;
           status?: string;
           scheduled_for?: string | null;
           published_at?: string | null;

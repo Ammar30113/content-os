@@ -8,6 +8,9 @@ const statusClasses: Record<string, string> = {
   reviewing: "border-violet-400/30 bg-violet-400/10 text-violet-100",
   scheduled: "border-[#ff6b4a]/30 bg-[#ff6b4a]/10 text-[#ffb7a7]",
   script_only: "border-[#C8923A]/30 bg-[#C8923A]/10 text-[#f5ebdc]",
+  missing: "border-[#C8923A]/30 bg-[#C8923A]/10 text-[#f5ebdc]",
+  not_required: "border-zinc-700 bg-zinc-900 text-zinc-400",
+  uploaded: "border-[#d4ff00]/30 bg-[#d4ff00]/10 text-[#ecff8a]",
 };
 
 export function StatusBadge({ status }: { status: string | null | undefined }) {

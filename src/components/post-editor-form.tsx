@@ -12,6 +12,7 @@ import {
   Save,
   Send,
   Trash2,
+  Video,
 } from "lucide-react";
 
 import {
@@ -40,6 +41,7 @@ type FormState = {
   template_type: string;
   template_fields: string;
   image_url: string;
+  video_url: string;
   status: string;
   scheduled_for: string;
 };
@@ -66,6 +68,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
       template_type: post.template_type || "news_digest",
       template_fields: JSON.stringify(post.template_fields || {}, null, 2),
       image_url: post.image_url || "",
+      video_url: post.video_url || "",
       status: post.status,
       scheduled_for: toDateTimeLocal(post.scheduled_for),
     }),
@@ -78,6 +81,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     error: null,
   });
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [videoUploadFile, setVideoUploadFile] = useState<File | null>(null);
   const router = useRouter();
   const parsedTemplateFields = useMemo(
     () => parseJsonField<Record<string, unknown>>(form.template_fields, {}),
@@ -86,7 +90,28 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   const brandName = getPostBrandName(parsedTemplateFields);
   const selectedChannels = useMemo(() => ["instagram"], []);
   const isReel = post.post_type === "reel";
+  const hasVideo = Boolean(form.video_url.trim());
   const hashtagsText = normalizeHashtags(form.hashtags).join(" ");
+  const veoPrompt = useMemo(
+    () =>
+      isReel
+        ? buildVeoPrompt({
+            caption: form.caption,
+            cta: form.cta,
+            hashtags: hashtagsText,
+            reelScript: form.reel_script,
+            templateFields: parsedTemplateFields,
+          })
+        : "",
+    [
+      form.caption,
+      form.cta,
+      form.reel_script,
+      hashtagsText,
+      isReel,
+      parsedTemplateFields,
+    ],
+  );
   const instagramPackage = [form.caption.trim(), hashtagsText]
     .filter(Boolean)
     .join("\n\n");
@@ -95,6 +120,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     hasImage: Boolean(form.image_url),
     hasCopy: Boolean(form.caption || form.x_version || form.linkedin_version),
     hasReelScript: Boolean(form.reel_script.trim()),
+    hasVideo,
     isReel,
     scheduledFor: form.scheduled_for,
   });
@@ -134,6 +160,17 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
       template_type: form.template_type,
       template_fields: templateFields,
       image_url: form.image_url || null,
+      video_url: form.video_url || null,
+      video_status: isReel
+        ? form.video_url.trim()
+          ? "uploaded"
+          : "missing"
+        : "not_required",
+      video_error: null,
+      video_source:
+        isReel && form.video_url.trim()
+          ? post.video_source || "manual_url"
+          : null,
       status: form.status,
       scheduled_for: form.scheduled_for
         ? new Date(form.scheduled_for).toISOString()
@@ -165,6 +202,21 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
         error: error instanceof Error ? error.message : `${loading} failed.`,
       });
     }
+  }
+
+  async function saveCurrentPost() {
+    const response = await fetch(`/api/posts/${post.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildPayload()),
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(payload.error || "Could not save post.");
+    }
+
+    return payload;
   }
 
   async function copyToClipboard(value: string, label: string) {
@@ -255,13 +307,120 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     );
   }
 
+  async function handleSaveVideoUrl() {
+    if (!isReel) {
+      return;
+    }
+
+    if (!form.video_url.trim()) {
+      await runAction(
+        "Saving video URL",
+        () =>
+          fetch(`/api/posts/${post.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...buildPayload(),
+              video_url: null,
+              video_status: "missing",
+              video_error: null,
+              video_source: null,
+            }),
+          }),
+        "Video URL cleared.",
+      );
+      return;
+    }
+
+    await runAction(
+      "Saving video URL",
+      () =>
+        fetch(`/api/posts/${post.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...buildPayload(),
+            video_status: "uploaded",
+            video_error: null,
+            video_source: "manual_url",
+          }),
+        }),
+      "Video URL saved.",
+    );
+  }
+
+  async function handleUploadVideo() {
+    if (!isReel) {
+      return;
+    }
+
+    if (!videoUploadFile) {
+      setState({ loading: null, message: null, error: "Choose an MP4 or MOV first." });
+      return;
+    }
+
+    const uploadData = new FormData();
+    uploadData.append("video", videoUploadFile);
+
+    await runAction(
+      "Uploading video",
+      () =>
+        fetch(`/api/posts/${post.id}/upload-video`, {
+          method: "POST",
+          body: uploadData,
+        }),
+      "Video uploaded.",
+    );
+  }
+
   async function handleSchedule() {
+    if (isReel && !form.video_url.trim()) {
+      setState({
+        loading: null,
+        message: null,
+        error: "Attach the finished Reel video before scheduling.",
+      });
+      return;
+    }
+
     if (!form.scheduled_for) {
       setState({
         loading: null,
         message: null,
         error: "Choose a scheduled date and time.",
       });
+      return;
+    }
+
+    if (isReel) {
+      setState({ loading: "Scheduling", message: null, error: null });
+
+      try {
+        await saveCurrentPost();
+        const response = await fetch("/api/schedule-post", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            post_id: post.id,
+            scheduled_for: new Date(form.scheduled_for).toISOString(),
+          }),
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Scheduling failed.");
+        }
+
+        setState({ loading: null, message: "Post scheduled.", error: null });
+        router.refresh();
+      } catch (error) {
+        setState({
+          loading: null,
+          message: null,
+          error: error instanceof Error ? error.message : "Scheduling failed.",
+        });
+      }
+
       return;
     }
 
@@ -347,6 +506,61 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
         error: error instanceof Error ? error.message : "Could not send post to Buffer.",
       });
     }
+  }
+
+  async function handleMarkPublished() {
+    if (isReel && !form.video_url.trim()) {
+      setState({
+        loading: null,
+        message: null,
+        error: "Attach the finished Reel video before marking it published.",
+      });
+      return;
+    }
+
+    if (isReel) {
+      setState({ loading: "Publishing", message: null, error: null });
+
+      try {
+        await saveCurrentPost();
+        const response = await fetch("/api/mark-published", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ post_id: post.id }),
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Publishing failed.");
+        }
+
+        setState({
+          loading: null,
+          message: "Post marked as published.",
+          error: null,
+        });
+        router.refresh();
+      } catch (error) {
+        setState({
+          loading: null,
+          message: null,
+          error: error instanceof Error ? error.message : "Publishing failed.",
+        });
+      }
+
+      return;
+    }
+
+    await runAction(
+      "Publishing",
+      () =>
+        fetch("/api/mark-published", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ post_id: post.id }),
+        }),
+      "Post marked as published.",
+    );
   }
 
   async function handleDeletePost() {
@@ -493,12 +707,81 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
       </section>
 
       <aside className="space-y-5">
-        <Panel title={isReel ? "Reel package" : "Image preview"}>
+        <Panel title={isReel ? "Reel video handoff" : "Image preview"}>
           {isReel ? (
-            <div className="rounded border border-zinc-800 bg-[#0a0a0b] p-3 text-sm leading-6 text-zinc-400">
-              Script-only reel package. Video upload, rendering, and Buffer handoff
-              are not enabled for this phase.
-            </div>
+            <>
+              <div className="overflow-hidden rounded border border-zinc-800 bg-black">
+                {form.video_url ? (
+                  <video
+                    controls
+                    playsInline
+                    src={form.video_url}
+                    className="aspect-[9/16] max-h-[520px] w-full bg-black object-contain"
+                  />
+                ) : (
+                  <div className="grid aspect-[9/16] max-h-[520px] place-items-center px-6 text-center text-sm leading-6 text-zinc-500">
+                    No Reel video attached yet.
+                  </div>
+                )}
+              </div>
+              <CopyButton
+                label="Copy Veo prompt"
+                value={veoPrompt}
+                onCopy={copyToClipboard}
+              />
+              <InputField
+                label="Final video URL"
+                value={form.video_url}
+                onChange={(value) => updateField("video_url", value)}
+              />
+              <button
+                type="button"
+                onClick={handleSaveVideoUrl}
+                disabled={Boolean(state.loading)}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
+              >
+                <Save size={16} />
+                {state.loading === "Saving video URL"
+                  ? "Saving..."
+                  : "Save video URL"}
+              </button>
+              <label className="block">
+                <span className="text-sm font-medium text-zinc-300">
+                  Upload exported video
+                </span>
+                <input
+                  type="file"
+                  accept="video/mp4,video/quicktime,.mp4,.mov"
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    setVideoUploadFile(event.target.files?.[0] || null)
+                  }
+                  className="mt-2 w-full rounded border border-zinc-700 bg-[#0a0a0b] px-3 py-2 text-sm text-zinc-300"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleUploadVideo}
+                disabled={Boolean(state.loading)}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
+              >
+                <Video size={16} />
+                {state.loading === "Uploading video" ? "Uploading..." : "Upload video"}
+              </button>
+              <div className="rounded border border-zinc-800 bg-[#0a0a0b] p-3 text-sm">
+                <p className="text-zinc-400">
+                  Video status:{" "}
+                  <span className="font-semibold text-white">
+                    {hasVideo ? "uploaded" : post.video_status || "missing"}
+                  </span>
+                </p>
+                {post.video_source ? (
+                  <p className="mt-1 text-zinc-500">Source: {post.video_source}</p>
+                ) : null}
+                {post.video_error ? (
+                  <p className="mt-2 text-red-300">{post.video_error}</p>
+                ) : null}
+              </div>
+            </>
           ) : (
             <>
               <div className="aspect-square overflow-hidden rounded border border-zinc-800 bg-black">
@@ -573,7 +856,8 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm">
               <p className="font-medium text-[#f5ebdc]">Manual reel handoff</p>
               <p className="mt-1 leading-5 text-zinc-400">
-                Copy the reel script and caption for manual video production.
+                Use the Veo prompt in Google Flow or Gemini, export the MP4,
+                attach it here, then publish manually.
               </p>
             </div>
           ) : (
@@ -615,6 +899,20 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             value={form.reel_script}
             onCopy={copyToClipboard}
           />
+          {isReel ? (
+            <>
+              <CopyButton
+                label="Copy Veo prompt"
+                value={veoPrompt}
+                onCopy={copyToClipboard}
+              />
+              <CopyButton
+                label="Copy video URL"
+                value={form.video_url}
+                onCopy={copyToClipboard}
+              />
+            </>
+          ) : null}
           <CopyButton
             label="Copy hashtags"
             value={hashtagsText}
@@ -730,18 +1028,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           ) : null}
           <button
             type="button"
-            onClick={() =>
-              runAction(
-                "Publishing",
-                () =>
-                  fetch("/api/mark-published", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ post_id: post.id }),
-                  }),
-                "Post marked as published.",
-              )
-            }
+            onClick={handleMarkPublished}
             disabled={Boolean(state.loading)}
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
           >
@@ -865,6 +1152,7 @@ function getWorkflowReadiness({
   hasImage,
   hasCopy,
   hasReelScript,
+  hasVideo,
   isReel,
   scheduledFor,
 }: {
@@ -872,6 +1160,7 @@ function getWorkflowReadiness({
   hasImage: boolean;
   hasCopy: boolean;
   hasReelScript: boolean;
+  hasVideo: boolean;
   isReel: boolean;
   scheduledFor: string;
 }) {
@@ -883,35 +1172,18 @@ function getWorkflowReadiness({
     };
   }
 
-  if (status === "scheduled" && scheduledFor) {
-    return {
-      title: "Ready for manual publishing",
-      description:
-        isReel
-          ? "Copy the reel script and caption when the scheduled slot arrives, then mark it published."
-          : "Copy the publish kit when the scheduled slot arrives, then mark the post published.",
-    };
-  }
-
-  if (isReel && status === "approved" && hasReelScript && hasCopy) {
-    return {
-      title: "Approved and ready to schedule",
-      description: "Pick a manual publishing time or use the next suggested slot.",
-    };
-  }
-
-  if (!isReel && status === "approved" && hasImage && hasCopy) {
-    return {
-      title: "Approved and ready to schedule",
-      description:
-        "Pick a manual publishing time or use the next suggested slot.",
-    };
-  }
-
   if (isReel && !hasReelScript) {
     return {
       title: "Needs reel script",
       description: "Add the reel script before approving or scheduling.",
+    };
+  }
+
+  if (isReel && !hasVideo) {
+    return {
+      title: "Needs video asset",
+      description:
+        "Copy the Veo prompt, export the MP4 from Google Flow or Gemini, then paste the URL or upload it here.",
     };
   }
 
@@ -929,12 +1201,110 @@ function getWorkflowReadiness({
     };
   }
 
+  if (status === "scheduled" && scheduledFor) {
+    return {
+      title: "Ready for manual publishing",
+      description:
+        isReel
+          ? "Publish the attached Reel video at the scheduled slot, then mark it published."
+          : "Copy the publish kit when the scheduled slot arrives, then mark the post published.",
+    };
+  }
+
+  if (status === "approved" && (isReel || hasImage) && hasCopy) {
+    return {
+      title: "Approved and ready to schedule",
+      description: "Pick a manual publishing time or use the next suggested slot.",
+    };
+  }
+
   return {
     title: "Draft",
     description: isReel
       ? "Review the script and copy, then approve the reel package."
       : "Review the copy and image, then approve the post.",
   };
+}
+
+function buildVeoPrompt({
+  caption,
+  cta,
+  hashtags,
+  reelScript,
+  templateFields,
+}: {
+  caption: string;
+  cta: string;
+  hashtags: string;
+  reelScript: string;
+  templateFields: Record<string, unknown>;
+}) {
+  const hook =
+    getStringField(templateFields, "reel_hook") ||
+    getStringField(templateFields, "headline");
+  const duration = getNumberField(templateFields, "reel_duration_seconds");
+  const beats = getStringArrayField(templateFields, "reel_beats");
+  const shotList = getStringArrayField(templateFields, "reel_shot_list");
+  const onScreenText = getStringArrayField(templateFields, "reel_on_screen_text");
+  const voiceover = getStringArrayField(templateFields, "reel_voiceover");
+  const audioDirection = getStringField(templateFields, "reel_audio_direction");
+  const coverText = getStringField(templateFields, "reel_cover_text");
+  const launchNeighborhood = getStringField(templateFields, "launch_neighborhood");
+  const categoryFocus = getStringField(templateFields, "category_focus");
+
+  return [
+    "Create a vertical 9:16 Instagram Reel video for Rallio, a local food and drink recommendation app.",
+    "Use Google Flow or Gemini with Veo. Generate natural-looking footage only. Do not render readable captions, fake UI text, logos, usernames, or brand marks inside the video. Text overlays and the cover will be added after export.",
+    "Visual style: local editorial, real neighborhood food discovery, warm indoor restaurant light, handheld details, quick food/table/service moments, premium but not glossy.",
+    `Target length: ${duration ? `${duration} seconds` : "15 to 30 seconds"}. If the tool only returns 8-second clips, make this as the first clip and keep the same style for follow-up clips.`,
+    launchNeighborhood
+      ? `Location context: ${launchNeighborhood}.`
+      : "Location context: Toronto and Rajkot launch markets, with a local-neighborhood feel.",
+    categoryFocus ? `Category focus: ${categoryFocus}.` : "",
+    hook ? `Opening hook: ${hook}` : "",
+    formatPromptList("Scene beats", beats),
+    formatPromptList("Shot list", shotList),
+    formatPromptList("Text overlays to add after export", onScreenText),
+    formatPromptList("Optional voiceover lines", voiceover),
+    audioDirection ? `Audio and motion direction: ${audioDirection}` : "",
+    coverText ? `Manual cover text: ${coverText}` : "",
+    reelScript.trim() ? `Reel script:\n${reelScript.trim()}` : "",
+    caption.trim() ? `Caption context:\n${caption.trim()}` : "",
+    cta.trim() ? `CTA: ${cta.trim()}` : "",
+    hashtags.trim() ? `Hashtags: ${hashtags.trim()}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function formatPromptList(title: string, items: string[]) {
+  if (!items.length) {
+    return "";
+  }
+
+  return `${title}:\n${items.map((item, index) => `${index + 1}. ${item}`).join("\n")}`;
+}
+
+function getStringField(fields: Record<string, unknown>, key: string) {
+  const value = fields[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getNumberField(fields: Record<string, unknown>, key: string) {
+  const value = fields[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function getStringArrayField(fields: Record<string, unknown>, key: string) {
+  const value = fields[key];
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean);
 }
 
 function getBufferPosts(fields: Record<string, unknown>) {

@@ -47,7 +47,11 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
       <PageHeader
         eyebrow="Editor"
         title={post.headline || post.hook || "Generated post"}
-        description="Edit the package, adjust template fields, regenerate the image, upload your own image, approve, schedule, or mark published."
+        description={
+          post.post_type === "reel"
+            ? "Edit the Reel package, copy the Veo prompt, attach the exported video, approve, schedule, or mark published."
+            : "Edit the package, adjust template fields, regenerate the image, upload your own image, approve, schedule, or mark published."
+        }
         action={
           <Link
             href="/app/posts"
@@ -61,7 +65,9 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
       <section className="space-y-5 p-6 lg:p-8">
         <div className="flex flex-wrap gap-2">
           <StatusBadge status={post.status} />
-          <StatusBadge status={post.image_status} />
+          <StatusBadge
+            status={post.post_type === "reel" ? post.video_status : post.image_status}
+          />
           <StatusBadge status={post.platform} />
           <StatusBadge status={post.post_type} />
         </div>

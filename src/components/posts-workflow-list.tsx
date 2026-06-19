@@ -23,10 +23,12 @@ type PostListItem = {
   post_type: string;
   status: string;
   image_status: string;
+  video_status: string;
   headline: string | null;
   hook: string | null;
   caption: string | null;
   image_url: string | null;
+  video_url: string | null;
   publish_error: string | null;
   scheduled_for: string | null;
   published_at: string | null;
@@ -324,7 +326,14 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
               <Link href={`/app/posts/${post.id}`} className="block">
                 <div className="grid gap-0 md:grid-cols-[210px_1fr]">
                   <div className="aspect-square bg-black">
-                    {post.image_url ? (
+                    {isReel && post.video_url ? (
+                      <video
+                        src={post.video_url}
+                        muted
+                        playsInline
+                        className="h-full w-full bg-black object-contain"
+                      />
+                    ) : post.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={post.image_url}
@@ -334,7 +343,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                     ) : (
                       <div className="grid h-full place-items-center p-4 text-center text-xs leading-5 text-zinc-500">
                         {isReel
-                          ? "Reel script"
+                          ? "Needs video"
                           : post.image_status === "failed"
                           ? "Image failed"
                           : "No image yet"}
@@ -344,7 +353,9 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                   <div className="p-5">
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge status={post.status} />
-                      <StatusBadge status={isReel ? "script_only" : post.image_status} />
+                      <StatusBadge
+                        status={isReel ? post.video_status : post.image_status}
+                      />
                     </div>
                     <h2 className="mt-4 text-xl font-semibold leading-tight text-white">
                       {post.headline || post.hook || "Untitled post"}
@@ -402,6 +413,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                   postType={post.post_type}
                   templateType={post.template_type}
                   templateFields={post.template_fields}
+                  videoUrl={post.video_url}
                 />
               </div>
             </article>

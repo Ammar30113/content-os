@@ -26,6 +26,10 @@ export async function PATCH(
       template_fields: input.template_fields as Json,
     };
 
+    if ("video_url" in input) {
+      updatePayload.video_url = input.video_url || null;
+    }
+
     const { data, error } = await supabase
       .from("generated_posts")
       .update(updatePayload)

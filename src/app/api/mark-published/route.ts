@@ -14,6 +14,21 @@ export async function POST(request: Request) {
     const input = markPublishedSchema.parse(await request.json());
     const { supabase, user } = await requireApiUser();
 
+    const { data: existingPost, error: existingPostError } = await supabase
+      .from("generated_posts")
+      .select("id, post_type, video_url")
+      .eq("id", input.post_id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (existingPostError || !existingPost) {
+      throw new Error(existingPostError?.message || "Post not found.");
+    }
+
+    if (existingPost.post_type === "reel" && !existingPost.video_url) {
+      throw new Error("Attach the finished Reel video before marking it published.");
+    }
+
     const publishedAt = new Date().toISOString();
     const { data: post, error: postError } = await supabase
       .from("generated_posts")

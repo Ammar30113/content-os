@@ -1673,6 +1673,7 @@ export async function POST(request: Request) {
           !isReelPackage && input.image_mode === "uploaded"
             ? "generated"
             : "not_generated",
+        video_status: isReelPackage ? "missing" : "not_required",
       })
       .select()
       .single();

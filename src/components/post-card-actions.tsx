@@ -11,6 +11,7 @@ type PostCardActionsProps = {
   postType: string;
   templateType: string | null;
   templateFields: Json;
+  videoUrl?: string | null;
 };
 
 export function PostCardActions({
@@ -18,12 +19,14 @@ export function PostCardActions({
   postType,
   templateType,
   templateFields,
+  videoUrl,
 }: PostCardActionsProps) {
   const [scheduledFor, setScheduledFor] = useState("");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const canRegenerateImage = postType !== "reel" && Boolean(templateType);
+  const canSchedule = postType !== "reel" || Boolean(videoUrl);
 
   async function runAction(action: string, request: () => Promise<Response>) {
     setLoadingAction(action);
@@ -117,7 +120,7 @@ export function PostCardActions({
         />
         <button
           type="button"
-          disabled={Boolean(loadingAction) || !scheduledFor}
+          disabled={Boolean(loadingAction) || !scheduledFor || !canSchedule}
           onClick={() =>
             runAction("Schedule", () =>
               fetch("/api/schedule-post", {
@@ -136,6 +139,11 @@ export function PostCardActions({
           {loadingAction === "Schedule" ? "Scheduling..." : "Schedule"}
         </button>
       </div>
+      {!canSchedule ? (
+        <p className="text-xs leading-5 text-zinc-500">
+          Attach the finished Reel video before scheduling.
+        </p>
+      ) : null}
       {error ? <p className="text-xs leading-5 text-red-300">{error}</p> : null}
     </div>
   );
