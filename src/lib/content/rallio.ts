@@ -127,26 +127,26 @@ export type RallioTopicSeed = {
 };
 
 const RALLIO_DEFAULT_FEED_RHYTHM: RallioContentType[] = [
+  "regular_quote",
+  "spot_carousel",
+  "participation_single",
   "supporter_steps_carousel",
+  "receipt_single",
   "regular_quote",
   "spot_carousel",
   "participation_single",
   "owner_steps_carousel",
-  "receipt_single",
-  "supporter_steps_carousel",
+  "regular_quote",
   "spot_carousel",
+  "participation_single",
+  "supporter_steps_carousel",
+  "receipt_single",
   "regular_quote",
   "participation_single",
+  "spot_carousel",
   "owner_claim_carousel",
-  "supporter_steps_carousel",
-  "receipt_single",
-  "spot_carousel",
-  "owner_steps_carousel",
-  "regular_quote",
-  "supporter_steps_carousel",
   "participation_single",
   "supporter_steps_carousel",
-  "participation_single",
 ];
 
 const RALLIO_POST_TYPE_PRIORITY: Record<PostType, RallioContentType[]> = {
@@ -968,6 +968,14 @@ export const rallioTopicSeeds: RallioTopicSeed[] = [
   },
 ];
 
+// Supporter/owner setup and owner-claim posts are deliberately a minority of
+// the feed; everything else is value content people actually save and share.
+const RALLIO_SETUP_CONTENT_TYPES = new Set<RallioContentType>([
+  "supporter_steps_carousel",
+  "owner_steps_carousel",
+  "owner_claim_carousel",
+]);
+
 export function selectRallioSeed({
   postType,
   recentText,
@@ -989,8 +997,26 @@ export function selectRallioSeed({
   );
   const recent = normalizeRecentText(recentText);
   const fresh = pool.filter((seed) => !seedMatchesRecent(seed, recent));
+  const candidates = fresh.length ? fresh : pool;
 
-  return pickRandomItem(fresh.length ? fresh : pool);
+  // Pick value content (quotes, spots, receipts, participation) most of the
+  // time and only allow a supporter/owner setup post about one pick in four, so
+  // single-post generation stops repeating supporter and owner profile posts.
+  const valueCandidates = candidates.filter(
+    (seed) => !RALLIO_SETUP_CONTENT_TYPES.has(seed.contentType),
+  );
+  const setupCandidates = candidates.filter((seed) =>
+    RALLIO_SETUP_CONTENT_TYPES.has(seed.contentType),
+  );
+
+  if (
+    valueCandidates.length &&
+    (!setupCandidates.length || Math.random() > 0.25)
+  ) {
+    return pickRandomItem(valueCandidates);
+  }
+
+  return pickRandomItem(candidates);
 }
 
 export function selectRallioAngle(seed: RallioTopicSeed, recentText: string) {
