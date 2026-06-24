@@ -32,13 +32,33 @@ export async function GET(
       return new Response("Post image not found.", { status: 404 });
     }
 
-    const { data: asset } = await supabase
+    // Prefer the stored asset that matches the post's cover image. Carousel
+    // posts have several assets, so "latest" would otherwise serve the last
+    // slide instead of the cover.
+    let asset: { storage_path: string } | null = null;
+
+    const { data: coverAsset } = await supabase
       .from("media_assets")
       .select("storage_path")
       .eq("post_id", postId)
+      .eq("public_url", post.image_url)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    asset = coverAsset;
+
+    if (!asset?.storage_path) {
+      const { data: latestAsset } = await supabase
+        .from("media_assets")
+        .select("storage_path")
+        .eq("post_id", postId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      asset = latestAsset;
+    }
 
     if (asset?.storage_path) {
       const { data: file, error: downloadError } = await supabase.storage

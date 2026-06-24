@@ -8,6 +8,7 @@ import {
   Clipboard,
   Clock,
   ImageUp,
+  Layers,
   RefreshCw,
   Save,
   Send,
@@ -90,6 +91,11 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   const brandName = getPostBrandName(parsedTemplateFields);
   const selectedChannels = useMemo(() => ["instagram"], []);
   const isReel = post.post_type === "reel";
+  const isCarousel = post.post_type === "carousel";
+  const slideImageUrls = useMemo(
+    () => getSlideImageUrls(parsedTemplateFields),
+    [parsedTemplateFields],
+  );
   const hasVideo = Boolean(form.video_url.trim());
   const hashtagsText = normalizeHashtags(form.hashtags).join(" ");
   const veoPrompt = useMemo(
@@ -275,6 +281,28 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           }),
         }),
       "Image regenerated.",
+    );
+  }
+
+  async function handleRenderCarousel() {
+    if (!isCarousel) {
+      return;
+    }
+
+    const payload = buildPayload();
+    await runAction(
+      "Rendering slides",
+      () =>
+        fetch("/api/render-carousel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            post_id: post.id,
+            template_fields: payload.template_fields,
+            headline: form.headline || undefined,
+          }),
+        }),
+      "Carousel slides rendered.",
     );
   }
 
@@ -819,8 +847,58 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
                 className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
               >
                 <RefreshCw size={16} />
-                {state.loading === "Rendering" ? "Rendering..." : "Regenerate image"}
+                {state.loading === "Rendering"
+                  ? "Rendering..."
+                  : isCarousel
+                    ? "Regenerate cover"
+                    : "Regenerate image"}
               </button>
+              {isCarousel ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleRenderCarousel}
+                    disabled={Boolean(state.loading)}
+                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-[#C8923A]/50 px-3 text-sm font-semibold text-[#f5ebdc] transition hover:bg-[#C8923A]/10 disabled:opacity-50"
+                  >
+                    <Layers size={16} />
+                    {state.loading === "Rendering slides"
+                      ? "Rendering slides..."
+                      : "Render carousel slides"}
+                  </button>
+                  {slideImageUrls.length ? (
+                    <div>
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        Carousel slides ({slideImageUrls.length}) — sent to Buffer
+                        in order
+                      </p>
+                      <div className="flex gap-2 overflow-x-auto">
+                        {slideImageUrls.map((url, index) => (
+                          <div
+                            key={url}
+                            className="relative h-20 w-20 shrink-0 overflow-hidden rounded border border-zinc-800 bg-black"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={`Slide ${index + 1}`}
+                              className="h-full w-full object-cover"
+                            />
+                            <span className="absolute bottom-0 right-0 bg-black/70 px-1 text-[10px] font-semibold text-white">
+                              {index + 1}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs leading-5 text-zinc-500">
+                      This carousel will ship as a single image until you render
+                      slides. Slide 1 is the value tile; slide 2 is the gap.
+                    </p>
+                  )}
+                </>
+              ) : null}
               <label className="block">
                 <span className="text-sm font-medium text-zinc-300">
                   Upload own image
@@ -1334,6 +1412,18 @@ function getBufferPosts(fields: Record<string, unknown>) {
 
 function getPostBrandName(fields: Record<string, unknown>) {
   return fields.brand_slug === "signal" ? "Signal" : "Rallio";
+}
+
+function getSlideImageUrls(fields: Record<string, unknown>): string[] {
+  const slides = fields.slide_image_urls;
+
+  if (!Array.isArray(slides)) {
+    return [];
+  }
+
+  return slides.filter(
+    (url): url is string => typeof url === "string" && url.length > 0,
+  );
 }
 
 function getNextManualSlot(platform: string) {

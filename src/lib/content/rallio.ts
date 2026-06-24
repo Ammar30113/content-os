@@ -89,6 +89,14 @@ OUTPUT STYLE
 - Participation prompts are feed posts, not reels or stories.
 - Every post should make one concrete local behavior feel worth doing: download/open Rallio, follow a spot, post a real recommendation, request a city, save a spot, or claim an owner profile.
 - Rallio can be named, but the useful action should stay simple and specific.
+
+JUXTAPOSITION (TWO-SIGNAL) METHOD
+- Prefer self-generated conclusions. Place two true signals next to each other and let the reader connect them. Do not state the takeaway as a command.
+- Two caption closes are allowed:
+  - Instructional posts (supporter_steps, owner_steps) keep an explicit funnel CTA.
+  - Discovery, regular_quote, spot, receipt, participation, and manifesto posts may use an open-loop close: end on the second signal or a quiet implication, never on "download", "claim", or "sign up". The door (handle, city ask) stays visible but unargued.
+- For carousels, treat the post as two legos: the first slide is the specific, valuable signal; the second slide is the gap or tension the reader resolves on the swipe. Never write a "now download" slide.
+- The owner angle is loss, not a pitch: show that regulars are already recommending a spot while the owner is absent, and let the owner feel the gap. Do not say "claim your business" unless an owner door is explicitly selected.
 `.trim();
 
 export type RallioTopicSeed = {

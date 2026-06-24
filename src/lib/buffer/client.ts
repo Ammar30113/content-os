@@ -11,6 +11,8 @@ import {
 } from "@/lib/env";
 
 const BUFFER_GRAPHQL_ENDPOINT = "https://api.buffer.com";
+// Instagram (and therefore Buffer) caps a carousel at 10 images.
+const BUFFER_INSTAGRAM_MAX_CAROUSEL = 10;
 const BUFFER_INSTAGRAM_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 const BUFFER_IMAGE_MIN_BYTES = 1024;
 const INSTAGRAM_IMAGE_MIN_WIDTH = 320;
@@ -56,6 +58,9 @@ type CreateBufferPostInput = {
   brandSlug: BufferBrand;
   text: string;
   imageUrl: string | null;
+  // Ordered carousel slide URLs. When two or more are present, the post is sent
+  // as a multi-image carousel and `imageUrl` is ignored.
+  imageUrls?: string[] | null;
   scheduledFor: string;
 };
 
@@ -96,6 +101,7 @@ export async function createBufferPost({
   brandSlug,
   text,
   imageUrl,
+  imageUrls,
   scheduledFor,
 }: CreateBufferPostInput): Promise<BufferPostResult> {
   const env = getBufferEnv();
@@ -108,29 +114,34 @@ export async function createBufferPost({
     dueAt: scheduledFor,
   };
 
-  const bufferImageUrl = getBufferImageUrl({
+  const bufferImageUrls = getBufferImageUrls({
     postId,
     platform,
     imageUrl,
+    imageUrls,
   });
 
-  if (bufferImageUrl) {
-    await assertBufferMediaUrlReady(bufferImageUrl, platform);
+  if (bufferImageUrls.length) {
+    // Validate every slide so a carousel never ships with a missing or
+    // non-JPEG image. A partial carousel is worse than a clear failure.
+    for (const url of bufferImageUrls) {
+      await assertBufferMediaUrlReady(url, platform);
+    }
 
-    input.assets = [
-      {
-        image: {
-          url: bufferImageUrl,
-          metadata: {
-            altText: `${formatBufferBrandName(brandSlug)} social post graphic`,
-            dimensions: {
-              width: 1080,
-              height: 1080,
-            },
+    const altText = `${formatBufferBrandName(brandSlug)} social post graphic`;
+
+    input.assets = bufferImageUrls.map((url) => ({
+      image: {
+        url,
+        metadata: {
+          altText,
+          dimensions: {
+            width: 1080,
+            height: 1080,
           },
         },
       },
-    ];
+    }));
   }
 
   if (platform === "instagram") {
@@ -189,23 +200,49 @@ function formatBufferBrandName(brandSlug: BufferBrand) {
   return brandSlug === "signal" ? "Signal" : "Rallio";
 }
 
-function getBufferImageUrl({
+function getBufferImageUrls({
   postId,
   platform,
   imageUrl,
+  imageUrls,
 }: {
   postId: string;
   platform: BufferPlatform;
   imageUrl: string | null;
-}) {
-  if (!imageUrl) {
-    return null;
-  }
-
+  imageUrls?: string[] | null;
+}): string[] {
   if (platform === "x" && process.env.BUFFER_ATTACH_IMAGES_TO_X !== "true") {
-    return null;
+    return [];
   }
 
+  const slides = (imageUrls || []).filter((url): url is string => Boolean(url));
+
+  if (slides.length > 1) {
+    if (slides.length > BUFFER_INSTAGRAM_MAX_CAROUSEL) {
+      throw new Error(
+        `Instagram carousels allow at most ${BUFFER_INSTAGRAM_MAX_CAROUSEL} images; this post has ${slides.length}. Re-render with fewer slides.`,
+      );
+    }
+
+    return slides.map((url) => resolveCarouselSlideUrl(url));
+  }
+
+  const single = imageUrl || slides[0] || null;
+
+  if (!single) {
+    return [];
+  }
+
+  return [resolveSingleImageUrl({ postId, imageUrl: single })];
+}
+
+function resolveSingleImageUrl({
+  postId,
+  imageUrl,
+}: {
+  postId: string;
+  imageUrl: string;
+}) {
   const appUrl = getAppUrl();
 
   if (
@@ -220,6 +257,30 @@ function getBufferImageUrl({
   }
 
   return `${appUrl}/api/public/post-image/${postId}.jpg`;
+}
+
+// Carousel slides are freshly rendered JPEGs stored at public Supabase URLs, so
+// Buffer can fetch them directly. Anything that is not a JPEG is rejected rather
+// than silently routed through the single-image proxy (which would duplicate the
+// cover across every slide).
+function resolveCarouselSlideUrl(url: string) {
+  if (!isPublicJpegUrl(url)) {
+    throw new Error(
+      "Carousel slide image must be a rendered JPEG URL. Re-render the carousel slides before sending to Buffer.",
+    );
+  }
+
+  return url;
+}
+
+function isPublicJpegUrl(imageUrl: string) {
+  try {
+    const pathname = new URL(imageUrl).pathname;
+
+    return /\.jpe?g$/i.test(pathname);
+  } catch {
+    return false;
+  }
 }
 
 async function assertBufferMediaUrlReady(url: string, platform: BufferPlatform) {

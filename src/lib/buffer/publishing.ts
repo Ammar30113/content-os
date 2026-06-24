@@ -85,6 +85,7 @@ export async function sendPublishingJobToBuffer(
       brandSlug,
       text: buildPlatformText(post, platform),
       imageUrl: post.image_url,
+      imageUrls: getCarouselSlideUrls(post),
       scheduledFor: new Date(job.scheduled_for).toISOString(),
     });
     const templateFields = withBufferPostMetadata({
@@ -334,6 +335,28 @@ function getPostBrandSlug(templateFields: Json): BufferBrand | null {
   const value = getTemplateFieldString(templateFields, "brand_slug");
 
   return value === "rallio" || value === "signal" ? value : null;
+}
+
+// Carousel slide images are stored on template_fields.slide_image_urls by the
+// render-carousel route. Only treat a post as a true carousel when it is a
+// carousel post type with at least two rendered slides; otherwise the single
+// image_url path is used.
+function getCarouselSlideUrls(post: GeneratedPost): string[] | null {
+  if (post.post_type !== "carousel") {
+    return null;
+  }
+
+  const fields = post.template_fields;
+
+  if (!isRecord(fields) || !Array.isArray(fields.slide_image_urls)) {
+    return null;
+  }
+
+  const urls = fields.slide_image_urls.filter(
+    (url): url is string => typeof url === "string" && url.length > 0,
+  );
+
+  return urls.length >= 2 ? urls : null;
 }
 
 function formatBrandName(brandSlug: BufferBrand) {
