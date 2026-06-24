@@ -26,6 +26,13 @@ const rallioPostTypes = postTypes.filter(
   (type) => type === "single" || type === "carousel" || type === "reel",
 );
 
+// Each carousel renders three slides, so cap carousel batches to keep the
+// render queue fast and avoid long, failure-prone generation runs.
+const CAROUSEL_MAX_QUANTITY = 5;
+const carouselPostQuantities = postQuantities.filter(
+  (quantity) => Number(quantity) <= CAROUSEL_MAX_QUANTITY,
+);
+
 type FormState = {
   brand_slug: BrandSlug;
   auto_topic: boolean;
@@ -161,6 +168,7 @@ export function IdeaGeneratorForm() {
   const router = useRouter();
   const brandCopy = getBrandFormCopy(form.brand_slug);
   const isReel = isReelForm(form);
+  const isCarousel = !isReel && form.post_type === "carousel";
 
   function updateField<K extends keyof FormState>(name: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -193,7 +201,13 @@ export function IdeaGeneratorForm() {
     setForm((current) => ({
       ...current,
       post_type: value,
-      quantity: value === "reel" ? "1" : current.quantity,
+      quantity:
+        value === "reel"
+          ? "1"
+          : value === "carousel" &&
+              Number(current.quantity) > CAROUSEL_MAX_QUANTITY
+            ? String(CAROUSEL_MAX_QUANTITY)
+            : current.quantity,
       image_mode: value === "reel" ? "template" : current.image_mode,
     }));
   }
@@ -214,7 +228,9 @@ export function IdeaGeneratorForm() {
       return 1;
     }
 
-    return Math.min(20, Math.max(1, Math.trunc(parsed)));
+    const max = targetForm.post_type === "carousel" ? CAROUSEL_MAX_QUANTITY : 20;
+
+    return Math.min(max, Math.max(1, Math.trunc(parsed)));
   }
 
   function buildRequestPayload(
@@ -847,14 +863,18 @@ export function IdeaGeneratorForm() {
           <SelectField
             label="Posts"
             value={form.quantity}
-            options={isReel ? ["1"] : postQuantities}
+            options={
+              isReel ? ["1"] : isCarousel ? carouselPostQuantities : postQuantities
+            }
             onChange={(value) => updateField("quantity", value)}
           />
         </div>
         <div className="rounded border border-[#C8923A]/30 bg-[#C8923A]/10 p-3 text-sm leading-6 text-[#f5ebdc]">
           {isReel
             ? "Rallio reels generate a script-only package for manual video production and publishing."
-            : brandCopy.routingNote}
+            : isCarousel
+              ? `Carousels render 3 slides each (value, gap, close), so batches are capped at ${CAROUSEL_MAX_QUANTITY} to keep generation fast and reliable.`
+              : brandCopy.routingNote}
         </div>
       </div>
 
