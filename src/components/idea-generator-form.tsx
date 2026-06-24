@@ -433,13 +433,58 @@ export function IdeaGeneratorForm() {
     return payload as GeneratePayload;
   }
 
-  async function renderPackageImage(payload: {
-    post: { id: string };
-    content: {
-      template_type: string;
-      template_fields: Record<string, unknown>;
-    };
-  }) {
+  async function renderCarouselSlides(
+    postId: string,
+    templateFields: Record<string, unknown>,
+  ) {
+    let response: Response;
+
+    try {
+      response = await fetch("/api/render-carousel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          post_id: postId,
+          template_fields: templateFields,
+        }),
+      });
+    } catch (error) {
+      return getApiErrorMessage(error, "Carousel render failed.");
+    }
+
+    const payload = await readApiJson<{ error?: unknown }>(response);
+
+    if (!response.ok) {
+      return getApiErrorMessage(payload.error, "Carousel render failed.");
+    }
+
+    return null;
+  }
+
+  async function renderPackageImage(
+    payload: {
+      post: { id: string };
+      content: {
+        template_type: string;
+        template_fields: Record<string, unknown>;
+      };
+    },
+    activeForm: FormState,
+  ) {
+    // Carousel posts render every slide so they actually publish as a carousel.
+    // Step carousels (and anything without buildable slides) fall through to a
+    // single cover render below.
+    if (!isReelForm(activeForm) && activeForm.post_type === "carousel") {
+      const carouselError = await renderCarouselSlides(
+        payload.post.id,
+        payload.content.template_fields,
+      );
+
+      if (!carouselError) {
+        return null;
+      }
+    }
+
     let renderResponse: Response;
 
     try {
@@ -510,7 +555,7 @@ export function IdeaGeneratorForm() {
             error: null,
           });
 
-          const imageError = await renderPackageImage(payload);
+          const imageError = await renderPackageImage(payload, activeForm);
 
           if (imageError) {
             imageFailures.push(`1: ${imageError}`);
@@ -580,7 +625,7 @@ export function IdeaGeneratorForm() {
               error: null,
             });
 
-            const imageError = await renderPackageImage(payload);
+            const imageError = await renderPackageImage(payload, activeForm);
 
             if (imageError) {
               imageFailures.push(`${angle.index}: ${imageError}`);
