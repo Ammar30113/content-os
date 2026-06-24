@@ -34,6 +34,33 @@ const GAP_LINES: Record<DoorFamily, string[]> = {
   ],
 };
 
+// The quiet third slide. A soft implication, never a command — the reader has
+// already drawn the conclusion from slides one and two.
+const CLOSE_LINES: Record<DoorFamily, string[]> = {
+  supporter: [
+    "the map remembers spots like this.",
+    "taste like this is worth keeping.",
+    "this is what the map is built from.",
+  ],
+  owner: [
+    "regulars started it. owners can shape it.",
+    "the profile is already out there.",
+    "this is the part owners can step into.",
+  ],
+  city: [
+    "the map grows one neighborhood at a time.",
+    "this is how the map reaches a new city.",
+    "every city starts with one spot.",
+  ],
+};
+
+// Soft door labels for the close slide. Not imperatives.
+const CLOSE_LABELS: Record<DoorFamily, string> = {
+  supporter: "the local taste map",
+  owner: "owner profiles",
+  city: "request your city",
+};
+
 type DoorFamily = "supporter" | "owner" | "city";
 
 // Steps carousels are deliberately instructional and stay single-image, so the
@@ -80,10 +107,13 @@ export function buildRallioCarouselSlideSpecs({
     return null;
   }
 
+  const family = doorFamily(fields);
+
   const valueFields: TemplateFields = {
     ...fields,
     brand_slug: fields.brand_slug || "rallio",
     headline: fields.headline || headline || undefined,
+    carousel_role: "value",
   };
 
   const gapFields: TemplateFields = {
@@ -91,14 +121,24 @@ export function buildRallioCarouselSlideSpecs({
     rallio_template_type: "rallio_manifesto",
     // No content_type: keeps the manifesto tile on the ink background with no
     // participation footer, so it reads as a quiet second signal, not a prompt.
-    headline: pickStable(GAP_LINES[doorFamily(fields)], postId),
+    carousel_role: "gap",
+    headline: pickStable(GAP_LINES[family], postId),
     business_name: fields.business_name,
     launch_neighborhood: fields.launch_neighborhood,
+  };
+
+  const closeFields: TemplateFields = {
+    brand_slug: "rallio",
+    rallio_template_type: "rallio_manifesto",
+    carousel_role: "close",
+    headline: pickStable(CLOSE_LINES[family], `${postId}close`),
+    door_label: CLOSE_LABELS[family],
   };
 
   return [
     { templateType: "creator_economy", fields: valueFields },
     { templateType: "founder_story", fields: gapFields },
+    { templateType: "founder_story", fields: closeFields },
   ];
 }
 

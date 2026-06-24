@@ -608,6 +608,10 @@ function ReceiptRow({ label, value }: { label: string; value: string }) {
 }
 
 function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
+  if (fields.carousel_role === "close") {
+    return <RallioCarouselCloseTemplate fields={fields} />;
+  }
+
   const isParticipation = fields.content_type === "participation_single";
   const headline = displayHeadline(
     isParticipation ? fields.participation_prompt || fields.headline : fields.headline,
@@ -669,6 +673,59 @@ function RallioManifestoTemplate({ fields }: { fields: TemplateFields }) {
         </div>
       ) : null}
       <RallioWatermark color={isParticipation ? rallio.muted : "rgba(245,235,220,0.55)"} />
+    </Canvas>
+  );
+}
+
+function RallioCarouselCloseTemplate({ fields }: { fields: TemplateFields }) {
+  const closeLine = displayHeadline(
+    fields.headline,
+    "the map remembers spots like this.",
+    90,
+  );
+  const doorLabel = compactText(fields.door_label, "the local taste map", 36);
+  const closeSize = closeLine.length > 60 ? 76 : closeLine.length > 36 ? 92 : 112;
+
+  return (
+    <Canvas background={rallio.cream}>
+      <div
+        style={{
+          position: "absolute",
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
+          top: 280,
+          color: rallio.ink,
+          fontFamily: "Fraunces, Georgia, serif",
+          fontSize: closeSize,
+          lineHeight: 1.04,
+          fontStyle: "italic",
+          fontWeight: 600,
+          display: "flex",
+        }}
+      >
+        {closeLine}
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: GRID_SAFE_INSET,
+          right: GRID_SAFE_INSET,
+          bottom: 124,
+          color: rallio.muted,
+          fontFamily: "Manrope, Inter, Arial, sans-serif",
+          fontSize: 26,
+          fontWeight: 800,
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 24,
+          borderTop: "2px solid rgba(12,10,8,0.32)",
+          paddingTop: 28,
+        }}
+      >
+        <span style={{ display: "flex" }}>link in bio</span>
+        <span style={{ display: "flex", color: rallio.amber }}>{doorLabel}</span>
+      </div>
+      <RallioWatermark color={rallio.muted} />
     </Canvas>
   );
 }

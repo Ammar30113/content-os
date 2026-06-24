@@ -239,6 +239,7 @@ export const templateFieldsSchema = z
     regular_since_year: z.string().optional(),
     carousel_page: z.string().optional(),
     carousel_total: z.string().optional(),
+    carousel_role: z.enum(["value", "gap", "close"]).optional(),
     receipt_lines: z.array(z.string()).optional(),
     subtotal: z.string().optional(),
     supporter_steps: z.array(z.string()).optional(),
