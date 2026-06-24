@@ -540,6 +540,55 @@ export function normalizeSignalCtaDoor(
   return ctaDoor || "app_download";
 }
 
+// Rallio-only fields must never survive on a Signal post, so a leaked taste-map
+// field can never pull a Signal post toward the Rallio template or copy.
+const RALLIO_ONLY_FIELD_KEYS = [
+  "rallio_template_type",
+  "content_type",
+  "cta_door",
+  "launch_neighborhood",
+  "category_focus",
+  "business_name",
+  "spot_category",
+  "spot_address",
+  "spot_list_name",
+  "spot_list_position",
+  "spot_list_total",
+  "recommender_quote",
+  "recommender_name",
+  "recommender_neighborhood",
+  "recommender_since",
+  "regular_quote",
+  "regular_neighborhood",
+  "regular_since_year",
+  "receipt_lines",
+  "subtotal",
+  "supporter_steps",
+  "owner_steps",
+  "step_audience",
+  "local_signal_id",
+  "source_status",
+  "signature_order",
+  "sensory_detail",
+  "participation_prompt",
+  "carousel_page",
+  "carousel_total",
+  "carousel_role",
+] as const;
+
+function omitTemplateFields(
+  fields: TemplateFields,
+  keys: readonly string[],
+): TemplateFields {
+  const result: TemplateFields = { ...fields };
+
+  for (const key of keys) {
+    delete (result as Record<string, unknown>)[key];
+  }
+
+  return result;
+}
+
 export function normalizeSignalMetadata(
   fields: TemplateFields,
   fallback?: {
@@ -562,7 +611,7 @@ export function normalizeSignalMetadata(
     templateForSignalContentType(contentType);
 
   return {
-    ...fields,
+    ...omitTemplateFields(fields, RALLIO_ONLY_FIELD_KEYS),
     brand_slug: "signal",
     brand_handle: SIGNAL_BRAND.handle,
     selected_platforms: ["instagram"],

@@ -1594,6 +1594,38 @@ export function mapRallioTemplateToCoreType(
   return "founder_story";
 }
 
+// Signal-only fields must never survive on a Rallio post. The image renderer
+// routes to the Signal template when it sees signal_template_type, so a leaked
+// value would render a Rallio post with Signal branding.
+const SIGNAL_ONLY_FIELD_KEYS = [
+  "signal_template_type",
+  "signal_content_type",
+  "signal_cta_door",
+  "signal_visual_style",
+  "signal_kpi_intent",
+  "signal_state",
+  "signal_protocol_steps",
+  "signal_trigger",
+  "signal_redirect_action",
+  "signal_identity_line",
+  "signal_privacy_line",
+  "signal_principle",
+  "signal_app_feature",
+] as const;
+
+function omitTemplateFields(
+  fields: TemplateFields,
+  keys: readonly string[],
+): TemplateFields {
+  const result: TemplateFields = { ...fields };
+
+  for (const key of keys) {
+    delete (result as Record<string, unknown>)[key];
+  }
+
+  return result;
+}
+
 export function normalizeRallioMetadata(
   fields: TemplateFields,
   fallback?: {
@@ -1617,7 +1649,7 @@ export function normalizeRallioMetadata(
   const launchStepFields = buildLaunchStepTemplateDefaults(contentType, fields);
 
   return {
-    ...fields,
+    ...omitTemplateFields(fields, SIGNAL_ONLY_FIELD_KEYS),
     ...launchStepFields,
     brand_slug: "rallio",
     brand_handle: RALLIO_BRAND.handle,
