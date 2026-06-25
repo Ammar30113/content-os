@@ -41,6 +41,10 @@ export async function POST(request: Request) {
     const input = ideaInputSchema.parse(await request.json());
     const quantity = input.quantity || 1;
 
+    if (input.brand_slug === "signal" && input.post_type !== "single") {
+      throw new Error("Signal generation is single-post only in this phase.");
+    }
+
     if (input.post_type === "reel") {
       throw new Error("Rallio reel generation is single-package only in this phase.");
     }

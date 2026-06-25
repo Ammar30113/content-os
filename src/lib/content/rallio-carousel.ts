@@ -1,4 +1,5 @@
 import type { PostType, TemplateFields, TemplateType } from "@/lib/content/types";
+import { RALLIO_OWNER_STEPS, RALLIO_SUPPORTER_STEPS } from "@/lib/content/rallio";
 
 // A single rendered carousel slide. `templateType` only satisfies the renderer
 // signature; the Rallio renderer routes on `fields.rallio_template_type`.
@@ -63,8 +64,6 @@ const CLOSE_LABELS: Record<DoorFamily, string> = {
 
 type DoorFamily = "supporter" | "owner" | "city";
 
-// Steps carousels are deliberately instructional and stay single-image, so the
-// "download/owner-setup" CTA is never split into a juxtaposition.
 const STEPS_CONTENT_TYPES = new Set([
   "supporter_steps_carousel",
   "owner_steps_carousel",
@@ -76,8 +75,8 @@ const STEPS_CONTENT_TYPES = new Set([
  *   - Slide 1: the post's own value tile (same as the single cover).
  *   - Slide 2: the gap/tension tile, which the reader connects on the swipe.
  *
- * Returns null when the post should stay a single image (non-carousel posts,
- * step carousels, or non-Rallio posts).
+ * Returns null when the post should stay a single image (non-carousel posts or
+ * non-Rallio posts).
  */
 export function buildRallioCarouselSlideSpecs({
   postId,
@@ -104,7 +103,12 @@ export function buildRallioCarouselSlideSpecs({
   const contentType = fields.content_type;
 
   if (contentType && STEPS_CONTENT_TYPES.has(contentType)) {
-    return null;
+    return buildRallioStepCarouselSlideSpecs({
+      postId,
+      fields,
+      headline,
+      contentType,
+    });
   }
 
   const family = doorFamily(fields);
@@ -140,6 +144,112 @@ export function buildRallioCarouselSlideSpecs({
     { templateType: "founder_story", fields: gapFields },
     { templateType: "founder_story", fields: closeFields },
   ];
+}
+
+function buildRallioStepCarouselSlideSpecs({
+  postId,
+  fields,
+  headline,
+  contentType,
+}: {
+  postId: string;
+  fields: TemplateFields;
+  headline?: string | null;
+  contentType: NonNullable<TemplateFields["content_type"]>;
+}): CarouselSlideSpec[] {
+  const isOwner =
+    contentType === "owner_steps_carousel" || fields.step_audience === "owner";
+  const steps = getStepList(fields, isOwner);
+  const firstSteps = steps.slice(0, 3);
+  const lastSteps =
+    steps.length > 3 ? steps.slice(3, 6) : steps.slice(Math.max(0, steps.length - 3));
+  const stepsKey = isOwner ? "owner_steps" : "supporter_steps";
+  const baseFields: TemplateFields = {
+    ...fields,
+    brand_slug: "rallio",
+    rallio_template_type: "rallio_steps",
+    content_type: contentType,
+    step_audience: isOwner ? "owner" : "supporter",
+    headline:
+      fields.headline ||
+      headline ||
+      (isOwner ? "Owners: set up the profile" : "Start with one spot"),
+  };
+
+  return [
+    {
+      templateType: "tutorial",
+      fields: {
+        ...baseFields,
+        [stepsKey]: steps,
+        carousel_role: "value",
+        carousel_page: "1",
+        carousel_total: "3",
+      },
+    },
+    {
+      templateType: "tutorial",
+      fields: {
+        ...baseFields,
+        headline: isOwner
+          ? pickStable(
+              [
+                "First, make the profile accurate",
+                "Start with the profile regulars see",
+              ],
+              `${postId}owner-first`,
+            )
+          : pickStable(
+              ["First, follow what you trust", "Start with the places you know"],
+              `${postId}supporter-first`,
+            ),
+        [stepsKey]: firstSteps,
+        door_label: "steps 01-03",
+        carousel_role: "gap",
+        carousel_page: "2",
+        carousel_total: "3",
+      },
+    },
+    {
+      templateType: "tutorial",
+      fields: {
+        ...baseFields,
+        headline: isOwner
+          ? pickStable(
+              [
+                "Then let regulars shape it",
+                "Then track the attention coming back",
+              ],
+              `${postId}owner-close`,
+            )
+          : pickStable(
+              ["Then build Your Taste", "Then turn one rec into a map"],
+              `${postId}supporter-close`,
+            ),
+        [stepsKey]: lastSteps,
+        door_label:
+          fields.door_label || (isOwner ? "owner setup" : "download rallio"),
+        carousel_role: "close",
+        carousel_page: "3",
+        carousel_total: "3",
+      },
+    },
+  ];
+}
+
+function getStepList(fields: TemplateFields, isOwner: boolean): string[] {
+  const fieldSteps = isOwner ? fields.owner_steps : fields.supporter_steps;
+  const cleanedSteps = Array.isArray(fieldSteps)
+    ? fieldSteps.filter(
+        (step): step is string => typeof step === "string" && step.trim().length > 0,
+      )
+    : [];
+
+  if (cleanedSteps.length) {
+    return cleanedSteps.slice(0, 6);
+  }
+
+  return [...(isOwner ? RALLIO_OWNER_STEPS : RALLIO_SUPPORTER_STEPS)];
 }
 
 function doorFamily(fields: TemplateFields): DoorFamily {

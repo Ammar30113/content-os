@@ -18,9 +18,7 @@ import type { RallioLocalSignal } from "@/lib/content/types";
 
 type ImageMode = (typeof imageModes)[number];
 
-const feedPostTypes = postTypes.filter((type) =>
-  type === "single" || type === "carousel",
-);
+const signalPostTypes = postTypes.filter((type) => type === "single");
 
 const rallioPostTypes = postTypes.filter(
   (type) => type === "single" || type === "carousel" || type === "reel",
@@ -72,6 +70,33 @@ function createDefaultForm(): FormState {
     quantity: "1",
     image_mode: "template",
     roulette_seed_id: "",
+  };
+}
+
+function scopeFormToBrand(form: FormState, brandSlug: BrandSlug): FormState {
+  if (brandSlug === "signal") {
+    return {
+      ...form,
+      brand_slug: "signal",
+      post_type: "single",
+      rallio_content_type: undefined,
+      rallio_cta_door: undefined,
+      rallio_template_type: undefined,
+      rallio_visual_style: undefined,
+      rallio_kpi_intent: undefined,
+      rallio_signal: undefined,
+      participation_prompt: undefined,
+    };
+  }
+
+  return {
+    ...form,
+    brand_slug: "rallio",
+    signal_content_type: undefined,
+    signal_cta_door: undefined,
+    signal_template_type: undefined,
+    signal_visual_style: undefined,
+    signal_kpi_intent: undefined,
   };
 }
 
@@ -240,10 +265,11 @@ export function IdeaGeneratorForm() {
   ) {
     const effectiveQuantity = quantity || getQuantity(targetForm);
     const targetIsReel = isReelForm(targetForm);
+    const scopedForm = scopeFormToBrand(targetForm, targetForm.brand_slug);
 
     return {
-      ...targetForm,
-      image_mode: targetIsReel ? "template" : targetForm.image_mode,
+      ...scopedForm,
+      image_mode: targetIsReel ? "template" : scopedForm.image_mode,
       platform: "instagram" as const,
       selected_platforms: ["instagram" as const],
       reference_image_url: reference?.image_url || "",
@@ -288,9 +314,17 @@ export function IdeaGeneratorForm() {
     });
 
     const roulette = await pickAutoTopic(quantity);
+    const requestedBrand = form.brand_slug;
+
+    if (roulette.brand_slug && roulette.brand_slug !== requestedBrand) {
+      throw new Error(
+        `${brandCopy.topicBankName} returned ${roulette.brand_slug} metadata. Re-select ${brandCopy.name} and try again.`,
+      );
+    }
+
     const nextForm: FormState = {
       ...form,
-      brand_slug: roulette.brand_slug || form.brand_slug,
+      brand_slug: requestedBrand,
       title: roulette.title,
       brief: roulette.brief,
       source_url: roulette.source_url || "",
@@ -310,9 +344,10 @@ export function IdeaGeneratorForm() {
       signal_visual_style: roulette.signal_visual_style,
       signal_kpi_intent: roulette.signal_kpi_intent,
     };
+    const scopedNextForm = scopeFormToBrand(nextForm, requestedBrand);
 
-    setForm(nextForm);
-    return nextForm;
+    setForm(scopedNextForm);
+    return scopedNextForm;
   }
 
   async function uploadReferenceImage() {
@@ -487,9 +522,9 @@ export function IdeaGeneratorForm() {
     },
     activeForm: FormState,
   ) {
-    // Carousel posts render every slide so they actually publish as a carousel.
-    // Step carousels (and anything without buildable slides) fall through to a
-    // single cover render below.
+    // Carousel posts must render every slide so they actually publish as a
+    // carousel. If slide rendering fails, surface that instead of silently
+    // degrading to a single-image post.
     if (!isReelForm(activeForm) && activeForm.post_type === "carousel") {
       const carouselError = await renderCarouselSlides(
         payload.post.id,
@@ -499,6 +534,8 @@ export function IdeaGeneratorForm() {
       if (!carouselError) {
         return null;
       }
+
+      return carouselError;
     }
 
     let renderResponse: Response;
@@ -845,7 +882,7 @@ export function IdeaGeneratorForm() {
           <SelectField
             label="Post type"
             value={form.post_type}
-            options={form.brand_slug === "rallio" ? rallioPostTypes : feedPostTypes}
+            options={form.brand_slug === "rallio" ? rallioPostTypes : signalPostTypes}
             onChange={updatePostType}
           />
           <SelectField
@@ -873,7 +910,7 @@ export function IdeaGeneratorForm() {
           {isReel
             ? "Rallio reels generate a script-only package for manual video production and publishing."
             : isCarousel
-              ? `Carousels render 3 slides each (value, gap, close), so batches are capped at ${CAROUSEL_MAX_QUANTITY} to keep generation fast and reliable.`
+              ? `Carousels render 3 ordered slides each, including supporter and owner step posts, so batches are capped at ${CAROUSEL_MAX_QUANTITY} to keep generation fast and reliable.`
               : brandCopy.routingNote}
         </div>
       </div>

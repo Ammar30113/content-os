@@ -957,16 +957,67 @@ function normalizeForNovelty(value: string | null | undefined) {
     .trim();
 }
 
+function assertBrandInputConsistency(input: z.infer<typeof ideaInputSchema>) {
+  const angleBrand = input.batch_angle?.brand_slug;
+
+  if (angleBrand && angleBrand !== input.brand_slug) {
+    throw new Error(
+      `Batch angle brand ${angleBrand} does not match selected brand ${input.brand_slug}.`,
+    );
+  }
+
+  const hasSignalFields =
+    Boolean(input.signal_content_type) ||
+    Boolean(input.signal_cta_door) ||
+    Boolean(input.signal_template_type) ||
+    Boolean(input.signal_visual_style) ||
+    Boolean(input.signal_kpi_intent) ||
+    Boolean(input.batch_angle?.signal_content_type) ||
+    Boolean(input.batch_angle?.signal_cta_door) ||
+    Boolean(input.batch_angle?.signal_template_type) ||
+    Boolean(input.batch_angle?.signal_visual_style) ||
+    Boolean(input.batch_angle?.signal_kpi_intent);
+
+  if (input.brand_slug === "rallio" && hasSignalFields) {
+    throw new Error("Rallio generation received Signal-only metadata.");
+  }
+
+  const hasRallioFields =
+    Boolean(input.rallio_content_type) ||
+    Boolean(input.rallio_cta_door) ||
+    Boolean(input.rallio_template_type) ||
+    Boolean(input.rallio_visual_style) ||
+    Boolean(input.rallio_kpi_intent) ||
+    Boolean(input.rallio_signal) ||
+    Boolean(input.participation_prompt) ||
+    Boolean(input.batch_angle?.rallio_content_type) ||
+    Boolean(input.batch_angle?.rallio_cta_door) ||
+    Boolean(input.batch_angle?.rallio_template_type) ||
+    Boolean(input.batch_angle?.rallio_visual_style) ||
+    Boolean(input.batch_angle?.rallio_kpi_intent) ||
+    Boolean(input.batch_angle?.rallio_signal) ||
+    Boolean(input.batch_angle?.participation_prompt);
+
+  if (input.brand_slug === "signal" && hasRallioFields) {
+    throw new Error("Signal generation received Rallio-only metadata.");
+  }
+}
+
 export async function POST(request: Request) {
   try {
     assertContentOsSupabaseWriteSafety();
     const input = ideaInputSchema.parse(await request.json());
+    assertBrandInputConsistency(input);
     const isReelPackage = input.brand_slug === "rallio" && input.post_type === "reel";
     const { supabase, user } = await requireApiUser();
     const referenceImageUrl = input.reference_image_url || undefined;
 
     if (!isReelPackage && input.image_mode === "uploaded" && !referenceImageUrl) {
       throw new Error("Upload a reference image before using it as the final image.");
+    }
+
+    if (input.brand_slug === "signal" && input.post_type !== "single") {
+      throw new Error("Signal generation is single-post only in this phase.");
     }
 
     const generationCount = input.generation_count || input.quantity || 1;

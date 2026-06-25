@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     if (!specs || specs.length < 2) {
       throw new Error(
-        "Could not build carousel slides for this post. Step carousels stay single-image; render a regular image instead.",
+        "Could not build carousel slides for this post. Confirm the post is a Rallio carousel with supported template fields.",
       );
     }
 
