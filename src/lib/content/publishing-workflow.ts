@@ -1,6 +1,7 @@
 import "server-only";
 
 import { platforms } from "@/lib/content/types";
+import { getCarouselMediaIssue } from "@/lib/content/carousel-media";
 import {
   getBufferChannelQueueCap,
   getBufferChannelEnvName,
@@ -36,6 +37,15 @@ export async function ensurePublishingJobsForPost(
 
   if (postError || !post) {
     throw new Error(postError?.message || "Generated post not found.");
+  }
+
+  const carouselMediaIssue = getCarouselMediaIssue(
+    post.post_type,
+    post.template_fields,
+  );
+
+  if (carouselMediaIssue) {
+    throw new Error(carouselMediaIssue);
   }
 
   const selectedPlatforms = getSelectedPublishingPlatforms(

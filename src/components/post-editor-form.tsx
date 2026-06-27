@@ -22,6 +22,10 @@ import {
   postStatuses,
   templateTypes,
 } from "@/lib/content/types";
+import {
+  getCarouselMediaIssue,
+  getRenderedCarouselSlideUrls,
+} from "@/lib/content/carousel-media";
 import type { Database, Json } from "@/types/database";
 
 const MANUAL_SLOT_WINDOW_DAYS = 30;
@@ -93,8 +97,12 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
   const isReel = post.post_type === "reel";
   const isCarousel = post.post_type === "carousel";
   const slideImageUrls = useMemo(
-    () => getSlideImageUrls(parsedTemplateFields),
+    () => getRenderedCarouselSlideUrls(parsedTemplateFields),
     [parsedTemplateFields],
+  );
+  const carouselMediaIssue = getCarouselMediaIssue(
+    post.post_type,
+    parsedTemplateFields,
   );
   const hasVideo = Boolean(form.video_url.trim());
   const hashtagsText = normalizeHashtags(form.hashtags).join(" ");
@@ -128,6 +136,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     hasReelScript: Boolean(form.reel_script.trim()),
     hasVideo,
     isReel,
+    carouselMediaIssue,
     scheduledFor: form.scheduled_for,
   });
   const bufferPosts = getBufferPosts(parsedTemplateFields);
@@ -188,17 +197,21 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     loading: string,
     request: () => Promise<Response>,
     successMessage: string,
+    onSuccess?: (payload: Record<string, unknown>) => void,
   ) {
     setState({ loading, message: null, error: null });
 
     try {
       const response = await request();
-      const payload = await response.json();
+      const payload = (await response.json()) as Record<string, unknown>;
 
       if (!response.ok) {
-        throw new Error(payload.error || `${loading} failed.`);
+        throw new Error(
+          typeof payload.error === "string" ? payload.error : `${loading} failed.`,
+        );
       }
 
+      onSuccess?.(payload);
       setState({ loading: null, message: successMessage, error: null });
       router.refresh();
     } catch (error) {
@@ -303,6 +316,35 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           }),
         }),
       "Carousel slides rendered.",
+      (responsePayload) => {
+        const urls = getRenderedCarouselSlideUrls({
+          slide_image_urls: responsePayload.slide_image_urls,
+        });
+
+        if (!urls.length) {
+          return;
+        }
+
+        setForm((current) => {
+          const currentFields = parseJsonField<Record<string, unknown>>(
+            current.template_fields,
+            {},
+          );
+
+          return {
+            ...current,
+            image_url:
+              typeof responsePayload.image_url === "string"
+                ? responsePayload.image_url
+                : current.image_url,
+            template_fields: JSON.stringify(
+              { ...currentFields, slide_image_urls: urls },
+              null,
+              2,
+            ),
+          };
+        });
+      },
     );
   }
 
@@ -411,6 +453,11 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
       return;
     }
 
+    if (carouselMediaIssue) {
+      setState({ loading: null, message: null, error: carouselMediaIssue });
+      return;
+    }
+
     if (!form.scheduled_for) {
       setState({
         loading: null,
@@ -474,6 +521,11 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
         message: null,
         error: "Reel packages are manual-publish only until video media support is enabled.",
       });
+      return;
+    }
+
+    if (carouselMediaIssue) {
+      setState({ loading: null, message: null, error: carouselMediaIssue });
       return;
     }
 
@@ -840,19 +892,19 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
                   <p className="mt-2 text-red-300">{post.image_error}</p>
                 ) : null}
               </div>
-              <button
-                type="button"
-                onClick={handleRegenerateImage}
-                disabled={Boolean(state.loading)}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
-              >
-                <RefreshCw size={16} />
-                {state.loading === "Rendering"
-                  ? "Rendering..."
-                  : isCarousel
-                    ? "Regenerate cover"
+              {!isCarousel ? (
+                <button
+                  type="button"
+                  onClick={handleRegenerateImage}
+                  disabled={Boolean(state.loading)}
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
+                >
+                  <RefreshCw size={16} />
+                  {state.loading === "Rendering"
+                    ? "Rendering..."
                     : "Regenerate image"}
-              </button>
+                </button>
+              ) : null}
               {isCarousel ? (
                 <>
                   <button
@@ -892,9 +944,10 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs leading-5 text-zinc-500">
-                      This carousel will ship as a single image until you render
-                      slides. Slide 1 is the value tile; slide 2 is the gap.
+                    <p className="text-xs leading-5 text-amber-200">
+                      Render the ordered slide set before scheduling. Incomplete
+                      carousels are blocked from Buffer instead of being sent as a
+                      single image.
                     </p>
                   )}
                 </>
@@ -1058,7 +1111,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <button
               type="button"
               onClick={() => handleSendToBuffer({ resendReady: true })}
-              disabled={Boolean(state.loading)}
+              disabled={Boolean(state.loading) || Boolean(carouselMediaIssue)}
               className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-[#C8923A]/50 px-3 text-sm font-semibold text-[#f5ebdc] transition hover:bg-[#C8923A]/10 disabled:opacity-50"
             >
               <RefreshCw size={16} />
@@ -1085,7 +1138,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           <button
             type="button"
             onClick={handleSchedule}
-            disabled={Boolean(state.loading)}
+            disabled={Boolean(state.loading) || Boolean(carouselMediaIssue)}
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-zinc-700 px-3 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:opacity-50"
           >
             <CalendarPlus size={16} />
@@ -1095,7 +1148,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
             <button
               type="button"
               onClick={() => handleSendToBuffer()}
-              disabled={Boolean(state.loading)}
+              disabled={Boolean(state.loading) || Boolean(carouselMediaIssue)}
               className="inline-flex h-10 w-full items-center justify-center gap-2 rounded bg-[#d4ff00] px-3 text-sm font-semibold text-[#0a0a0b] transition hover:bg-[#e7ff68] disabled:opacity-50"
             >
               <Send size={16} />
@@ -1232,6 +1285,7 @@ function getWorkflowReadiness({
   hasReelScript,
   hasVideo,
   isReel,
+  carouselMediaIssue,
   scheduledFor,
 }: {
   status: string;
@@ -1240,6 +1294,7 @@ function getWorkflowReadiness({
   hasReelScript: boolean;
   hasVideo: boolean;
   isReel: boolean;
+  carouselMediaIssue: string | null;
   scheduledFor: string;
 }) {
   if (status === "published") {
@@ -1262,6 +1317,14 @@ function getWorkflowReadiness({
       title: "Needs video asset",
       description:
         "Copy the Veo prompt, export the MP4 from Google Flow or Gemini, then paste the URL or upload it here.",
+    };
+  }
+
+  if (carouselMediaIssue) {
+    return {
+      title: "Needs carousel slides",
+      description:
+        "Render the ordered slide set before scheduling or sending this post to Buffer.",
     };
   }
 
@@ -1412,18 +1475,6 @@ function getBufferPosts(fields: Record<string, unknown>) {
 
 function getPostBrandName(fields: Record<string, unknown>) {
   return fields.brand_slug === "signal" ? "Signal" : "Rallio";
-}
-
-function getSlideImageUrls(fields: Record<string, unknown>): string[] {
-  const slides = fields.slide_image_urls;
-
-  if (!Array.isArray(slides)) {
-    return [];
-  }
-
-  return slides.filter(
-    (url): url is string => typeof url === "string" && url.length > 0,
-  );
 }
 
 function getNextManualSlot(platform: string) {

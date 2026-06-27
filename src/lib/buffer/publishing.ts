@@ -1,6 +1,10 @@
 import "server-only";
 
 import { createBufferPost } from "@/lib/buffer/client";
+import {
+  getCarouselMediaIssue,
+  getRenderedCarouselSlideUrls,
+} from "@/lib/content/carousel-media";
 import { normalizeHashtags, platforms } from "@/lib/content/types";
 import { getConfiguredBufferPlatforms, type BufferBrand } from "@/lib/env";
 import type { ContentOsSupabaseClient } from "@/lib/supabase/server";
@@ -72,6 +76,7 @@ export async function sendPublishingJobToBuffer(
   const nextAttempts = job.attempts + 1;
 
   try {
+    const carouselSlideUrls = getRenderedCarouselSlideUrls(post.template_fields);
     const brandSlug = validateBufferReadyPost(post, platform, job);
 
     await supabase
@@ -85,7 +90,7 @@ export async function sendPublishingJobToBuffer(
       brandSlug,
       text: buildPlatformText(post, platform),
       imageUrl: post.image_url,
-      imageUrls: getCarouselSlideUrls(post),
+      imageUrls: post.post_type === "carousel" ? carouselSlideUrls : null,
       scheduledFor: new Date(job.scheduled_for).toISOString(),
     });
     const templateFields = withBufferPostMetadata({
@@ -254,6 +259,15 @@ function validateBufferReadyPost(
     throw new Error("Instagram posts need an image before sending to Buffer.");
   }
 
+  const carouselMediaIssue = getCarouselMediaIssue(
+    post.post_type,
+    post.template_fields,
+  );
+
+  if (carouselMediaIssue) {
+    throw new Error(carouselMediaIssue);
+  }
+
   if (!buildPlatformText(post, platform).trim()) {
     throw new Error(`${platform} copy is empty.`);
   }
@@ -335,28 +349,6 @@ function getPostBrandSlug(templateFields: Json): BufferBrand | null {
   const value = getTemplateFieldString(templateFields, "brand_slug");
 
   return value === "rallio" || value === "signal" ? value : null;
-}
-
-// Carousel slide images are stored on template_fields.slide_image_urls by the
-// render-carousel route. Only treat a post as a true carousel when it is a
-// carousel post type with at least two rendered slides; otherwise the single
-// image_url path is used.
-function getCarouselSlideUrls(post: GeneratedPost): string[] | null {
-  if (post.post_type !== "carousel") {
-    return null;
-  }
-
-  const fields = post.template_fields;
-
-  if (!isRecord(fields) || !Array.isArray(fields.slide_image_urls)) {
-    return null;
-  }
-
-  const urls = fields.slide_image_urls.filter(
-    (url): url is string => typeof url === "string" && url.length > 0,
-  );
-
-  return urls.length >= 2 ? urls : null;
 }
 
 function formatBrandName(brandSlug: BufferBrand) {

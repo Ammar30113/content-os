@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { PostCardActions } from "@/components/post-card-actions";
 import { StatusBadge } from "@/components/status-badge";
+import { getRenderedCarouselSlideUrls } from "@/lib/content/carousel-media";
 import {
   BUFFER_SENT_POST_RETENTION_DAYS,
   getBufferScheduledClearAt,
@@ -303,6 +304,10 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
           const clearAt =
             activeTab === "scheduled" ? getBufferScheduledClearAt(post) : null;
           const isReel = post.post_type === "reel";
+          const carouselSlideCount =
+            post.post_type === "carousel"
+              ? getRenderedCarouselSlideUrls(post.template_fields).length
+              : 0;
 
           return (
             <article
@@ -378,7 +383,9 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                       <div>
                         <dt className="text-zinc-500">Type</dt>
                         <dd className="mt-1 font-medium text-zinc-200">
-                          {post.post_type}
+                          {post.post_type === "carousel"
+                            ? `carousel · ${carouselSlideCount} slides`
+                            : post.post_type}
                         </dd>
                       </div>
                       <div>

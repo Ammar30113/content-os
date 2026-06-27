@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarPlus, Check, RefreshCw, Trash2 } from "lucide-react";
 
+import { getCarouselMediaIssue } from "@/lib/content/carousel-media";
 import type { Json } from "@/types/database";
 
 type PostCardActionsProps = {
@@ -25,8 +26,11 @@ export function PostCardActions({
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const isCarousel = postType === "carousel";
+  const carouselMediaIssue = getCarouselMediaIssue(postType, templateFields);
   const canRegenerateImage = postType !== "reel" && Boolean(templateType);
-  const canSchedule = postType !== "reel" || Boolean(videoUrl);
+  const canSchedule =
+    (postType !== "reel" || Boolean(videoUrl)) && !carouselMediaIssue;
 
   async function runAction(action: string, request: () => Promise<Response>) {
     setLoadingAction(action);
@@ -71,22 +75,39 @@ export function PostCardActions({
             type="button"
             disabled={Boolean(loadingAction)}
             onClick={() =>
-              runAction("Regenerate image", () =>
-                fetch("/api/render-template", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    post_id: postId,
-                    template_type: templateType,
-                    template_fields: templateFields,
-                  }),
-                }),
+              runAction(
+                isCarousel ? "Render carousel slides" : "Regenerate image",
+                () =>
+                  fetch(
+                    isCarousel ? "/api/render-carousel" : "/api/render-template",
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(
+                        isCarousel
+                          ? {
+                              post_id: postId,
+                              template_fields: templateFields,
+                            }
+                          : {
+                              post_id: postId,
+                              template_type: templateType,
+                              template_fields: templateFields,
+                            },
+                      ),
+                    },
+                  ),
               )
             }
             className="inline-flex h-9 items-center gap-2 rounded border border-zinc-700 px-3 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
           >
             <RefreshCw size={15} />
-            {loadingAction === "Regenerate image" ? "Rendering..." : "Regenerate"}
+            {loadingAction === "Regenerate image" ||
+            loadingAction === "Render carousel slides"
+              ? "Rendering..."
+              : isCarousel
+                ? "Render slides"
+                : "Regenerate"}
           </button>
         ) : null}
         <button
@@ -139,7 +160,11 @@ export function PostCardActions({
           {loadingAction === "Schedule" ? "Scheduling..." : "Schedule"}
         </button>
       </div>
-      {!canSchedule ? (
+      {carouselMediaIssue ? (
+        <p className="text-xs leading-5 text-amber-200">
+          Render the full carousel before scheduling or sending it to Buffer.
+        </p>
+      ) : !canSchedule ? (
         <p className="text-xs leading-5 text-zinc-500">
           Attach the finished Reel video before scheduling.
         </p>
