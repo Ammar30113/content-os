@@ -255,9 +255,12 @@ function RallioSpotCarouselTemplate({ fields }: { fields: TemplateFields }) {
     "Ossington Ave",
     40,
   );
+  const fallbackListName = fields.launch_neighborhood
+    ? `${fields.launch_neighborhood} taste map`
+    : "local taste map";
   const listName = compactText(
     fields.spot_list_name,
-    "THE OSSINGTON 30",
+    fallbackListName,
     32,
   ).toUpperCase();
   const listPosition = compactText(fields.spot_list_position, "", 3);
@@ -684,6 +687,7 @@ function RallioCarouselCloseTemplate({ fields }: { fields: TemplateFields }) {
     90,
   );
   const doorLabel = compactText(fields.door_label, "the local taste map", 36);
+  const bottomLabel = compactText(fields.bottom_label, "link in bio", 36);
   const closeSize = closeLine.length > 60 ? 76 : closeLine.length > 36 ? 92 : 112;
 
   return (
@@ -722,7 +726,7 @@ function RallioCarouselCloseTemplate({ fields }: { fields: TemplateFields }) {
           paddingTop: 28,
         }}
       >
-        <span style={{ display: "flex" }}>link in bio</span>
+        <span style={{ display: "flex" }}>{bottomLabel}</span>
         <span style={{ display: "flex", color: rallio.amber }}>{doorLabel}</span>
       </div>
       <RallioWatermark color={rallio.muted} />

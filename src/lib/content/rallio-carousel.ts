@@ -11,55 +11,55 @@ export type CarouselSlideSpec = {
 // Instagram (and therefore Buffer) caps a carousel at 10 images.
 export const MAX_CAROUSEL_SLIDES = 10;
 
-// The "two legos" gap lines. Each is the SECOND signal in the juxtaposition:
-// a true tension placed next to the value slide so the reader supplies the
-// conclusion themselves. None of these are calls to action.
-const GAP_LINES: Record<DoorFamily, string[]> = {
+// Fallbacks only. When source fields are present, the second and third slides
+// stay grounded in the same spot, order, and neighborhood as the cover.
+const PROOF_FALLBACKS: Record<DoorFamily, string[]> = {
   supporter: [
-    "none of this is written down anywhere.",
-    "and it only lives in one regular's head.",
-    "no map remembers this yet.",
-    "it disappears the day they stop coming.",
+    "the best local details usually come from someone who keeps showing up.",
+    "a repeat order says more than an average rating.",
+    "regular habits are what make a taste map useful.",
   ],
   owner: [
-    "the owner has never seen this.",
-    "a regular added it. the owner hasn't.",
-    "this profile is community-added, not owner-claimed.",
-    "the people who run it aren't in the room yet.",
+    "supporters are already shaping how this place is remembered.",
+    "the profile starts with what regulars notice.",
+    "local attention becomes useful when the profile stays accurate.",
   ],
   city: [
-    "your city isn't on the map yet.",
-    "the map stops at two cities. for now.",
-    "nobody has built this for your block.",
-    "this is the part of the map still blank.",
+    "every new city starts with one specific local recommendation.",
+    "one regular's order can become the first point on a new map.",
+    "the next city starts with the places locals already repeat.",
   ],
 };
 
-// The quiet third slide. A soft implication, never a command — the reader has
-// already drawn the conclusion from slides one and two.
-const CLOSE_LINES: Record<DoorFamily, string[]> = {
+const QUESTION_FALLBACKS: Record<DoorFamily, string[]> = {
   supporter: [
-    "the map remembers spots like this.",
-    "taste like this is worth keeping.",
-    "this is what the map is built from.",
+    "What order would you tell a regular to try first?",
+    "Which local detail makes this place worth repeating?",
+    "What belongs on the taste map here?",
   ],
   owner: [
-    "regulars started it. owners can shape it.",
-    "the profile is already out there.",
-    "this is the part owners can step into.",
+    "Ready to shape the profile regulars are helping build?",
+    "What should every supporter know about this place?",
+    "Which profile detail should the owner confirm first?",
   ],
   city: [
-    "the map grows one neighborhood at a time.",
-    "this is how the map reaches a new city.",
-    "every city starts with one spot.",
+    "Which spot should put your city on the map?",
+    "What neighborhood should Rallio map next?",
+    "Which local order should start the next city?",
   ],
 };
 
-// Soft door labels for the close slide. Not imperatives.
+// Compact door labels for the close slide.
 const CLOSE_LABELS: Record<DoorFamily, string> = {
-  supporter: "the local taste map",
+  supporter: "add to the taste map",
   owner: "owner profiles",
   city: "request your city",
+};
+
+const CLOSE_FOOTERS: Record<DoorFamily, string> = {
+  supporter: "reply below",
+  owner: "link in bio",
+  city: "reply with your city",
 };
 
 type DoorFamily = "supporter" | "owner" | "city";
@@ -70,10 +70,10 @@ const STEPS_CONTENT_TYPES = new Set([
 ]);
 
 /**
- * Build the ordered render specs for a Rallio carousel using the juxtaposition
- * ("two legos") structure:
- *   - Slide 1: the post's own value tile (same as the single cover).
- *   - Slide 2: the gap/tension tile, which the reader connects on the swipe.
+ * Build the ordered render specs for a Rallio carousel:
+ *   - Slide 1: the post's own spot or quote cover.
+ *   - Slide 2: one concrete proof point from the same local signal.
+ *   - Slide 3: one answerable prompt or audience-specific next step.
  *
  * Returns null when the post should stay a single image (non-carousel posts or
  * non-Rallio posts).
@@ -118,6 +118,8 @@ export function buildRallioCarouselSlideSpecs({
     brand_slug: fields.brand_slug || "rallio",
     headline: fields.headline || headline || undefined,
     carousel_role: "value",
+    carousel_page: "1",
+    carousel_total: "3",
   };
 
   const gapFields: TemplateFields = {
@@ -126,17 +128,24 @@ export function buildRallioCarouselSlideSpecs({
     // No content_type: keeps the manifesto tile on the ink background with no
     // participation footer, so it reads as a quiet second signal, not a prompt.
     carousel_role: "gap",
-    headline: pickStable(GAP_LINES[family], postId),
+    headline: buildProofLine(fields, family, postId),
     business_name: fields.business_name,
     launch_neighborhood: fields.launch_neighborhood,
+    carousel_page: "2",
+    carousel_total: "3",
   };
 
   const closeFields: TemplateFields = {
     brand_slug: "rallio",
     rallio_template_type: "rallio_manifesto",
     carousel_role: "close",
-    headline: pickStable(CLOSE_LINES[family], `${postId}close`),
+    headline: buildCloseLine(fields, family, `${postId}close`),
     door_label: CLOSE_LABELS[family],
+    bottom_label: CLOSE_FOOTERS[family],
+    business_name: fields.business_name,
+    launch_neighborhood: fields.launch_neighborhood,
+    carousel_page: "3",
+    carousel_total: "3",
   };
 
   return [
@@ -144,6 +153,108 @@ export function buildRallioCarouselSlideSpecs({
     { templateType: "founder_story", fields: gapFields },
     { templateType: "founder_story", fields: closeFields },
   ];
+}
+
+function buildProofLine(
+  fields: TemplateFields,
+  family: DoorFamily,
+  seed: string,
+) {
+  const business = cleanFragment(fields.business_name);
+  const order = cleanFragment(fields.signature_order);
+  const sensoryDetail = cleanFragment(fields.sensory_detail);
+  const neighborhood = cleanFragment(fields.launch_neighborhood);
+
+  if (family === "owner" && business) {
+    return order
+      ? fitLine(`regulars connect ${business} with ${order}.`)
+      : fitLine(`supporters are already shaping how ${business} is remembered.`);
+  }
+
+  if (family === "city") {
+    if (business && neighborhood) {
+      return fitLine(`${business} is one reason ${neighborhood} belongs on the map.`);
+    }
+    if (order) {
+      return fitLine(`${order} is the kind of local detail a city map should keep.`);
+    }
+  }
+
+  if (order) {
+    return fitLine(
+      business ? `${business}'s repeat order: ${order}.` : `the repeat order: ${order}.`,
+    );
+  }
+
+  if (sensoryDetail) {
+    return fitLine(`the detail regulars notice: ${sensoryDetail}.`);
+  }
+
+  if (business && neighborhood) {
+    return fitLine(`${business} is part of how regulars remember ${neighborhood}.`);
+  }
+
+  return pickStable(PROOF_FALLBACKS[family], seed);
+}
+
+function buildCloseLine(
+  fields: TemplateFields,
+  family: DoorFamily,
+  seed: string,
+) {
+  const business = cleanFragment(fields.business_name);
+  const neighborhood = cleanFragment(fields.launch_neighborhood);
+  const category = cleanFragment(fields.spot_category);
+
+  if (family === "city") {
+    if (neighborhood) {
+      return fitQuestion(`Which ${neighborhood} spot should be mapped next?`);
+    }
+    return pickStable(QUESTION_FALLBACKS.city, seed);
+  }
+
+  if (family === "owner") {
+    if (business) {
+      return fitQuestion(`Ready to shape the profile for ${business}?`);
+    }
+    return pickStable(QUESTION_FALLBACKS.owner, seed);
+  }
+
+  const participationPrompt = cleanFragment(fields.participation_prompt);
+  if (participationPrompt) {
+    return fitQuestion(participationPrompt);
+  }
+  if (business) {
+    return fitQuestion(`What would you order first at ${business}?`);
+  }
+  if (category) {
+    return fitQuestion(`Which ${category} belongs on the taste map?`);
+  }
+
+  return pickStable(QUESTION_FALLBACKS.supporter, seed);
+}
+
+function cleanFragment(value: unknown) {
+  return typeof value === "string"
+    ? value.trim().replace(/[.!?]+$/g, "")
+    : "";
+}
+
+function fitLine(value: string, maxLength = 90) {
+  if (value.length <= maxLength) return value;
+
+  const shortened = value.slice(0, maxLength - 1);
+  const lastSpace = shortened.lastIndexOf(" ");
+  return `${shortened.slice(0, Math.max(lastSpace, 40)).trim()}.`;
+}
+
+function fitQuestion(value: string, maxLength = 86) {
+  const question = `${cleanFragment(value)}?`;
+  if (question.length <= maxLength) return question;
+
+  const shortened = question.slice(0, maxLength - 1);
+  const lastSpace = shortened.lastIndexOf(" ");
+  return `${shortened.slice(0, Math.max(lastSpace, 40)).trim()}?`;
 }
 
 function buildRallioStepCarouselSlideSpecs({
