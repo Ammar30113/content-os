@@ -150,6 +150,11 @@ export function getBufferEnvStatus(): BufferEnvStatus {
   const connectedTargets = connectedEntries.map(
     ({ brand, platform }) => `${formatBufferBrandName(brand)} ${platform}`,
   );
+  const hasBrandChannelConflict = Boolean(
+    brandChannels.rallio.instagram &&
+      brandChannels.signal.instagram &&
+      brandChannels.rallio.instagram === brandChannels.signal.instagram,
+  );
   const connectedChannels = Array.from(
     new Set(connectedEntries.map(({ platform }) => platform)),
   );
@@ -168,7 +173,8 @@ export function getBufferEnvStatus(): BufferEnvStatus {
   const ok =
     Boolean(process.env.BUFFER_ACCESS_TOKEN) &&
     Boolean(process.env.BUFFER_ORGANIZATION_ID) &&
-    connectedTargets.length > 0;
+    connectedTargets.length > 0 &&
+    !hasBrandChannelConflict;
 
   return {
     ok,
@@ -179,9 +185,11 @@ export function getBufferEnvStatus(): BufferEnvStatus {
     connectedChannels,
     connectedTargets,
     missing,
-    message: ok
-      ? `Buffer ready for ${connectedTargets.join(", ")}.`
-      : `Missing ${missing.join(", ")}.`,
+    message: hasBrandChannelConflict
+      ? "Rallio and Signal must use different Buffer Instagram channel IDs."
+      : ok
+        ? `Buffer ready for ${connectedTargets.join(", ")}.`
+        : `Missing ${missing.join(", ")}.`,
   };
 }
 

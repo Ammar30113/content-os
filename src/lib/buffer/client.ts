@@ -89,10 +89,18 @@ const createPostMutation = `
 export function getBufferChannelId(platform: BufferPlatform, brandSlug: BufferBrand) {
   const env = getBufferEnv();
   const channelId = env.brandChannels[brandSlug]?.[platform] || null;
+  const otherBrand = brandSlug === "signal" ? "rallio" : "signal";
+  const otherChannelId = env.brandChannels[otherBrand]?.[platform] || null;
 
   if (!channelId) {
     throw new Error(
       `Buffer channel for ${formatBufferBrandName(brandSlug)} ${platform} is not configured. Add ${getBufferChannelEnvName(platform, brandSlug)} in Vercel.`,
+    );
+  }
+
+  if (otherChannelId && otherChannelId === channelId) {
+    throw new Error(
+      "Rallio and Signal Buffer channel IDs must be different. Update the brand-specific Vercel environment variables before sending.",
     );
   }
 
