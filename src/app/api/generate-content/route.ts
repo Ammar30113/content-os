@@ -602,7 +602,7 @@ const RALLIO_GENERATION_SYSTEM_PROMPT = [
   "Use one funnel CTA door only. Prefer app_download_supporter for supporter launch/action posts, app_download_owner for owner setup posts, city_request for next-city asks, local_guide for taste-map saves, and claim_your_business only when the requested content type is owner_claim_carousel.",
   "Caption shape: 1-line hook, 1-2 lines of tension, 3-5 short bullets describing concrete local behavior or launch steps, one strong reframe ending, then hashtags.",
   "Juxtaposition close: for discovery, regular_quote, spot_carousel, receipt, participation, and manifesto posts you may end on an open loop — state two true signals and let the reader draw the conclusion. Do not end these with a download/claim command; keep the door (handle, city ask) visible but unargued. Keep supporter_steps and owner_steps posts explicitly instructional with their funnel CTA.",
-  "For carousel posts, structure the slides as two legos: slide one is the specific valuable signal, slide two is the gap or tension the reader resolves. Do not add a 'download now' slide.",
+  "For carousel posts, write exactly three connected slides: slide one establishes one specific local value signal, slide two proves it with a concrete order, sensory detail, or regular behavior from the same source, and slide three asks one answerable audience question or gives the assigned owner/supporter next step. Keep all three slides about the same place and CTA door.",
   "Do not reuse copy across platforms. Instagram is spaced, X is compressed, LinkedIn is slightly expanded.",
   "Never use exclamation points, download-now copy, coupon/cashback/reward language, reservations, Moments, perks, full-global claims, or 'tag a friend' bait.",
   "If a repair_pass block is present in the request, fix exactly those issues while keeping everything else aligned with the contract.",
@@ -621,7 +621,7 @@ const RALLIO_REEL_GENERATION_SYSTEM_PROMPT = [
 ].join(" ");
 
 const RICH_FIELD_GUIDE_SPOT =
-  "For rallio_spot_carousel: set business_name to the place name; spot_category to specific cuisine; spot_address to street/intersection (e.g. '93 Ossington Ave'); spot_list_name to the collection title in uppercase (e.g. 'THE OSSINGTON 30'); spot_list_position and spot_list_total as zero-padded strings (e.g. '04', '30'); recommender_quote to one short italic line from a believable regular; recommender_name to a first-name handle (e.g. '@mayachen' or 'Maya'); recommender_neighborhood to a lowercase short area label (e.g. 'ossington'); recommender_since to a two-digit year like \"'22\"; carousel_page and carousel_total to numeric strings like '1' and '6'.";
+  "For rallio_spot_carousel: set business_name to the place name; spot_category to a specific cuisine or shop type; spot_address to the supplied street/intersection; spot_list_name to an uppercase neighborhood taste-map series title grounded in the supplied source; leave spot_list_position and spot_list_total null unless the source explicitly provides a real numbered collection; recommender_quote to the supplied regular quote; recommender_name to the supplied first name; recommender_neighborhood to the supplied neighborhood; recommender_since to the supplied year; carousel_page to '1' and carousel_total to '3'.";
 const RICH_FIELD_GUIDE_QUOTE =
   "For rallio_regular_quote: set regular_quote to the full quote; attribution to the regular's first name; regular_neighborhood to the neighborhood they regular at (e.g. 'Little Italy'); regular_since_year to a four-digit year (e.g. '2019'); business_name to the spot they're a regular of.";
 const RICH_FIELD_GUIDE_RECEIPT =
@@ -1441,7 +1441,7 @@ export async function POST(request: Request) {
                   carousel_slides: isReelPackage
                     ? "Set carousel_slides to an empty array for this script-only reel package."
                     : input.post_type === "carousel"
-                      ? "Write 2-3 concise carousel slides as two legos: slide one is the specific valuable signal, slide two is the gap or tension. Do not write a download/claim slide."
+                      ? "Write exactly 3 concise, connected carousel slides: local value signal, concrete proof from the same source, then one answerable question or assigned supporter/owner next step."
                       : "Set carousel_slides to an empty array for this single-image post.",
                 },
                 reel_output_contract: isReelPackage

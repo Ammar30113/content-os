@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LogIn, UserPlus } from "lucide-react";
 
+import { normalizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { getPublicEnvStatus } from "@/lib/env-public";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -12,7 +13,7 @@ type AuthMode = "sign-in" | "sign-up";
 export function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = normalizeNextPath(searchParams.get("next"));
+  const nextPath = normalizeInternalRedirectPath(searchParams.get("next"));
   const callbackError = searchParams.get("error");
   const initialError =
     callbackError === "confirmation_failed"
@@ -153,14 +154,6 @@ export function AuthForm() {
       ) : null}
     </div>
   );
-}
-
-function normalizeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/app/dashboard";
-  }
-
-  return value;
 }
 
 function formatAuthError(message: string) {

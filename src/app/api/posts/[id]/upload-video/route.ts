@@ -40,6 +40,10 @@ export async function POST(
       throw new Error("Uploaded video must be 100 MB or smaller.");
     }
 
+    if (!file.size) {
+      throw new Error("Uploaded video is empty.");
+    }
+
     const { data: post, error: postError } = await supabase
       .from("generated_posts")
       .select("id, user_id, post_type")
@@ -83,6 +87,7 @@ export async function POST(
     });
 
     if (mediaError) {
+      await supabase.storage.from("post-images").remove([storagePath]);
       throw new Error(mediaError.message);
     }
 
@@ -99,6 +104,14 @@ export async function POST(
       .single();
 
     if (updateError || !updatedPost) {
+      await Promise.all([
+        supabase
+          .from("media_assets")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("storage_path", storagePath),
+        supabase.storage.from("post-images").remove([storagePath]),
+      ]);
       throw new Error(updateError?.message || "Could not save uploaded video.");
     }
 

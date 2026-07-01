@@ -1,9 +1,10 @@
 # Content OS
 
-Content OS is a private AI-powered social media operating system for Rallio.
-The MVP turns rough ideas, URLs, or briefs into complete Instagram post packages
-with branded 1080x1080 images, then supports review, approval, scheduling, and
-manual publish tracking.
+Content OS is a private AI-powered social media operating system for Rallio and
+Signal. It turns rough ideas, source-bank signals, URLs, or briefs into complete
+Instagram post packages with branded 1080x1080 JPEGs, then supports review,
+approval, ordered carousel rendering, scheduling, and brand-specific Buffer
+handoff.
 
 This is an internal single-user tool first. It intentionally does not include
 billing, teams, public SaaS marketing flows, or direct Instagram/X/LinkedIn
@@ -26,10 +27,10 @@ Use only the Content OS Supabase project:
 https://rxcxgnmnwonqzizjrgoh.supabase.co
 ```
 
-Backend writes are blocked unless `NEXT_PUBLIC_SUPABASE_URL` includes:
+Backend writes are blocked unless `NEXT_PUBLIC_SUPABASE_URL` exactly matches:
 
 ```text
-rxcxgnmnwonqzizjrgoh
+https://rxcxgnmnwonqzizjrgoh.supabase.co
 ```
 
 Never use any unrelated Supabase project for this app.
@@ -113,7 +114,7 @@ testing.
 - `/auth` - email/password sign in and sign up
 - `/app/dashboard` - metrics and recent posts
 - `/app/ideas` - save ideas and generate packages
-- `/app/rallio` - generate Rallio Instagram packages
+- `/app/ideas` also switches between the isolated Rallio and Signal generators
 - `/app/posts` - review grid with approve/schedule/regenerate actions
 - `/app/posts/[id]` - editor, image upload/regeneration, scheduling
 - `/app/calendar` - scheduled and published posts
@@ -126,12 +127,13 @@ Content OS can hand scheduled posts to Buffer after review:
 1. Generate and approve a post.
 2. Set `Scheduled for` in the editor.
 3. Click `Save, schedule, send to Buffer`.
-4. Confirm the post appears in Buffer's queue.
+4. Confirm the single image or ordered carousel appears in Buffer's queue.
 5. After Instagram confirms the post went live, mark it published in Content OS.
 
-Generated template images are stored as JPEGs for Instagram/Buffer compatibility.
-Older PNG images are served through the public proxy as JPEGs when Buffer fetches
-them.
+Generated template images and carousel slides are stored as JPEGs for
+Instagram/Buffer compatibility. Older PNG images are served through the public
+proxy as JPEGs when Buffer fetches them. Buffer uses the ordered `assets` array
+shape required by the current public API.
 
 The production Vercel cron at `/api/cron/publish-due-posts` also sweeps queued
 publishing jobs inside the next 14 days once per day. Vercel Hobby plans do not
@@ -139,6 +141,9 @@ support high-frequency cron, so the editor button is the primary no-wait handoff
 The same cron deletes Buffer-sent scheduled post records after the 10-day
 scheduled tab retention window once the Buffer slot has passed, including
 generated image storage cleanup.
+
+`CRON_SECRET` is mandatory. The cron route fails closed when the secret is
+missing and accepts only the matching Bearer token.
 
 Buffer environment variables:
 
@@ -178,5 +183,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ```bash
 npm run lint
+npm run typecheck
+npm run test:logic
 npm run build
+git diff --check
 ```
+
+Run `npm run verify` for lint, type checking, logic tests, rotation checks, and
+the production build in one command. Before applying a new linked Supabase
+migration, also run `supabase db push --dry-run`.

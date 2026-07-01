@@ -47,15 +47,15 @@ export async function deleteGeneratedPosts(
   const storagePaths = Array.from(
     new Set((mediaAssets || []).map((asset) => asset.storage_path).filter(Boolean)),
   );
-  let storageWarning: string | null = null;
-
   if (storagePaths.length) {
     const { error: storageError } = await supabase.storage
       .from("post-images")
       .remove(storagePaths);
 
     if (storageError) {
-      storageWarning = storageError.message;
+      throw new Error(
+        `Could not remove post media from storage: ${storageError.message}`,
+      );
     }
   }
 
@@ -73,7 +73,7 @@ export async function deleteGeneratedPosts(
   return {
     deleted_count: deletedPosts?.length || 0,
     deleted_ids: (deletedPosts || []).map((post) => post.id),
-    storage_removed_count: storageWarning ? 0 : storagePaths.length,
-    storage_warning: storageWarning,
+    storage_removed_count: storagePaths.length,
+    storage_warning: null,
   };
 }

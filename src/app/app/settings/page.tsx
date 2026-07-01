@@ -43,8 +43,8 @@ export default async function SettingsPage() {
                 Supabase project safety
               </h2>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
-                Backend writes are blocked unless the configured URL includes
-                the Content OS project ref.
+                Backend writes are blocked unless the configured URL exactly
+                matches the Content OS project.
               </p>
             </div>
             <StatusBadge status={envStatus.ok ? "approved" : "failed"} />
@@ -62,7 +62,7 @@ export default async function SettingsPage() {
             <div>
               <h2 className="text-lg font-semibold text-white">App health</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
-                Core services needed for the manual workflow MVP.
+                Core services needed for generation, media, and publishing.
               </p>
             </div>
             <StatusBadge

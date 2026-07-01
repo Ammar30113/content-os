@@ -320,13 +320,13 @@ export const postUpdateSchema = z.object({
   linkedin_version: z.string().nullable().optional(),
   template_type: z.enum(templateTypes).nullable().optional(),
   template_fields: templateFieldsSchema,
-  image_url: z.string().nullable().optional(),
+  image_url: z.string().trim().url().nullable().optional().or(z.literal("")),
   video_url: z.string().trim().url().nullable().optional().or(z.literal("")),
   video_status: z.enum(videoStatuses).optional(),
   video_error: z.string().nullable().optional(),
   video_source: z.enum(videoSources).nullable().optional(),
   status: z.enum(postStatuses),
-  scheduled_for: z.string().nullable().optional(),
+  scheduled_for: z.string().datetime().nullable().optional(),
 });
 
 export type IdeaInput = z.infer<typeof ideaInputSchema>;

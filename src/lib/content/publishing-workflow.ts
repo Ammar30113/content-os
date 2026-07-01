@@ -112,8 +112,12 @@ export async function ensurePublishingJobsForPost(
     platforms: effectivePlatforms,
   });
 
+  const requestedScheduledFor = scheduledFor
+    ? requireFutureScheduledIso(scheduledFor)
+    : null;
+
   const resolvedScheduledFor =
-    scheduledFor ||
+    requestedScheduledFor ||
     getFutureIso(post.scheduled_for) ||
     (await getNextManualSlotForUser(supabase, {
       userId,
@@ -173,6 +177,12 @@ export async function ensurePublishingJobsForPost(
       continue;
     }
 
+    if (existingJob?.status === "processing") {
+      throw new Error(
+        `${platform} is already being sent to Buffer. Wait for that handoff to finish before retrying.`,
+      );
+    }
+
     if (existingJob?.status === "ready" || existingJob?.status === "published") {
       const { data: existingReadyJob, error: existingReadyError } = await supabase
         .from("publishing_jobs")
@@ -199,14 +209,11 @@ export async function ensurePublishingJobsForPost(
       error: null,
     };
 
-    const jobResult = existingJob
-      ? await supabase
-          .from("publishing_jobs")
-          .update(jobPayload)
-          .eq("id", existingJob.id)
-          .select()
-          .single()
-      : await supabase.from("publishing_jobs").insert(jobPayload).select().single();
+    const jobResult = await supabase
+      .from("publishing_jobs")
+      .upsert(jobPayload, { onConflict: "post_id,platform" })
+      .select()
+      .single();
 
     if (jobResult.error || !jobResult.data) {
       throw new Error(jobResult.error?.message || "Could not create schedule job.");
@@ -409,14 +416,24 @@ async function assertBufferQueueCapacity(
   }
 }
 
-function getFutureIso(value: string | null) {
+export function requireFutureScheduledIso(value: string, now = Date.now()) {
+  const futureIso = getFutureIso(value, now);
+
+  if (!futureIso) {
+    throw new Error("Scheduled time must be valid and at least 5 minutes in the future.");
+  }
+
+  return futureIso;
+}
+
+function getFutureIso(value: string | null, now = Date.now()) {
   if (!value) {
     return null;
   }
 
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime()) || date.getTime() < Date.now() + 5 * 60 * 1000) {
+  if (Number.isNaN(date.getTime()) || date.getTime() < now + 5 * 60 * 1000) {
     return null;
   }
 

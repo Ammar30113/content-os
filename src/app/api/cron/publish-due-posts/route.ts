@@ -21,7 +21,15 @@ export async function GET(request: Request) {
       scheduled_cleanup: cleanupResult,
     });
   } catch (error) {
-    return jsonError(error, error instanceof Error && error.message === "Unauthorized" ? 401 : 400);
+    const status =
+      error instanceof Error && error.message === "Unauthorized"
+        ? 401
+        : error instanceof Error &&
+            error.message === "CRON_SECRET is not configured."
+          ? 503
+          : 400;
+
+    return jsonError(error, status);
   }
 }
 
@@ -29,17 +37,11 @@ function assertAuthorizedCron(request: Request) {
   const secret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
 
-  if (secret) {
-    if (authHeader !== `Bearer ${secret}`) {
-      throw new Error("Unauthorized");
-    }
-
-    return;
+  if (!secret) {
+    throw new Error("CRON_SECRET is not configured.");
   }
 
-  if (request.headers.get("user-agent")?.includes("vercel-cron")) {
-    return;
+  if (authHeader !== `Bearer ${secret}`) {
+    throw new Error("Unauthorized");
   }
-
-  throw new Error("Unauthorized");
 }

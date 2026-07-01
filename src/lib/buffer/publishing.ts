@@ -69,20 +69,49 @@ export async function sendPublishingJobToBuffer(
     throw new Error("Post is not owned by the current user.");
   }
 
-  if (job.status === "ready") {
+  if (job.status === "ready" || job.status === "published") {
     throw new Error(`${platform} has already been sent to Buffer.`);
   }
 
+  if (job.status === "processing") {
+    throw new Error(`${platform} is already being sent to Buffer.`);
+  }
+
+  if (job.status !== "queued" && job.status !== "failed") {
+    throw new Error(`${platform} publishing job is ${job.status} and cannot be sent.`);
+  }
+
   const nextAttempts = job.attempts + 1;
+  const { data: claimedJob, error: claimError } = await supabase
+    .from("publishing_jobs")
+    .update({
+      status: "processing",
+      attempts: nextAttempts,
+      error: null,
+    })
+    .eq("id", job.id)
+    .eq("status", job.status)
+    .eq("attempts", job.attempts)
+    .select("id")
+    .maybeSingle();
+
+  if (claimError) {
+    throw new Error(claimError.message);
+  }
+
+  if (!claimedJob) {
+    throw new Error(
+      `${platform} is already being processed by another Buffer handoff.`,
+    );
+  }
+
+  let bufferPostCreated = false;
+  let bufferPostId: string | null = null;
+  let jobReadyPersisted = false;
 
   try {
     const carouselSlideUrls = getRenderedCarouselSlideUrls(post.template_fields);
     const brandSlug = validateBufferReadyPost(post, platform, job);
-
-    await supabase
-      .from("publishing_jobs")
-      .update({ attempts: nextAttempts, error: null })
-      .eq("id", job.id);
 
     const bufferPost = await createBufferPost({
       postId: post.id,
@@ -93,6 +122,8 @@ export async function sendPublishingJobToBuffer(
       imageUrls: post.post_type === "carousel" ? carouselSlideUrls : null,
       scheduledFor: new Date(job.scheduled_for).toISOString(),
     });
+    bufferPostCreated = true;
+    bufferPostId = bufferPost.id;
     const templateFields = withBufferPostMetadata({
       templateFields: post.template_fields,
       platform,
@@ -100,32 +131,34 @@ export async function sendPublishingJobToBuffer(
       scheduledFor: bufferPost.dueAt || job.scheduled_for,
     });
 
-    const [jobUpdate, postUpdate] = await Promise.all([
-      supabase
-        .from("publishing_jobs")
-        .update({
-          status: "ready",
-          attempts: nextAttempts,
-          error: null,
-        })
-        .eq("id", job.id)
-        .select()
-        .single(),
-      supabase
-        .from("generated_posts")
-        .update({
-          status: "scheduled",
-          publish_error: null,
-          template_fields: templateFields,
-        })
-        .eq("id", post.id)
-        .select()
-        .single(),
-    ]);
+    const jobUpdate = await supabase
+      .from("publishing_jobs")
+      .update({
+        status: "ready",
+        attempts: nextAttempts,
+        error: null,
+      })
+      .eq("id", job.id)
+      .eq("status", "processing")
+      .select()
+      .single();
 
     if (jobUpdate.error || !jobUpdate.data) {
       throw new Error(jobUpdate.error?.message || "Could not update publishing job.");
     }
+
+    jobReadyPersisted = true;
+
+    const postUpdate = await supabase
+      .from("generated_posts")
+      .update({
+        status: "scheduled",
+        publish_error: null,
+        template_fields: templateFields,
+      })
+      .eq("id", post.id)
+      .select()
+      .single();
 
     if (postUpdate.error || !postUpdate.data) {
       throw new Error(postUpdate.error?.message || "Could not update generated post.");
@@ -141,6 +174,27 @@ export async function sendPublishingJobToBuffer(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Buffer publishing failed.";
+
+    if (bufferPostCreated) {
+      const reconciliationMessage = `Buffer post ${bufferPostId || "created"} was created, but Content OS could not finish saving the handoff: ${message} Do not retry automatically; inspect Buffer first.`;
+
+      await Promise.all([
+        supabase
+          .from("publishing_jobs")
+          .update({
+            status: jobReadyPersisted ? "ready" : "processing",
+            attempts: nextAttempts,
+            error: reconciliationMessage,
+          })
+          .eq("id", job.id),
+        supabase
+          .from("generated_posts")
+          .update({ publish_error: reconciliationMessage })
+          .eq("id", job.post_id),
+      ]);
+
+      throw new Error(reconciliationMessage);
+    }
 
     await Promise.all([
       supabase

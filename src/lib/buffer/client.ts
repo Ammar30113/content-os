@@ -9,6 +9,10 @@ import {
   type BufferBrand,
   type BufferPlatform,
 } from "@/lib/env";
+import {
+  assertSafeRemoteHttpUrl,
+  readResponseBufferWithLimit,
+} from "@/lib/http/remote-url";
 
 const BUFFER_GRAPHQL_ENDPOINT = "https://api.buffer.com";
 // Instagram (and therefore Buffer) caps a carousel at 10 images.
@@ -284,7 +288,11 @@ function isPublicJpegUrl(imageUrl: string) {
 }
 
 async function assertBufferMediaUrlReady(url: string, platform: BufferPlatform) {
-  const response = await fetch(url, { cache: "no-store" });
+  const safeUrl = await assertSafeRemoteHttpUrl(url);
+  const response = await fetch(safeUrl, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
+  });
 
   if (!response.ok) {
     throw new Error(
@@ -293,7 +301,12 @@ async function assertBufferMediaUrlReady(url: string, platform: BufferPlatform) 
   }
 
   const contentType = response.headers.get("content-type") || "";
-  const body = Buffer.from(await response.arrayBuffer());
+  const body = await readResponseBufferWithLimit(
+    response,
+    platform === "instagram"
+      ? BUFFER_INSTAGRAM_IMAGE_MAX_BYTES
+      : BUFFER_INSTAGRAM_IMAGE_MAX_BYTES,
+  );
 
   if (!contentType.startsWith("image/")) {
     throw new Error(

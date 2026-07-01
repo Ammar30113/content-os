@@ -1,6 +1,7 @@
 import { jsonError, jsonOk } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth";
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
+import { validateImageUpload } from "@/lib/images/upload";
 
 export async function POST(request: Request) {
   try {
@@ -13,21 +14,14 @@ export async function POST(request: Request) {
       throw new Error("Upload an image file.");
     }
 
-    if (!file.type.startsWith("image/")) {
-      throw new Error("Uploaded file must be an image.");
-    }
+    const validatedImage = await validateImageUpload(file);
 
-    const extension = file.type.includes("jpeg")
-      ? "jpg"
-      : file.type.includes("webp")
-        ? "webp"
-        : "png";
-    const storagePath = `${user.id}/references/reference-${Date.now()}.${extension}`;
+    const storagePath = `${user.id}/references/reference-${Date.now()}.${validatedImage.extension}`;
 
     const { error: uploadError } = await supabase.storage
       .from("post-images")
-      .upload(storagePath, file, {
-        contentType: file.type,
+      .upload(storagePath, validatedImage.buffer, {
+        contentType: validatedImage.contentType,
         upsert: false,
       });
 
@@ -55,6 +49,7 @@ export async function POST(request: Request) {
       .single();
 
     if (mediaError || !asset) {
+      await supabase.storage.from("post-images").remove([storagePath]);
       throw new Error(mediaError?.message || "Could not save reference image.");
     }
 

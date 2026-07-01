@@ -73,6 +73,7 @@ export async function POST(request: Request) {
     });
 
     if (mediaError) {
+      await supabase.storage.from("post-images").remove([storagePath]);
       throw new Error(mediaError.message);
     }
 
@@ -90,6 +91,14 @@ export async function POST(request: Request) {
       .single();
 
     if (updateError || !updatedPost) {
+      await Promise.all([
+        supabase
+          .from("media_assets")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("storage_path", storagePath),
+        supabase.storage.from("post-images").remove([storagePath]),
+      ]);
       throw new Error(updateError?.message || "Could not update post image.");
     }
 

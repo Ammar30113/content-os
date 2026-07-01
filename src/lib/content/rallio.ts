@@ -95,7 +95,7 @@ JUXTAPOSITION (TWO-SIGNAL) METHOD
 - Two caption closes are allowed:
   - Instructional posts (supporter_steps, owner_steps) keep an explicit funnel CTA.
   - Discovery, regular_quote, spot, receipt, participation, and manifesto posts may use an open-loop close: end on the second signal or a quiet implication, never on "download", "claim", or "sign up". The door (handle, city ask) stays visible but unargued.
-- For carousels, treat the post as two legos: the first slide is the specific, valuable signal; the second slide is the gap or tension the reader resolves on the swipe. Never write a "now download" slide.
+- For carousels, build one three-slide story: the first slide is the specific local value signal, the second proves it with a concrete detail from the same source, and the third asks one answerable question or gives the assigned supporter/owner next step. Never switch places or CTA doors mid-carousel.
 - The owner angle is loss, not a pitch: show that regulars are already recommending a spot while the owner is absent, and let the owner feel the gap. Do not say "claim your business" unless an owner door is explicitly selected.
 `.trim();
 

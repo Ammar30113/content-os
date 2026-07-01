@@ -34,7 +34,7 @@ export function checkSupabaseProjectUrl(
     };
   }
 
-  if (projectUrl.includes(REQUIRED_SUPABASE_PROJECT_REF)) {
+  if (isExpectedSupabaseProjectUrl(projectUrl)) {
     return {
       configured: true,
       ok: true,
@@ -47,8 +47,27 @@ export function checkSupabaseProjectUrl(
     configured: true,
     ok: false,
     projectUrl,
-    message: `Supabase URL must include ${REQUIRED_SUPABASE_PROJECT_REF}.`,
+    message: `Supabase URL must exactly match ${EXPECTED_SUPABASE_URL}.`,
   };
+}
+
+function isExpectedSupabaseProjectUrl(projectUrl: string) {
+  try {
+    const url = new URL(projectUrl);
+
+    return (
+      url.protocol === "https:" &&
+      url.hostname === `${REQUIRED_SUPABASE_PROJECT_REF}.supabase.co` &&
+      !url.port &&
+      !url.username &&
+      !url.password &&
+      url.pathname === "/" &&
+      !url.search &&
+      !url.hash
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function assertConfiguredSupabaseProjectUrl(

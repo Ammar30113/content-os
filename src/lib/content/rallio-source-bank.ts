@@ -1,6 +1,8 @@
 import type { RallioLocalSignal } from "@/lib/content/types";
 
-// Generated from rallio_global_taste_map_fixed.csv. Only approved, validated rows are included.
+// Generated from rallio_global_taste_map_fixed.csv as review-safe creative
+// source material. Rows are not verified business facts; generated posts still
+// require operator approval before Buffer handoff.
 export const rallioSourceSignals = [
   {
     id: "golden-bowl-pho-chinatown",

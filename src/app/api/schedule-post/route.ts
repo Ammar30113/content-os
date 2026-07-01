@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 import { jsonError, jsonOk } from "@/lib/api";
-import { ensurePublishingJobsForPost } from "@/lib/content/publishing-workflow";
+import {
+  ensurePublishingJobsForPost,
+  requireFutureScheduledIso,
+} from "@/lib/content/publishing-workflow";
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
 import { requireApiUser } from "@/lib/auth";
 
@@ -14,6 +17,7 @@ export async function POST(request: Request) {
   try {
     assertContentOsSupabaseWriteSafety();
     const input = schedulePostSchema.parse(await request.json());
+    const scheduledFor = requireFutureScheduledIso(input.scheduled_for);
     const { supabase, user } = await requireApiUser();
 
     const { data: post, error: postError } = await supabase
@@ -36,7 +40,7 @@ export async function POST(request: Request) {
         .from("generated_posts")
         .update({
           status: "scheduled",
-          scheduled_for: input.scheduled_for,
+          scheduled_for: scheduledFor,
           publish_error: null,
         })
         .eq("id", input.post_id)
@@ -52,14 +56,14 @@ export async function POST(request: Request) {
         post: scheduledPost,
         jobs: [],
         selectedPlatforms: ["instagram"],
-        scheduledFor: input.scheduled_for,
+        scheduledFor,
       });
     }
 
     const result = await ensurePublishingJobsForPost(supabase, {
       postId: input.post_id,
       userId: user.id,
-      scheduledFor: input.scheduled_for,
+      scheduledFor,
     });
 
     return jsonOk(result);

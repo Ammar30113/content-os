@@ -1,10 +1,15 @@
 import { z } from "zod";
 
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
+import {
+  assertSafeRemoteHttpUrl,
+  readResponseBufferWithLimit,
+} from "@/lib/http/remote-url";
 import { convertImageToInstagramJpeg } from "@/lib/images/render";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
+const MAX_PROXY_IMAGE_BYTES = 10 * 1024 * 1024;
 
 const publicPostImageParamsSchema = z.object({
   postId: z
@@ -72,8 +77,10 @@ export async function GET(
       }
     }
 
-    const imageResponseFromUrl = await fetch(post.image_url, {
+    const remoteImageUrl = await assertSafeRemoteHttpUrl(post.image_url);
+    const imageResponseFromUrl = await fetch(remoteImageUrl, {
       cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!imageResponseFromUrl.ok) {
@@ -82,7 +89,15 @@ export async function GET(
 
     const contentType =
       imageResponseFromUrl.headers.get("content-type") || inferContentType(post.image_url);
-    const body = await imageResponseFromUrl.blob();
+
+    if (!contentType.startsWith("image/")) {
+      return new Response("Post image URL did not return an image.", { status: 502 });
+    }
+
+    const body = await readResponseBufferWithLimit(
+      imageResponseFromUrl,
+      MAX_PROXY_IMAGE_BYTES,
+    );
 
     return imageResponse(body, contentType, { forceJpeg: true });
   } catch (error) {
@@ -94,14 +109,17 @@ export async function GET(
 }
 
 async function imageResponse(
-  file: Blob,
+  file: Blob | Buffer,
   contentType: string,
   { forceJpeg = false }: { forceJpeg?: boolean } = {},
 ) {
+  const input = Buffer.isBuffer(file)
+    ? file
+    : Buffer.from(await file.arrayBuffer());
   const body =
     forceJpeg && !/^image\/jpe?g$/i.test(contentType)
-      ? await convertImageToInstagramJpeg(Buffer.from(await file.arrayBuffer()))
-      : Buffer.from(await file.arrayBuffer());
+      ? await convertImageToInstagramJpeg(input)
+      : input;
   const resolvedContentType = forceJpeg ? "image/jpeg" : contentType;
   const extension = resolvedContentType === "image/jpeg" ? "jpg" : "png";
 

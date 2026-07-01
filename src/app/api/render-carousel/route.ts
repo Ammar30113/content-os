@@ -21,6 +21,7 @@ const renderCarouselInputSchema = z.object({
 
 export async function POST(request: Request) {
   let postId: string | null = null;
+  const uploadedStoragePaths: string[] = [];
 
   try {
     assertContentOsSupabaseWriteSafety();
@@ -86,6 +87,8 @@ export async function POST(request: Request) {
         throw new Error(uploadError.message);
       }
 
+      uploadedStoragePaths.push(storagePath);
+
       const { data: publicUrlData } = supabase.storage
         .from("post-images")
         .getPublicUrl(storagePath);
@@ -136,7 +139,21 @@ export async function POST(request: Request) {
   } catch (error) {
     if (postId) {
       try {
-        const { supabase } = await requireApiUser();
+        const { supabase, user } = await requireApiUser();
+
+        if (uploadedStoragePaths.length) {
+          await Promise.all([
+            supabase
+              .from("media_assets")
+              .delete()
+              .eq("user_id", user.id)
+              .in("storage_path", uploadedStoragePaths),
+            supabase.storage
+              .from("post-images")
+              .remove(uploadedStoragePaths),
+          ]);
+        }
+
         await supabase
           .from("generated_posts")
           .update({
@@ -146,7 +163,8 @@ export async function POST(request: Request) {
                 ? error.message
                 : "Carousel rendering failed.",
           })
-          .eq("id", postId);
+          .eq("id", postId)
+          .eq("user_id", user.id);
       } catch {
         // Preserve the original rendering error for the response.
       }

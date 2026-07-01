@@ -3,6 +3,7 @@ import { z } from "zod";
 import { jsonError, jsonOk } from "@/lib/api";
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
 import { requireApiUser } from "@/lib/auth";
+import { validateImageUpload } from "@/lib/images/upload";
 
 const routeParamsSchema = z.object({
   id: z.string().uuid(),
@@ -23,9 +24,7 @@ export async function POST(
       throw new Error("Upload an image file.");
     }
 
-    if (!file.type.startsWith("image/")) {
-      throw new Error("Uploaded file must be an image.");
-    }
+    const validatedImage = await validateImageUpload(file);
 
     const { data: post, error: postError } = await supabase
       .from("generated_posts")
@@ -37,17 +36,12 @@ export async function POST(
       throw new Error("Post not found or not owned by current user.");
     }
 
-    const extension = file.type.includes("jpeg")
-      ? "jpg"
-      : file.type.includes("webp")
-        ? "webp"
-        : "png";
-    const storagePath = `${user.id}/${id}/upload-${Date.now()}.${extension}`;
+    const storagePath = `${user.id}/${id}/upload-${Date.now()}.${validatedImage.extension}`;
 
     const { error: uploadError } = await supabase.storage
       .from("post-images")
-      .upload(storagePath, file, {
-        contentType: file.type,
+      .upload(storagePath, validatedImage.buffer, {
+        contentType: validatedImage.contentType,
         upsert: false,
       });
 
@@ -70,6 +64,7 @@ export async function POST(
     });
 
     if (mediaError) {
+      await supabase.storage.from("post-images").remove([storagePath]);
       throw new Error(mediaError.message);
     }
 
@@ -85,6 +80,14 @@ export async function POST(
       .single();
 
     if (updateError || !updatedPost) {
+      await Promise.all([
+        supabase
+          .from("media_assets")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("storage_path", storagePath),
+        supabase.storage.from("post-images").remove([storagePath]),
+      ]);
       throw new Error(updateError?.message || "Could not save uploaded image.");
     }
 
