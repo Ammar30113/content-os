@@ -954,6 +954,21 @@ function tokenSimilarity(left: string, right: string) {
   return overlap / Math.max(leftTokens.size, rightTokens.size);
 }
 
+// Highest token overlap between a hook and any previously used hook (0 = fully
+// novel, 1 = identical). Used to pick the least repetitive fallback attempt.
+function maxHookSimilarity(hook: string, previousHooks: string[]) {
+  const current = normalizeForNovelty(hook);
+
+  if (!current || !previousHooks.length) {
+    return 0;
+  }
+
+  return previousHooks.reduce(
+    (max, previous) => Math.max(max, tokenSimilarity(current, previous)),
+    0,
+  );
+}
+
 function normalizeForNovelty(value: string | null | undefined) {
   return (value || "")
     .toLowerCase()
@@ -1140,6 +1155,13 @@ export async function POST(request: Request) {
     if (input.brand_slug === "signal") {
       let signalContent: GeneratedContentPackage | null = null;
       let signalQualityFailures: string[] = [];
+      // Track the least repetitive safe+quality attempt so a stubborn duplicate
+      // hook degrades to the best real attempt instead of hard-failing the batch.
+      let signalFallbackCandidate: GeneratedContentPackage | null = null;
+      let signalFallbackHookOverlap = Number.POSITIVE_INFINITY;
+      const previousHooksForNovelty = [...generatedSoFar, ...recentHistory]
+        .map((post) => normalizeForNovelty(post.hook))
+        .filter(Boolean);
       const signalFallback = getSignalFallbackMetadata(input);
 
       for (let attempt = 1; attempt <= 4; attempt += 1) {
@@ -1160,7 +1182,7 @@ export async function POST(request: Request) {
                 "Return Instagram-only metadata: selected_platforms must be [\"instagram\"], brand_slug must be signal, and all Rallio-only fields must be null.",
                 "Never use exclamation points, guaranteed outcomes, perfect streak claims, download-now language, coupons, rewards, or tag-a-friend bait.",
                 isRepairPass
-                  ? `Repair pass: previous attempt failed quality. Fix these issues: ${signalQualityFailures.join(" ")}`
+                  ? `Repair pass: the previous attempt failed these checks: ${signalQualityFailures.join(" ")} Rewrite so it passes. If a hook or headline was flagged as duplicate or too similar, write a completely different opening line and headline — do not reuse or lightly reword any hook, headline, or line from generated_so_far or recent_posts_to_avoid.`
                   : "",
               ]
                 .filter(Boolean)
@@ -1273,7 +1295,7 @@ export async function POST(request: Request) {
           {
             ...normalizedTemplateFields,
             headline:
-              signalFallback.batchWorkingTitle || normalizedTemplateFields.headline,
+              forcedHeadline || normalizedTemplateFields.headline,
             reference_image_url: referenceImageUrl,
             reference_image_asset_id: input.reference_image_asset_id,
             selected_platforms: ["instagram" as const],
@@ -1288,7 +1310,7 @@ export async function POST(request: Request) {
         );
         const parsedContent = generatedContentSchema.parse({
           ...parsed,
-          headline: signalFallback.batchWorkingTitle || parsed.headline,
+          headline: forcedHeadline || parsed.headline,
           pillar: forcedTemplateType,
           template_type: forcedTemplateType,
           template_fields: templateFieldsWithWorkflow,
@@ -1314,22 +1336,22 @@ export async function POST(request: Request) {
           continue;
         }
 
+        const qualityResult = validateGeneratedContentQuality({
+          content: candidate,
+        });
+
+        if (!qualityResult.ok) {
+          signalQualityFailures = qualityResult.failures;
+          continue;
+        }
+
         const noveltyFailures = validateBatchNovelty(
           candidate,
           generatedSoFar,
           recentHistory,
         );
 
-        if (noveltyFailures.length) {
-          signalQualityFailures = noveltyFailures;
-          continue;
-        }
-
-        const qualityResult = validateGeneratedContentQuality({
-          content: candidate,
-        });
-
-        if (qualityResult.ok) {
+        if (!noveltyFailures.length) {
           signalContent = {
             ...candidate,
             template_fields: {
@@ -1344,7 +1366,33 @@ export async function POST(request: Request) {
           break;
         }
 
-        signalQualityFailures = qualityResult.failures;
+        // Safe, specific, and well-formed, just not novel enough. Remember the
+        // least repetitive such attempt so we can ship it rather than hard-fail
+        // the whole batch when no fully novel attempt lands.
+        signalQualityFailures = noveltyFailures;
+        const hookOverlap = maxHookSimilarity(candidate.hook, previousHooksForNovelty);
+
+        if (hookOverlap < signalFallbackHookOverlap) {
+          signalFallbackHookOverlap = hookOverlap;
+          signalFallbackCandidate = {
+            ...candidate,
+            template_fields: {
+              ...candidate.template_fields,
+              quality_gate: {
+                passed: false,
+                attempt,
+                failures: noveltyFailures,
+                notes: [
+                  "Accepted the most novel Signal attempt after the novelty gate could not be fully satisfied. Review the hook and headline before publishing.",
+                ],
+              },
+            },
+          };
+        }
+      }
+
+      if (!signalContent && signalFallbackCandidate) {
+        signalContent = signalFallbackCandidate;
       }
 
       if (!signalContent) {
