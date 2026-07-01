@@ -21,7 +21,9 @@ const BUFFER_INSTAGRAM_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 const BUFFER_IMAGE_MIN_BYTES = 1024;
 const INSTAGRAM_IMAGE_MIN_WIDTH = 320;
 const INSTAGRAM_IMAGE_MAX_WIDTH = 1440;
-const INSTAGRAM_IMAGE_MIN_ASPECT_RATIO = 0.8;
+// 4:5 portrait is exactly 0.8; keep a hair of float tolerance so a rendered 1080x1350
+// slide is never rejected, while 3:4 (0.75) and taller still fail.
+const INSTAGRAM_IMAGE_MIN_ASPECT_RATIO = 0.79;
 const INSTAGRAM_IMAGE_MAX_ASPECT_RATIO = 1.91;
 
 type BufferGraphQLError = {
@@ -155,7 +157,7 @@ export async function createBufferPost({
           altText,
           dimensions: {
             width: 1080,
-            height: 1080,
+            height: 1350,
           },
         },
       },
