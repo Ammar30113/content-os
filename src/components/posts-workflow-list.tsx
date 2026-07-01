@@ -9,6 +9,12 @@ import { PostCardActions } from "@/components/post-card-actions";
 import { StatusBadge } from "@/components/status-badge";
 import { getRenderedCarouselSlideUrls } from "@/lib/content/carousel-media";
 import {
+  formatPostBrandName,
+  getInitialPostBrand,
+  getPostBrandFilter,
+  type PostBrandFilter,
+} from "@/lib/content/post-brand";
+import {
   BUFFER_SENT_POST_RETENTION_DAYS,
   getBufferScheduledClearAt,
   isBufferScheduledPost,
@@ -52,28 +58,44 @@ type BulkSummary = {
 
 type PostTab = "posts" | "scheduled";
 
+const EMPTY_BULK_STATE: BulkState = {
+  loading: null,
+  message: null,
+  details: [],
+  error: null,
+};
+
 const POST_TABS: { id: PostTab; label: string }[] = [
   { id: "posts", label: "Posts" },
   { id: "scheduled", label: "Scheduled" },
 ];
 
+const BRAND_TABS: { id: PostBrandFilter; label: string }[] = [
+  { id: "rallio", label: "Rallio" },
+  { id: "signal", label: "Signal" },
+  { id: "unassigned", label: "Needs review" },
+];
+
 export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeBrand, setActiveBrand] = useState<PostBrandFilter>(() =>
+    getInitialPostBrand(posts),
+  );
   const [activeTab, setActiveTab] = useState<PostTab>("posts");
-  const [state, setState] = useState<BulkState>({
-    loading: null,
-    message: null,
-    details: [],
-    error: null,
-  });
+  const [state, setState] = useState<BulkState>(EMPTY_BULK_STATE);
   const router = useRouter();
-  const groupedPosts = useMemo(() => groupWorkflowPosts(posts), [posts]);
-  const visiblePosts = groupedPosts[activeTab];
+  const groupedPosts = useMemo(() => groupWorkflowPostsByBrand(posts), [posts]);
+  const visiblePosts = groupedPosts[activeBrand][activeTab];
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const allVisibleSelected =
     visiblePosts.length > 0 && visiblePosts.every((post) => selectedSet.has(post.id));
   const selectedCount = selectedIds.length;
   const isActivePostsTab = activeTab === "posts";
+  const activeBrandName = formatPostBrandName(activeBrand);
+  const isRoutableBrand = activeBrand !== "unassigned";
+  const visibleBrandTabs = BRAND_TABS.filter(
+    (tab) => tab.id !== "unassigned" || getBrandPostCount(groupedPosts, tab.id) > 0,
+  );
 
   function togglePost(postId: string) {
     setSelectedIds((current) =>
@@ -87,8 +109,15 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
     setSelectedIds(visiblePosts.map((post) => post.id));
   }
 
+  function changeBrand(brand: PostBrandFilter) {
+    setSelectedIds([]);
+    setState(EMPTY_BULK_STATE);
+    setActiveBrand(brand);
+  }
+
   function changeTab(tab: PostTab) {
     setSelectedIds([]);
+    setState(EMPTY_BULK_STATE);
     setActiveTab(tab);
   }
 
@@ -96,6 +125,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
     loading: string,
     endpoint: string,
     successMessage: (payload: Record<string, unknown>) => string | BulkSummary,
+    requestBody: Record<string, unknown> = {},
   ) {
     if (!selectedIds.length) {
       setState({
@@ -113,7 +143,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ post_ids: selectedIds }),
+        body: JSON.stringify({ ...requestBody, post_ids: selectedIds }),
       });
       const payload = await readApiJson<Record<string, unknown>>(response);
 
@@ -145,6 +175,30 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   return (
     <div className="space-y-5">
       <div className="sticky top-0 z-10 rounded border border-zinc-800 bg-[#0a0a0b]/95 p-4 backdrop-blur">
+        <div className="mb-4 border-b border-zinc-900 pb-4">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+            Brand queue
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {visibleBrandTabs.map((brand) => (
+              <button
+                key={brand.id}
+                type="button"
+                onClick={() => changeBrand(brand.id)}
+                className={`inline-flex h-10 items-center gap-2 rounded border px-4 text-sm font-semibold transition ${
+                  activeBrand === brand.id
+                    ? "border-[#d4ff00] bg-[#d4ff00]/10 text-white"
+                    : "border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+                }`}
+              >
+                {brand.label}
+                <span className="rounded bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-300">
+                  {getBrandPostCount(groupedPosts, brand.id)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="mb-4 flex flex-wrap gap-2 border-b border-zinc-900 pb-4">
           {POST_TABS.map((tab) => (
             <button
@@ -159,7 +213,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
             >
               {tab.label}
               <span className="rounded bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-300">
-                {groupedPosts[tab.id].length}
+                {groupedPosts[activeBrand][tab.id].length}
               </span>
             </button>
           ))}
@@ -171,7 +225,9 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
             </p>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
               {isActivePostsTab
-                ? "Bulk send approves, uses the next manual Buffer slot, sends to configured Buffer channels, then moves the post into Scheduled."
+                ? isRoutableBrand
+                  ? `${activeBrandName} posts route only to the ${activeBrandName} Instagram channel, then move into Scheduled.`
+                  : "These posts are missing brand metadata. Regenerate them before sending to Buffer."
                 : `Buffer-sent posts stay here for ${BUFFER_SENT_POST_RETENTION_DAYS} days, then daily cleanup deletes them after the Buffer slot has passed.`}
             </p>
           </div>
@@ -215,7 +271,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                     ? "Approving..."
                     : "Approve selected"}
                 </button>
-                <button
+                {isRoutableBrand ? <button
                   type="button"
                   disabled={Boolean(state.loading) || !selectedCount}
                   onClick={() =>
@@ -229,11 +285,12 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
 
                         return failed
                           ? {
-                              message: `Sent ${sent} posts to Buffer. ${failed} need review.`,
+                              message: `Sent ${sent} ${activeBrandName} posts to Buffer. ${failed} need review.`,
                               details,
                             }
-                          : `Sent ${sent} posts to Buffer and moved them to Scheduled.`;
+                          : `Sent ${sent} ${activeBrandName} posts to Buffer and moved them to Scheduled.`;
                       },
+                      { brand_slug: activeBrand },
                     )
                   }
                   className="inline-flex h-9 items-center justify-center gap-2 rounded bg-[#C8923A] px-3 text-xs font-semibold text-[#0a0a0b] transition hover:bg-[#d9a85a] disabled:opacity-50"
@@ -241,8 +298,8 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                   <Send size={15} />
                   {state.loading === "Sending selected"
                     ? "Sending..."
-                    : "Send selected to Buffer"}
-                </button>
+                    : `Send to ${activeBrandName} Buffer`}
+                </button> : null}
               </>
             ) : null}
             <button
@@ -357,6 +414,9 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                   </div>
                   <div className="p-5">
                     <div className="flex flex-wrap gap-2">
+                      <span className="rounded border border-zinc-700 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-300">
+                        {formatPostBrandName(getPostBrandFilter(post.template_fields))}
+                      </span>
                       <StatusBadge status={post.status} />
                       <StatusBadge
                         status={isReel ? post.video_status : post.image_status}
@@ -430,12 +490,14 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
       {!visiblePosts.length ? (
         <div className="rounded border border-zinc-800 bg-zinc-950 p-8 text-center">
           <p className="font-semibold text-white">
-            {isActivePostsTab ? "No active posts." : "No scheduled posts."}
+            {isActivePostsTab
+              ? `No active ${activeBrandName} posts.`
+              : `No scheduled ${activeBrandName} posts.`}
           </p>
           <p className="mt-2 text-sm text-zinc-500">
             {isActivePostsTab
-              ? "Create a new package from Ideas."
-              : "Posts sent to Buffer will appear here until the 10-day cleanup window deletes them."}
+              ? `Create a new ${activeBrandName} package from Ideas.`
+              : `${activeBrandName} posts sent to Buffer will appear here until the 10-day cleanup window deletes them.`}
           </p>
         </div>
       ) : null}
@@ -443,24 +505,41 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
   );
 }
 
-function groupWorkflowPosts(posts: PostListItem[]) {
+type BrandWorkflowGroups = Record<
+  PostBrandFilter,
+  Record<PostTab, PostListItem[]>
+>;
+
+function groupWorkflowPostsByBrand(posts: PostListItem[]) {
   const now = new Date();
+  const groups: BrandWorkflowGroups = {
+    rallio: { posts: [], scheduled: [] },
+    signal: { posts: [], scheduled: [] },
+    unassigned: { posts: [], scheduled: [] },
+  };
 
-  return posts.reduce<Record<PostTab, PostListItem[]>>(
-    (groups, post) => {
-      if (isBufferScheduledPost(post)) {
-        if (!isBufferScheduledPostExpired(post, now)) {
-          groups.scheduled.push(post);
-        }
+  for (const post of posts) {
+    const brand = getPostBrandFilter(post.template_fields);
 
-        return groups;
+    if (isBufferScheduledPost(post)) {
+      if (!isBufferScheduledPostExpired(post, now)) {
+        groups[brand].scheduled.push(post);
       }
 
-      groups.posts.push(post);
-      return groups;
-    },
-    { posts: [], scheduled: [] },
-  );
+      continue;
+    }
+
+    groups[brand].posts.push(post);
+  }
+
+  return groups;
+}
+
+function getBrandPostCount(
+  groups: BrandWorkflowGroups,
+  brand: PostBrandFilter,
+) {
+  return groups[brand].posts.length + groups[brand].scheduled.length;
 }
 
 function normalizeBulkSummary(result: string | BulkSummary): BulkSummary {

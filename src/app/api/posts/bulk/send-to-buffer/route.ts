@@ -8,6 +8,7 @@ import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
 
 const bulkSendToBufferSchema = z.object({
   post_ids: z.array(z.string().uuid()).min(1).max(20),
+  brand_slug: z.enum(["rallio", "signal"]),
 });
 
 type BulkResult = {
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
         const ensured = await ensurePublishingJobsForPost(supabase, {
           postId,
           userId: user.id,
+          expectedBrand: input.brand_slug,
         });
         const pendingJobs = ensured.jobs.filter(
           (job) => job.status === "queued" || job.status === "failed",

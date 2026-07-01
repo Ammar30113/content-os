@@ -22,11 +22,18 @@ type EnsurePublishingJobsInput = {
   userId: string;
   scheduledFor?: string | null;
   resendReady?: boolean;
+  expectedBrand?: BufferBrand | null;
 };
 
 export async function ensurePublishingJobsForPost(
   supabase: ContentOsSupabaseClient,
-  { postId, userId, scheduledFor, resendReady = false }: EnsurePublishingJobsInput,
+  {
+    postId,
+    userId,
+    scheduledFor,
+    resendReady = false,
+    expectedBrand,
+  }: EnsurePublishingJobsInput,
 ) {
   const { data: post, error: postError } = await supabase
     .from("generated_posts")
@@ -53,6 +60,15 @@ export async function ensurePublishingJobsForPost(
     post.platform,
   );
   const brandSlug = getPublishingBrandSlug(post.template_fields);
+
+  if (expectedBrand && brandSlug !== expectedBrand) {
+    const actualBrand = brandSlug ? formatBrandName(brandSlug) : "Unassigned";
+
+    throw new Error(
+      `Brand selection expected ${formatBrandName(expectedBrand)}, but this post is ${actualBrand}. Refresh the Posts page and select from one brand queue.`,
+    );
+  }
+
   const effectivePlatforms = getConfiguredPublishingPlatforms(
     selectedPlatforms,
     brandSlug,
