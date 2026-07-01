@@ -120,6 +120,7 @@ export async function sendPublishingJobToBuffer(
       text: buildPlatformText(post, platform),
       imageUrl: post.image_url,
       imageUrls: post.post_type === "carousel" ? carouselSlideUrls : null,
+      altText: platform === "instagram" ? buildInstagramAltText(post, brandSlug) : null,
       scheduledFor: new Date(job.scheduled_for).toISOString(),
     });
     bufferPostCreated = true;
@@ -329,7 +330,38 @@ function validateBufferReadyPost(
   return brandSlug;
 }
 
-function buildPlatformText(post: GeneratedPost, platform: PublishPlatform) {
+// Instagram enforces a hard 5-hashtag limit (rolled out December 2025): extra tags are
+// stripped or block publishing, and oversized or identical tag blocks get throttled as
+// spam. buildPlatformText is the single chokepoint every send path (manual, bulk, cron)
+// flows through, so capping here guarantees no post can exceed it downstream.
+const INSTAGRAM_MAX_HASHTAGS = 5;
+const INSTAGRAM_HASHTAG_PATTERN = /#[\p{L}\p{N}_]+/gu;
+
+export function capInstagramHashtags(tags: string[]) {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+
+  for (const raw of tags) {
+    const tag = raw.trim();
+
+    if (!tag) {
+      continue;
+    }
+
+    const key = tag.toLowerCase();
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    unique.push(tag);
+  }
+
+  return unique.slice(0, INSTAGRAM_MAX_HASHTAGS);
+}
+
+export function buildPlatformText(post: GeneratedPost, platform: PublishPlatform) {
   if (platform === "x") {
     return clampForX(post.x_version || post.hook || post.headline || post.caption || "");
   }
@@ -338,11 +370,23 @@ function buildPlatformText(post: GeneratedPost, platform: PublishPlatform) {
     return post.linkedin_version || post.caption || post.hook || post.headline || "";
   }
 
-  const caption = post.caption || post.hook || post.headline || "";
-  const hashtags = normalizeHashtags(post.hashtags || []);
-  const missingHashtags = hashtags.filter((tag) => !caption.includes(tag));
+  const rawCaption = post.caption || post.hook || post.headline || "";
+  const captionTags = rawCaption.match(INSTAGRAM_HASHTAG_PATTERN) || [];
+  const hashtags = capInstagramHashtags([
+    ...captionTags,
+    ...normalizeHashtags(post.hashtags || []),
+  ]);
+  // Strip hashtags out of the caption body and re-append a single capped block so the
+  // published post can never exceed Instagram's 5-tag limit, no matter how many the model
+  // or the stored field carried. The keyword-rich caption body stays intact for search.
+  const captionBody = rawCaption
+    .replace(INSTAGRAM_HASHTAG_PATTERN, "")
+    .replace(/[^\S\n]{2,}/g, " ")
+    .replace(/[^\S\n]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
-  return [caption.trim(), missingHashtags.join(" ")].filter(Boolean).join("\n\n");
+  return [captionBody, hashtags.join(" ")].filter(Boolean).join("\n\n");
 }
 
 function clampForX(value: string) {
@@ -407,4 +451,27 @@ function getPostBrandSlug(templateFields: Json): BufferBrand | null {
 
 function formatBrandName(brandSlug: BufferBrand) {
   return brandSlug === "signal" ? "Signal" : "Rallio";
+}
+
+// Instagram reads alt text as a search/ranking signal, so we describe the post with the
+// concrete fields it already carries instead of a generic "social post graphic" string.
+function buildInstagramAltText(post: GeneratedPost, brandSlug: BufferBrand) {
+  const descriptor =
+    brandSlug === "rallio" ? "Rallio local taste map" : "Signal urge reset";
+  const details =
+    brandSlug === "rallio"
+      ? [
+          getTemplateFieldString(post.template_fields, "business_name"),
+          getTemplateFieldString(post.template_fields, "spot_category"),
+          getTemplateFieldString(post.template_fields, "launch_neighborhood") ||
+            getTemplateFieldString(post.template_fields, "recommender_neighborhood"),
+        ]
+      : [
+          getTemplateFieldString(post.template_fields, "signal_principle"),
+          getTemplateFieldString(post.template_fields, "signal_trigger"),
+        ];
+  const detail = details.filter(Boolean).join(", ");
+  const core = detail || post.headline?.trim() || "";
+
+  return core ? `${descriptor}: ${core}` : `${descriptor} Instagram post`;
 }

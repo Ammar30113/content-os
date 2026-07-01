@@ -462,10 +462,14 @@ function assembleFallbackContent({
   const finalLine =
     signal?.participation_prompt ||
     rallioFallbackFinalLines[variant % rallioFallbackFinalLines.length];
+  const rotatedFallbackHashtags = [
+    ...rallioFallbackHashtags.slice(variant % rallioFallbackHashtags.length),
+    ...rallioFallbackHashtags.slice(0, variant % rallioFallbackHashtags.length),
+  ];
   const hashtags = normalizeFallbackHashtags([
     ...(useModelCopy ? candidate.hashtags || [] : []),
-    ...rallioFallbackHashtags,
-  ]).slice(0, 16);
+    ...rotatedFallbackHashtags,
+  ]).slice(0, 5);
   const ctaDoor = normalizeRallioCtaDoor(
     rallioFallback?.contentType || candidate.template_fields.content_type,
     rallioFallback?.ctaDoor || candidate.template_fields.cta_door,
@@ -589,7 +593,7 @@ function normalizeFallbackHashtags(hashtags: string[]) {
     .filter(Boolean)
     .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
 
-  return uniqueStrings([...normalized, ...rallioFallbackHashtags]).slice(0, 20);
+  return uniqueStrings([...normalized, ...rallioFallbackHashtags]).slice(0, 5);
 }
 
 // Built once so every request sends a byte-identical system message, letting
@@ -600,7 +604,8 @@ const RALLIO_GENERATION_SYSTEM_PROMPT = [
   "Treat Rallio as live in the App Store, with Toronto + Rajkot as first active markets and a soft city-request invitation for everyone else.",
   "Do not copy hooks, headlines, or template fields from generated_so_far.",
   "Use one funnel CTA door only. Prefer app_download_supporter for supporter launch/action posts, app_download_owner for owner setup posts, city_request for next-city asks, local_guide for taste-map saves, and claim_your_business only when the requested content type is owner_claim_carousel.",
-  "Caption shape: 1-line hook, 1-2 lines of tension, 3-5 short bullets describing concrete local behavior or launch steps, one strong reframe ending, then hashtags.",
+  "Caption shape: 1-line hook that front-loads a searchable local keyword, 1-2 lines of tension, 3-5 short bullets describing concrete local behavior or launch steps, one strong reframe ending, then 3-5 fresh, specific hashtags.",
+  "Optimize for saves and quiet DM sends, the signals that actually drive Instagram reach in 2026: give every post concrete reference value worth saving and worth sending to one person who trusts local taste. This is genuine save-and-send value, never tag-a-friend or share-this bait.",
   "Juxtaposition close: for discovery, regular_quote, spot_carousel, receipt, participation, and manifesto posts you may end on an open loop — state two true signals and let the reader draw the conclusion. Do not end these with a download/claim command; keep the door (handle, city ask) visible but unargued. Keep supporter_steps and owner_steps posts explicitly instructional with their funnel CTA.",
   "For carousel posts, write exactly three connected slides: slide one establishes one specific local value signal, slide two proves it with a concrete order, sensory detail, or regular behavior from the same source, and slide three asks one answerable audience question or gives the assigned owner/supporter next step. Keep all three slides about the same place and CTA door.",
   "Do not reuse copy across platforms. Instagram is spaced, X is compressed, LinkedIn is slightly expanded.",
@@ -1150,7 +1155,8 @@ export async function POST(request: Request) {
                 "Signal is a separate app from Rallio. Do not mention Rallio, taste maps, restaurants, city launches, owners, or local food discovery.",
                 "Use original discipline language only. Do not quote Atomic Habits, James Clear, or any book verbatim or by name.",
                 "Do not use explicit sexual language, medical claims, cure language, shame streaks, surveillance, blockers, or screenshots.",
-                "Caption shape: 1-line hook, one short tension line, 3-5 short bullets, one grounded closing line, then hashtags.",
+                "Caption shape: 1-line hook that front-loads a searchable keyword, one short tension line, 3-5 short bullets, one grounded closing line, then 3-5 fresh, neutral hashtags.",
+                "Optimize for saves and quiet DM sends, the signals that actually drive Instagram reach: make each post worth saving for the next hard moment and worth sending to one person who would recognize the loop. Never use tag-a-friend or share-this bait.",
                 "Return Instagram-only metadata: selected_platforms must be [\"instagram\"], brand_slug must be signal, and all Rallio-only fields must be null.",
                 "Never use exclamation points, guaranteed outcomes, perfect streak claims, download-now language, coupons, rewards, or tag-a-friend bait.",
                 isRepairPass
@@ -1220,7 +1226,7 @@ export async function POST(request: Request) {
                   recent_posts_to_avoid: recentPostsToAvoid,
                   caption_rules: {
                     instagram:
-                      "Strong first line, one tension line, 3-5 action bullets, one grounded final line, then 8-15 varied hashtags. No explicit terms and no motivational poster tone.",
+                      "Front-load the most searchable term (the concrete cue, trigger, or discipline topic) into the first line so it stops the scroll and gets indexed by Instagram search. Then one tension line, 3-5 action bullets, one grounded final line. Make it worth saving and worth quietly sending to one person who would recognize it. End with exactly 3-5 neutral discipline or habit hashtags (for example #discipline, #habits, #selfcontrol, #focus, #dopamine) picked fresh for THIS post. Never use explicit, addiction, recovery, or clinical hashtags - they restrict the whole post's reach. No explicit terms and no motivational poster tone.",
                     x: "Under 280 characters, sharper than Instagram, no hashtags unless truly needed.",
                     linkedin:
                       "Slightly expanded, still private and practical, no long paragraphs and no clinical framing.",
@@ -1412,7 +1418,7 @@ export async function POST(request: Request) {
               {
                 caption_rules: {
                   instagram:
-                    "Strong first line, 1-2 line tension, 3-5 action bullets, strong final reframe/filter/insight, then 15-25 varied hashtags. 1-3 emojis max.",
+                    "Front-load the most searchable term (a specific cuisine, neighborhood, or concrete local behavior) into the first line so it stops the scroll and gets indexed by Instagram search. Then 1-2 line tension, 3-5 action bullets, strong final reframe/filter/insight. Make it worth saving and worth sending to one friend who would get it. End with exactly 3-5 highly specific hashtags picked fresh for THIS post (one neighborhood, one cuisine or category, one branded) - never the same block twice. 1-3 emojis max.",
                   x:
                     "Under 280 characters, sharper than Instagram, 0-1 hashtag.",
                   linkedin:

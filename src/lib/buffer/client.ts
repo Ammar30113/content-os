@@ -65,6 +65,9 @@ type CreateBufferPostInput = {
   // Ordered carousel slide URLs. When two or more are present, the post is sent
   // as a multi-image carousel and `imageUrl` is ignored.
   imageUrls?: string[] | null;
+  // Optional Instagram alt text (a search/ranking signal). Falls back to a generic
+  // brand string when omitted or on non-Instagram platforms.
+  altText?: string | null;
   scheduledFor: string;
 };
 
@@ -114,6 +117,7 @@ export async function createBufferPost({
   text,
   imageUrl,
   imageUrls,
+  altText: customAltText,
   scheduledFor,
 }: CreateBufferPostInput): Promise<BufferPostResult> {
   const env = getBufferEnv();
@@ -140,7 +144,9 @@ export async function createBufferPost({
       await assertBufferMediaUrlReady(url, platform);
     }
 
-    const altText = `${formatBufferBrandName(brandSlug)} social post graphic`;
+    const altText =
+      customAltText?.trim() ||
+      `${formatBufferBrandName(brandSlug)} social post graphic`;
 
     input.assets = bufferImageUrls.map((url) => ({
       image: {
