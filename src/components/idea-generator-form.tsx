@@ -344,10 +344,10 @@ export function IdeaGeneratorForm() {
       signal_visual_style: roulette.signal_visual_style,
       signal_kpi_intent: roulette.signal_kpi_intent,
     };
-    const scopedNextForm = scopeFormToBrand(nextForm, requestedBrand);
-
-    setForm(scopedNextForm);
-    return scopedNextForm;
+    // Auto-picked topics stay request-scoped. Writing them into form state
+    // would surface the machine-built brief in "Write my own" mode and leak
+    // stale roulette metadata into later manual generations.
+    return scopeFormToBrand(nextForm, requestedBrand);
   }
 
   async function uploadReferenceImage() {
