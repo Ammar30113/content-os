@@ -159,10 +159,14 @@ export const ideaInputSchema = z
       .trim()
       .min(3, "Add a sharper idea title.")
       .max(200, "Keep the idea title under 200 characters."),
+    // `brief` is dual-purpose: a short user-typed brief in manual mode, OR the
+    // machine-built roulette/batch brief in auto mode. The auto brief grows with
+    // batch size — a 20-post Rallio batch is ~16k chars — so the cap must clear
+    // that with headroom while still bounding a pathological paste.
     brief: z
       .string()
       .trim()
-      .max(5000, "Keep the brief under 5000 characters.")
+      .max(40000, "Keep the brief under 40000 characters.")
       .default(""),
     source_url: z.string().trim().url().max(2048).optional().or(z.literal("")),
     platform: z.enum(platforms),
