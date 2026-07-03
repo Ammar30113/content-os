@@ -1,10 +1,8 @@
 import { z } from "zod";
 
 import { assertContentOsSupabaseWriteSafety } from "@/lib/env";
-import {
-  assertSafeRemoteHttpUrl,
-  readResponseBufferWithLimit,
-} from "@/lib/http/remote-url";
+import { logError } from "@/lib/log";
+import { readResponseBufferWithLimit, safeFetch } from "@/lib/http/remote-url";
 import { convertImageToInstagramJpeg } from "@/lib/images/render";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
@@ -27,10 +25,16 @@ export async function GET(
     const { postId } = publicPostImageParamsSchema.parse(await params);
     const supabase = createSupabaseAdminClient();
 
+    // This route is public and uses the service-role client, so it must only
+    // serve images for posts that are actually meant to be shared. Buffer
+    // fetches the image once a post is `scheduled`; `published` covers the
+    // live post. Drafts, reviewing, approved, failed, and archived posts are
+    // never served through this proxy.
     const { data: post, error: postError } = await supabase
       .from("generated_posts")
       .select("id, image_url")
       .eq("id", postId)
+      .in("status", ["scheduled", "published"])
       .single();
 
     if (postError || !post?.image_url) {
@@ -77,8 +81,7 @@ export async function GET(
       }
     }
 
-    const remoteImageUrl = await assertSafeRemoteHttpUrl(post.image_url);
-    const imageResponseFromUrl = await fetch(remoteImageUrl, {
+    const imageResponseFromUrl = await safeFetch(post.image_url, {
       cache: "no-store",
       signal: AbortSignal.timeout(10_000),
     });
@@ -101,10 +104,11 @@ export async function GET(
 
     return imageResponse(body, contentType, { forceJpeg: true });
   } catch (error) {
-    return new Response(
-      error instanceof Error ? error.message : "Post image could not be loaded.",
-      { status: 400 },
-    );
+    // Never leak internal error strings (zod issues, the Supabase-safety config
+    // message, storage errors) from a public endpoint. Log server-side and
+    // return a single generic message for every failure mode.
+    logError("public-post-image", error);
+    return new Response("Post image not found.", { status: 404 });
   }
 }
 

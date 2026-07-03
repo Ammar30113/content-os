@@ -60,13 +60,23 @@ export async function deleteExpiredScheduledBufferPosts(
   const storageWarnings: string[] = [];
 
   for (const [userId, postIds] of postIdsByUser.entries()) {
-    const result = await deleteGeneratedPosts(supabase, { postIds, userId });
-    deletedCount += result.deleted_count;
-    storageRemovedCount += result.storage_removed_count;
-    deletedIds.push(...result.deleted_ids);
+    // Isolate each user's cleanup so one failure does not abort the sweep for
+    // every remaining user.
+    try {
+      const result = await deleteGeneratedPosts(supabase, { postIds, userId });
+      deletedCount += result.deleted_count;
+      storageRemovedCount += result.storage_removed_count;
+      deletedIds.push(...result.deleted_ids);
 
-    if (result.storage_warning) {
-      storageWarnings.push(result.storage_warning);
+      if (result.storage_warning) {
+        storageWarnings.push(result.storage_warning);
+      }
+    } catch (error) {
+      storageWarnings.push(
+        `Cleanup failed for user ${userId}: ${
+          error instanceof Error ? error.message : "unknown error"
+        }`,
+      );
     }
   }
 

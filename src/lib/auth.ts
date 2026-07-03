@@ -3,6 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 
+import { AuthError } from "@/lib/errors";
 import { getEnvStatus } from "@/lib/env";
 import {
   createSupabaseServerClient,
@@ -59,7 +60,7 @@ export async function requireApiUser() {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    throw new Error("You must be signed in to perform this action.");
+    throw new AuthError();
   }
 
   return { supabase, user };

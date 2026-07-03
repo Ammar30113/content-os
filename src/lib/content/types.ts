@@ -154,9 +154,17 @@ export const ideaInputSchema = z
   .object({
     idea_id: z.string().uuid().optional(),
     brand_slug: z.enum(brandSlugs).optional().default("rallio"),
-    title: z.string().trim().min(3, "Add a sharper idea title."),
-    brief: z.string().trim().default(""),
-    source_url: z.string().trim().url().optional().or(z.literal("")),
+    title: z
+      .string()
+      .trim()
+      .min(3, "Add a sharper idea title.")
+      .max(200, "Keep the idea title under 200 characters."),
+    brief: z
+      .string()
+      .trim()
+      .max(5000, "Keep the brief under 5000 characters.")
+      .default(""),
+    source_url: z.string().trim().url().max(2048).optional().or(z.literal("")),
     platform: z.enum(platforms),
     selected_platforms: z
       .array(z.enum(platforms))
@@ -172,19 +180,19 @@ export const ideaInputSchema = z
     reference_image_url: z.string().trim().url().optional().or(z.literal("")),
     reference_image_asset_id: z.string().uuid().optional(),
     image_mode: z.enum(imageModes).optional().default("template"),
-    roulette_seed_id: z.string().trim().optional().or(z.literal("")),
+    roulette_seed_id: z.string().trim().max(500).optional().or(z.literal("")),
     rallio_content_type: z.enum(rallioContentTypes).optional(),
     rallio_cta_door: z.enum(rallioCtaDoors).optional(),
     rallio_template_type: z.enum(rallioTemplateTypes).optional(),
-    rallio_visual_style: z.string().trim().optional().or(z.literal("")),
-    rallio_kpi_intent: z.string().trim().optional().or(z.literal("")),
+    rallio_visual_style: z.string().trim().max(500).optional().or(z.literal("")),
+    rallio_kpi_intent: z.string().trim().max(500).optional().or(z.literal("")),
     rallio_signal: rallioLocalSignalSchema.optional(),
-    participation_prompt: z.string().trim().optional().or(z.literal("")),
+    participation_prompt: z.string().trim().max(500).optional().or(z.literal("")),
     signal_content_type: z.enum(signalContentTypes).optional(),
     signal_cta_door: z.enum(signalCtaDoors).optional(),
     signal_template_type: z.enum(signalTemplateTypes).optional(),
-    signal_visual_style: z.string().trim().optional().or(z.literal("")),
-    signal_kpi_intent: z.string().trim().optional().or(z.literal("")),
+    signal_visual_style: z.string().trim().max(500).optional().or(z.literal("")),
+    signal_kpi_intent: z.string().trim().max(500).optional().or(z.literal("")),
     batch_angle: batchAngleSchema.optional(),
     recent_context: recentContextSchema.optional(),
   })

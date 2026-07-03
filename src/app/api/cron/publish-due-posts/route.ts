@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 import { jsonError, jsonOk } from "@/lib/api";
 import { sendDuePublishingJobsToBuffer } from "@/lib/buffer/publishing";
 import { deleteExpiredScheduledBufferPosts } from "@/lib/content/scheduled-cleanup";
@@ -41,7 +43,18 @@ function assertAuthorizedCron(request: Request) {
     throw new Error("CRON_SECRET is not configured.");
   }
 
-  if (authHeader !== `Bearer ${secret}`) {
+  if (!authHeader || !timingSafeStringEqual(authHeader, `Bearer ${secret}`)) {
     throw new Error("Unauthorized");
   }
+}
+
+function timingSafeStringEqual(a: string, b: string) {
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
+
+  if (aBuffer.length !== bBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(aBuffer, bBuffer);
 }

@@ -45,11 +45,15 @@ export async function POST(request: Request) {
       throw new Error(postError?.message || "Could not mark post published.");
     }
 
+    // Do not clobber a job that is mid-send (`processing`): the Buffer handoff
+    // is in flight and its own compare-and-swap will resolve the final state.
+    // Overwriting it here would mask an in-flight send (and any resulting error).
     await supabase
       .from("publishing_jobs")
       .update({ status: "published", error: null })
       .eq("post_id", input.post_id)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .neq("status", "processing");
 
     return jsonOk({ post });
   } catch (error) {

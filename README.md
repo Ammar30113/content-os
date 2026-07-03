@@ -51,7 +51,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4o-mini
-TAVILY_API_KEY=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 CRON_SECRET=
 BUFFER_ACCESS_TOKEN=
@@ -66,10 +65,12 @@ Do not commit `.env.local` or real secrets.
 `OPENAI_MODEL` defaults to `gpt-4o-mini` if omitted. Use a model your OpenAI
 project has access to and that supports structured outputs on the Responses API.
 
-`TAVILY_API_KEY` is optional. When set, generated posts can use live web research
-for topical context. Auto-pick topic also supports three source modes in the app:
-hybrid, live, and evergreen. Rallio generation defaults to the internal
-community/taste-map topic bank for Instagram feed growth.
+Rallio generation defaults to the internal community/taste-map topic bank for
+Instagram feed growth. When an idea includes a `source_url`, generation fetches
+and summarizes that page for topical context (see `src/lib/content/source.ts`).
+
+> Note: live web research via Tavily is planned but not yet implemented. There is
+> no `TAVILY_API_KEY` wiring in the codebase today.
 
 ## Supabase Setup
 

@@ -665,8 +665,13 @@ export function enforceSignalCopySafety(content: GeneratedContent): GeneratedCon
     "sexual content",
     "adult content",
   ];
+  // Match on whole words, not raw substrings. A substring check flags "secure",
+  // "security" and "procure" for the banned word "cure" — everyday vocabulary
+  // for a privacy-first app — which hard-fails Signal generation with no post
+  // produced. Word boundaries keep the ban precise ("this will cure you" still
+  // trips; "your data stays secure" does not).
   const hit = [...bannedPhrases, ...explicitTerms].find((phrase) =>
-    joined.includes(phrase),
+    matchesWholeWord(joined, phrase),
   );
 
   if (hit) {
@@ -686,6 +691,14 @@ export function enforceSignalCopySafety(content: GeneratedContent): GeneratedCon
   }
 
   return content;
+}
+
+function matchesWholeWord(haystack: string, phrase: string) {
+  return new RegExp(`\\b${escapeRegExp(phrase)}\\b`, "i").test(haystack);
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function getSeedForContentType(

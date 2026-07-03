@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createBufferPost } from "@/lib/buffer/client";
+import { BufferConnectionError, createBufferPost } from "@/lib/buffer/client";
 import {
   getCarouselMediaIssue,
   getRenderedCarouselSlideUrls,
@@ -197,6 +197,34 @@ export async function sendPublishingJobToBuffer(
       throw new Error(reconciliationMessage);
     }
 
+    if (error instanceof BufferConnectionError) {
+      // Buffer never confirmed the handoff, so we cannot tell whether the post
+      // was created. Leave the job in `processing` — which the cron retry query
+      // (status in queued/failed) deliberately excludes — so it is never
+      // auto-resent and can never double-post. It must be verified in Buffer and
+      // resolved by hand.
+      const reconciliationMessage = `Buffer did not confirm this handoff: ${message} The post may already exist in Buffer — verify there before resending. Content OS will not auto-retry it.`;
+
+      await Promise.all([
+        supabase
+          .from("publishing_jobs")
+          .update({
+            status: "processing",
+            attempts: nextAttempts,
+            error: reconciliationMessage,
+          })
+          .eq("id", job.id),
+        supabase
+          .from("generated_posts")
+          .update({ publish_error: reconciliationMessage })
+          .eq("id", job.post_id),
+      ]);
+
+      throw new Error(reconciliationMessage);
+    }
+
+    // Buffer actively rejected the request with a readable error, so nothing was
+    // created and the job is safe to retry.
     await Promise.all([
       supabase
         .from("publishing_jobs")

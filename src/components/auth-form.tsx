@@ -75,6 +75,7 @@ export function AuthForm() {
         <button
           type="button"
           onClick={() => setMode("sign-in")}
+          aria-pressed={mode === "sign-in"}
           className={`h-10 rounded text-sm font-semibold transition ${
             mode === "sign-in"
               ? "bg-[#d4ff00] text-[#0a0a0b]"
@@ -86,6 +87,7 @@ export function AuthForm() {
         <button
           type="button"
           onClick={() => setMode("sign-up")}
+          aria-pressed={mode === "sign-up"}
           className={`h-10 rounded text-sm font-semibold transition ${
             mode === "sign-up"
               ? "bg-[#d4ff00] text-[#0a0a0b]"

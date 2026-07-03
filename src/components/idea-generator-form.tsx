@@ -1050,6 +1050,7 @@ function ImageModeButton({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={`rounded border p-3 text-left transition ${
         active
           ? "border-[#C8923A]/60 bg-[#C8923A]/10"
@@ -1084,6 +1085,7 @@ function TopicSourceButton({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={`rounded border p-3 text-left transition ${
         active
           ? "border-[#C8923A]/60 bg-[#C8923A]/10"

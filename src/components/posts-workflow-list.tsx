@@ -185,6 +185,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                 key={brand.id}
                 type="button"
                 onClick={() => changeBrand(brand.id)}
+                aria-pressed={activeBrand === brand.id}
                 className={`inline-flex h-10 items-center gap-2 rounded border px-4 text-sm font-semibold transition ${
                   activeBrand === brand.id
                     ? "border-[#d4ff00] bg-[#d4ff00]/10 text-white"
@@ -205,6 +206,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
               key={tab.id}
               type="button"
               onClick={() => changeTab(tab.id)}
+              aria-pressed={activeTab === tab.id}
               className={`inline-flex h-9 items-center gap-2 rounded border px-3 text-xs font-semibold transition ${
                 activeTab === tab.id
                   ? "border-[#C8923A] bg-[#C8923A]/15 text-[#F5EBDC]"
@@ -377,6 +379,7 @@ export function PostsWorkflowList({ posts }: { posts: PostListItem[] }) {
                     type="checkbox"
                     checked={selectedSet.has(post.id)}
                     onChange={() => togglePost(post.id)}
+                    aria-label={`Select "${post.headline || post.hook || "Untitled post"}"`}
                     className="h-4 w-4 accent-[#C8923A]"
                   />
                   Select

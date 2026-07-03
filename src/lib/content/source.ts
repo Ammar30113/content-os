@@ -1,14 +1,10 @@
-import {
-  assertSafeRemoteHttpUrl,
-  readResponseBufferWithLimit,
-} from "@/lib/http/remote-url";
+import { readResponseBufferWithLimit, safeFetch } from "@/lib/http/remote-url";
 
 const MAX_SOURCE_RESPONSE_BYTES = 1024 * 1024;
 
 export async function summarizeSourceUrl(sourceUrl: string) {
   try {
-    const safeSourceUrl = await assertSafeRemoteHttpUrl(sourceUrl);
-    const response = await fetch(safeSourceUrl, {
+    const response = await safeFetch(sourceUrl, {
       signal: AbortSignal.timeout(7000),
       headers: {
         "User-Agent": "Content OS internal research bot",

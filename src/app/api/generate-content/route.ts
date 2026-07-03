@@ -4,6 +4,9 @@ import { z } from "zod";
 
 import { jsonError, jsonOk } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth";
+import { NotFoundError } from "@/lib/errors";
+import { logError } from "@/lib/log";
+import { getPostBrandSlug } from "@/lib/content/post-brand";
 import { summarizeSourceUrl } from "@/lib/content/source";
 import {
   enforceRallioCopySafety,
@@ -141,6 +144,12 @@ const openAIContentSchema = z.object({
 // Generation can run several OpenAI attempts per post; give the function
 // room on Vercel instead of dying mid-batch on the default duration.
 export const maxDuration = 300;
+// Stop starting new generation attempts once this much wall-clock has elapsed,
+// leaving headroom under `maxDuration` for the in-flight attempt plus image
+// render and DB writes. Attempts are normally fast; this only trips on
+// pathologically slow OpenAI calls, degrading to the fallback instead of being
+// killed mid-request.
+const GENERATION_ATTEMPT_BUDGET_MS = 150_000;
 
 type GeneratedContentPackage = z.infer<typeof generatedContentSchema>;
 
@@ -1024,6 +1033,15 @@ function assertBrandInputConsistency(input: z.infer<typeof ideaInputSchema>) {
 }
 
 export async function POST(request: Request) {
+  // Wall-clock guard: generation runs several sequential OpenAI attempts. Once
+  // this much time has elapsed we stop starting new attempts and fall through to
+  // the fallback/best-candidate path, so worst-case work can never blow past
+  // `maxDuration` (300s) and get killed mid-request with an orphaned idea.
+  const generationStartedAt = Date.now();
+  // Cleans up a just-created idea if generation later throws, so a failed run
+  // never leaves an orphaned draft. Null when reusing an existing idea.
+  let cleanupCreatedIdea: (() => Promise<void>) | null = null;
+
   try {
     assertContentOsSupabaseWriteSafety();
     const input = ideaInputSchema.parse(await request.json());
@@ -1066,7 +1084,9 @@ export async function POST(request: Request) {
         .single();
 
       if (ideaError || !existingIdea || existingIdea.user_id !== user.id) {
-        throw new Error("Campaign idea not found or not owned by current user.");
+        throw new NotFoundError(
+          "Campaign idea not found or not owned by current user.",
+        );
       }
 
       idea = existingIdea;
@@ -1096,6 +1116,13 @@ export async function POST(request: Request) {
       }
 
       idea = newIdea;
+      cleanupCreatedIdea = async () => {
+        await supabase
+          .from("content_ideas")
+          .delete()
+          .eq("id", newIdea.id)
+          .eq("user_id", user.id);
+      };
     }
 
     const { data: recentPosts } = await supabase
@@ -1103,8 +1130,14 @@ export async function POST(request: Request) {
       .select("headline, hook, pillar, template_fields")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(20);
-    const recentHistory = (recentPosts || []).map(recentPostToNoveltyItem);
+      .limit(40);
+    // Only compare against — and feed the model — same-brand history. Mixing
+    // Rallio restaurant names into a Signal "avoid" list is pure token waste and
+    // skews the novelty gate against the wrong brand.
+    const recentHistory = (recentPosts || [])
+      .filter((post) => getPostBrandSlug(post.template_fields) === input.brand_slug)
+      .slice(0, 20)
+      .map(recentPostToNoveltyItem);
     // The novelty gate checks the full window; the model only needs a compact
     // sample, so cap and truncate what gets sent as prompt tokens.
     const recentPostsToAvoid = recentHistory.slice(0, 12).map((post) => ({
@@ -1150,7 +1183,7 @@ export async function POST(request: Request) {
         ? plannedWorkingTitle
         : null;
     const { apiKey, model } = getOpenAIEnv();
-    const openai = new OpenAI({ apiKey, timeout: 90_000, maxRetries: 1 });
+    const openai = new OpenAI({ apiKey, timeout: 60_000, maxRetries: 1 });
 
     if (input.brand_slug === "signal") {
       let signalContent: GeneratedContentPackage | null = null;
@@ -1165,6 +1198,13 @@ export async function POST(request: Request) {
       const signalFallback = getSignalFallbackMetadata(input);
 
       for (let attempt = 1; attempt <= 4; attempt += 1) {
+        if (
+          attempt > 1 &&
+          Date.now() - generationStartedAt > GENERATION_ATTEMPT_BUDGET_MS
+        ) {
+          break;
+        }
+
         const isRepairPass = signalQualityFailures.length > 0;
         const response = await openai.responses.parse({
           model,
@@ -1448,6 +1488,13 @@ export async function POST(request: Request) {
     let fallbackAttempt = 0;
 
     for (let attempt = 1; attempt <= 3; attempt += 1) {
+      if (
+        attempt > 1 &&
+        Date.now() - generationStartedAt > GENERATION_ATTEMPT_BUDGET_MS
+      ) {
+        break;
+      }
+
       const isRepairPass = qualityFailures.length > 0;
       const response = await openai.responses.parse({
         model,
@@ -1796,6 +1843,14 @@ export async function POST(request: Request) {
 
     return jsonOk({ idea, post, content });
   } catch (error) {
+    if (cleanupCreatedIdea) {
+      try {
+        await cleanupCreatedIdea();
+      } catch (cleanupError) {
+        logError("generate-content", cleanupError, { phase: "idea-cleanup" });
+      }
+    }
+
     return jsonError(error, 400);
   }
 }

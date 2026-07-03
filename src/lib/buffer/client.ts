@@ -9,12 +9,26 @@ import {
   type BufferBrand,
   type BufferPlatform,
 } from "@/lib/env";
-import {
-  assertSafeRemoteHttpUrl,
-  readResponseBufferWithLimit,
-} from "@/lib/http/remote-url";
+import { readResponseBufferWithLimit, safeFetch } from "@/lib/http/remote-url";
 
 const BUFFER_GRAPHQL_ENDPOINT = "https://api.buffer.com";
+// Hard ceiling on the Buffer create-post call. Without it a hung request keeps
+// the publishing job pinned in `processing` until the serverless function is
+// killed, which then blocks every future handoff for that post.
+const BUFFER_REQUEST_TIMEOUT_MS = 30_000;
+
+// Thrown when Buffer never returned a usable response (network error, timeout,
+// aborted request). This is the one ambiguous case where the post may or may
+// not have been created on Buffer's side, so the caller must NOT auto-retry —
+// a blind retry is exactly what double-posts to Instagram. A rejection we can
+// actually read back from Buffer (bad input, auth) throws a plain Error and is
+// safe to retry.
+export class BufferConnectionError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "BufferConnectionError";
+  }
+}
 // Instagram (and therefore Buffer) caps a carousel at 10 images.
 const BUFFER_INSTAGRAM_MAX_CAROUSEL = 10;
 const BUFFER_INSTAGRAM_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
@@ -173,19 +187,40 @@ export async function createBufferPost({
     };
   }
 
-  const response = await fetch(BUFFER_GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      query: createPostMutation,
-      variables: { input },
-    }),
-  });
+  let response: Response;
 
-  const payload = (await response.json()) as BufferCreatePostResponse;
+  try {
+    response = await fetch(BUFFER_GRAPHQL_ENDPOINT, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: createPostMutation,
+        variables: { input },
+      }),
+      signal: AbortSignal.timeout(BUFFER_REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    throw new BufferConnectionError(
+      "Buffer did not respond in time; the post may or may not have been created.",
+      { cause: error },
+    );
+  }
+
+  let payload: BufferCreatePostResponse;
+
+  try {
+    payload = (await response.json()) as BufferCreatePostResponse;
+  } catch (error) {
+    // A response arrived but the body could not be read/parsed. We cannot tell
+    // whether Buffer committed the post, so treat it as ambiguous too.
+    throw new BufferConnectionError(
+      `Buffer returned an unreadable response (status ${response.status}).`,
+      { cause: error },
+    );
+  }
 
   if (!response.ok || payload.errors?.length) {
     throw new Error(
@@ -304,8 +339,7 @@ function isPublicJpegUrl(imageUrl: string) {
 }
 
 async function assertBufferMediaUrlReady(url: string, platform: BufferPlatform) {
-  const safeUrl = await assertSafeRemoteHttpUrl(url);
-  const response = await fetch(safeUrl, {
+  const response = await safeFetch(url, {
     cache: "no-store",
     signal: AbortSignal.timeout(15_000),
   });

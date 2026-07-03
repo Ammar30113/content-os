@@ -50,6 +50,41 @@ export async function assertSafeRemoteHttpUrl(value: string) {
   return url.toString();
 }
 
+// Fetch a remote URL with SSRF protection that survives redirects. A plain
+// `fetch` follows 3xx responses automatically, so validating only the initial
+// URL leaves a hole: a public URL can 302 to `http://169.254.169.254/…` or an
+// internal host and the redirect is followed unchecked. This resolves each hop
+// manually and re-validates the destination before following it.
+export async function safeFetch(
+  input: string,
+  init: RequestInit = {},
+  { maxRedirects = 3 }: { maxRedirects?: number } = {},
+): Promise<Response> {
+  let currentUrl = await assertSafeRemoteHttpUrl(input);
+
+  for (let hop = 0; hop <= maxRedirects; hop += 1) {
+    const response = await fetch(currentUrl, { ...init, redirect: "manual" });
+
+    if (response.status < 300 || response.status >= 400) {
+      return response;
+    }
+
+    const location = response.headers.get("location");
+
+    if (!location) {
+      return response;
+    }
+
+    // Release the redirect response's socket before following the next hop.
+    await response.body?.cancel().catch(() => {});
+    currentUrl = await assertSafeRemoteHttpUrl(
+      new URL(location, currentUrl).toString(),
+    );
+  }
+
+  throw new Error("Too many redirects while fetching the remote URL.");
+}
+
 export async function readResponseBufferWithLimit(
   response: Response,
   maxBytes: number,

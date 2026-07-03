@@ -62,6 +62,12 @@ export async function DELETE(
     });
 
     if (!result.deleted_count) {
+      if (result.blocked_ids.includes(id)) {
+        throw new Error(
+          "This post has a live Buffer handoff. Cancel it in Buffer first, then delete it here.",
+        );
+      }
+
       throw new Error("Post not found or already deleted.");
     }
 

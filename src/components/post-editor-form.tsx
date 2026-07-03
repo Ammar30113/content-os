@@ -223,6 +223,18 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
     }
   }
 
+  // `router.refresh()` refetches the server `post`, but React preserves this
+  // component's `form` state across the refresh, so image fields seeded from
+  // props once via useState would otherwise stay stale after a regenerate or
+  // upload. Patch the freshly rendered image URL back into local state so the
+  // preview and Image URL field update immediately.
+  function syncImageUrlFromResponse(responsePayload: Record<string, unknown>) {
+    if (typeof responsePayload.image_url === "string") {
+      const nextImageUrl = responsePayload.image_url;
+      setForm((current) => ({ ...current, image_url: nextImageUrl }));
+    }
+  }
+
   async function saveCurrentPost() {
     const response = await fetch(`/api/posts/${post.id}`, {
       method: "PATCH",
@@ -294,6 +306,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           }),
         }),
       "Image regenerated.",
+      (responsePayload) => syncImageUrlFromResponse(responsePayload),
     );
   }
 
@@ -374,6 +387,7 @@ export function PostEditorForm({ post }: { post: GeneratedPost }) {
           body: uploadData,
         }),
       "Image uploaded.",
+      (responsePayload) => syncImageUrlFromResponse(responsePayload),
     );
   }
 
