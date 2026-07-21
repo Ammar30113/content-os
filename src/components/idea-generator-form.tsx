@@ -567,6 +567,7 @@ export function IdeaGeneratorForm() {
     const quantity = getQuantity();
     const createdPostIds: string[] = [];
     const imageFailures: string[] = [];
+    const slotFailures: string[] = [];
     const generatedSoFar: GeneratedPostSummary[] = [];
 
     setState({
@@ -631,15 +632,29 @@ export function IdeaGeneratorForm() {
             error: null,
           });
 
-          const payload = await generateOnePackage({
-            index: angle.index,
-            quantity,
-            ideaId: batchPlan.idea.id,
-            batchAngle: angle,
-            generatedSoFar,
-            reference,
-            activeForm,
-          });
+          // One failed slot must not abandon the rest of the campaign. Record
+          // the failure, keep the batch moving, and report it at the end.
+          let payload: GeneratePayload;
+
+          try {
+            payload = await generateOnePackage({
+              index: angle.index,
+              quantity,
+              ideaId: batchPlan.idea.id,
+              batchAngle: angle,
+              generatedSoFar,
+              reference,
+              activeForm,
+            });
+          } catch (error) {
+            slotFailures.push(
+              `${angle.index} (${angle.working_title}): ${truncateFailure(
+                getApiErrorMessage(error, "Generation failed."),
+              )}`,
+            );
+            continue;
+          }
+
           createdPostIds.push(payload.post.id);
           generatedSoFar.push({
             hook: payload.content.hook || payload.post.hook,
@@ -687,6 +702,14 @@ export function IdeaGeneratorForm() {
         }
       }
 
+      if (quantity > 1 && !createdPostIds.length) {
+        throw new Error(
+          `No posts were generated. First failure: ${
+            slotFailures[0] || "Unknown error."
+          }`,
+        );
+      }
+
       const failureMessage = imageFailures.length
         ? ` ${imageFailures.length} image${imageFailures.length === 1 ? "" : "s"} failed and can be regenerated from the post editor.`
         : "";
@@ -703,15 +726,22 @@ export function IdeaGeneratorForm() {
         message:
           quantity === 1
             ? `Content package ready.${imageModeMessage}${failureMessage}`
-            : `${createdPostIds.length} content packages ready.${imageModeMessage}${failureMessage}`,
-        error: null,
+            : `${createdPostIds.length} of ${quantity} content packages ready.${imageModeMessage}${failureMessage}`,
+        error: slotFailures.length
+          ? `${slotFailures.length} post${slotFailures.length === 1 ? "" : "s"} failed and can be regenerated: ${slotFailures.join("; ")}`
+          : null,
       });
 
-      router.push(
-        quantity === 1 && createdPostIds[0]
-          ? `/app/posts/${createdPostIds[0]}`
-          : "/app/posts",
-      );
+      // Stay on the form when slots failed so the failure summary stays
+      // visible; the created posts are waiting in the review grid.
+      if (!slotFailures.length) {
+        router.push(
+          quantity === 1 && createdPostIds[0]
+            ? `/app/posts/${createdPostIds[0]}`
+            : "/app/posts",
+        );
+      }
+
       router.refresh();
     } catch (error) {
       const imageFailureMessage = imageFailures.length
@@ -994,6 +1024,10 @@ function getBrandFormCopy(brandSlug: BrandSlug) {
     routingNote:
       "Rallio posts are Instagram-only. They route to the Rallio Buffer channel for App Store launch posts, supporter/owner setup steps, city requests, and taste-map participation with no legacy-channel fallback.",
   };
+}
+
+function truncateFailure(message: string, max = 160) {
+  return message.length > max ? `${message.slice(0, max)}…` : message;
 }
 
 function isReelForm(form: Pick<FormState, "brand_slug" | "post_type">) {

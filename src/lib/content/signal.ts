@@ -1,5 +1,6 @@
 import "server-only";
 
+import { generatedContentSchema } from "@/lib/content/types";
 import type {
   GeneratedContent,
   SignalContentType,
@@ -855,4 +856,382 @@ function labelForSignalCtaDoor(ctaDoor: SignalCtaDoor) {
   };
 
   return labels[ctaDoor];
+}
+
+// ---------------------------------------------------------------------------
+// Quality fallback: deterministic Signal package used when every OpenAI
+// attempt fails the safety/specificity/quality gates. Mirrors the Rallio
+// fallback so a stubborn generation degrades to reviewable bank copy instead
+// of hard-failing the whole batch mid-way.
+// ---------------------------------------------------------------------------
+
+export type SignalQualityFallbackMetadata = {
+  contentType?: SignalContentType;
+  ctaDoor?: SignalCtaDoor;
+  templateType?: SignalTemplateType;
+  visualStyle?: string;
+  kpiIntent?: string;
+  batchWorkingTitle?: string;
+};
+
+type SignalFallbackVoice = {
+  hook: string;
+  tension: string;
+  close: string;
+  bullets: string[];
+};
+
+const signalFallbackVoices: Record<SignalContentType, SignalFallbackVoice> = {
+  discipline_quote: {
+    hook: "You do not out-argue an urge. You outlast it.",
+    tension: "The argument is the trap. Distance is the exit.",
+    close: "Save this for the next time the debate starts.",
+    bullets: [
+      "Name the cue instead of negotiating with it",
+      "Change the room before you decide anything",
+      "Let the timer answer, not the mood",
+    ],
+  },
+  urge_reset_protocol: {
+    hook: "An urge is a ten-minute spike, not a permanent state.",
+    tension: "The window between cue and action is short, and it is enough.",
+    close: "Next spike, run the list instead of the argument.",
+    bullets: [
+      "Name the cue",
+      "Change the room",
+      "Move for two minutes",
+      "Choose one redirect",
+      "Let the timer finish",
+    ],
+  },
+  pattern_awareness: {
+    hook: "Your loop runs on a schedule. Most people never check it.",
+    tension: "Same hour, same room, same app. The setup repeats.",
+    close: "Map the setup once and the next reset starts earlier.",
+    bullets: [
+      "Note the hour the pull usually starts",
+      "Note the room and the last app you opened",
+      "Note what you were avoiding",
+      "Watch the same setup repeat within a week",
+    ],
+  },
+  identity_anchor: {
+    hook: "You are not the urge. You are the one who notices it.",
+    tension: "The loop wants a reaction. Identity is a decision.",
+    close: "Decide once, then let the next ten minutes prove it.",
+    bullets: [
+      "Name what the loop quietly costs you",
+      "Choose the person you are protecting",
+      "Pick one visible action for the window",
+      "Let the action cast the vote",
+    ],
+  },
+  privacy_first: {
+    hook: "Help works better without an audience.",
+    tension: "A tool you trust at the worst moment has to be private first.",
+    close: "A private tool is one you will actually open.",
+    bullets: [
+      "Everything stays on your phone",
+      "No account and no cloud sync",
+      "No screenshots and no watchers",
+      "Nothing to explain to anyone later",
+    ],
+  },
+  slip_review: {
+    hook: "One slip is data, not a verdict.",
+    tension: "The sequence before it matters more than the moment itself.",
+    close: "Review the setup calmly and the next interruption comes sooner.",
+    bullets: [
+      "Write down what happened right before",
+      "Name the cue and the room",
+      "Mark where an earlier interruption could have landed",
+      "Plan the next reset from that point",
+    ],
+  },
+  app_feature_steps: {
+    hook: "Open Signal before the loop gets loud.",
+    tension: "The flow is short on purpose. Low focus is the design constraint.",
+    close: "Set it up now so it is ready when you are not.",
+    bullets: [
+      "Open Signal",
+      "Name the current state",
+      "Pick the trigger",
+      "Start the SOS timer",
+      "Log what helped",
+    ],
+  },
+};
+
+const signalFallbackXBridges = [
+  "The reset is not willpower. It is distance plus a timer.",
+  "Change the room first. The mind follows late.",
+  "Notice earlier, move sooner, log what helped.",
+];
+
+const signalFallbackLinkedinLines = [
+  [
+    "Behavior change is mostly design.",
+    "The moment between cue and action is short, but it is workable.",
+  ],
+  [
+    "Willpower is a weak system.",
+    "Distance, friction, and a timer are stronger ones.",
+  ],
+  [
+    "Most loops are schedules, not character flaws.",
+    "A pattern you can see is a pattern you can plan around.",
+  ],
+];
+
+const signalFallbackHashtags = [
+  "#discipline",
+  "#habits",
+  "#selfcontrol",
+  "#focus",
+  "#reset",
+  "#latenight",
+  "#selfrespect",
+];
+
+const signalFallbackCtaSentences: Record<SignalCtaDoor, string> = {
+  app_download: "Signal is in the App Store when you want a private reset.",
+  sos_protocol: "Start SOS in Signal the next time the pull builds.",
+  check_in: "Run a quiet check-in in Signal tonight.",
+  pattern_map: "Log the next three urges in Signal and look at the map.",
+  privacy_first: "Signal keeps the whole reset on your phone.",
+  identity_anchor: "Anchor it in Signal before the next window opens.",
+};
+
+function signalHashString(value: string) {
+  return Array.from(value).reduce(
+    (total, character) => (total * 31 + character.charCodeAt(0)) >>> 0,
+    7,
+  );
+}
+
+function sanitizeSignalCopy(value: string | null | undefined) {
+  return (value || "").replace(/!+/g, ".").replace(/\.{2,}/g, ".").trim();
+}
+
+function normalizeSignalNovelty(value: string | null | undefined) {
+  return (value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractCaptionBullets(caption: string) {
+  return caption
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^([-–—•▸›→✓✔☑✅*]|\d+[.):]|step\s+\d+)/i.test(line))
+    .map((line) =>
+      line
+        .replace(/^(step\s+\d+[.:)]?|\d+[.):]|[-–—•▸›→✓✔☑✅*]+)\s*/i, "")
+        .trim(),
+    )
+    .filter((line) => line.length > 2);
+}
+
+function uniqueSignalStrings(values: Array<string | null | undefined>) {
+  const seen = new Set<string>();
+
+  return values.filter((value): value is string => {
+    const normalized = (value || "").trim();
+    const key = normalized.toLowerCase();
+
+    if (!normalized || seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function pickSignalFallbackHeadline({
+  fallback,
+  candidate,
+  contentType,
+  usedHeadlines,
+  useModelCopy,
+}: {
+  fallback?: SignalQualityFallbackMetadata;
+  candidate: GeneratedContent | null;
+  contentType: SignalContentType;
+  usedHeadlines?: Set<string>;
+  useModelCopy: boolean;
+}) {
+  const voice = signalFallbackVoices[contentType];
+  const options = uniqueSignalStrings([
+    fallback?.batchWorkingTitle,
+    useModelCopy ? sanitizeSignalCopy(candidate?.headline) : null,
+    ...signalTopicSeeds
+      .filter((seed) => seed.contentType === contentType)
+      .map((seed) => seed.title),
+    sanitizeSignalCopy(voice.hook),
+  ]);
+  const fresh = options.find(
+    (value) => !usedHeadlines?.has(normalizeSignalNovelty(value)),
+  );
+
+  return fresh || options[0];
+}
+
+export function createSignalQualityFallbackContent(args: {
+  candidate: GeneratedContent | null;
+  failures: string[];
+  attempt: number;
+  fallback?: SignalQualityFallbackMetadata;
+  usedHeadlines?: Set<string>;
+}): GeneratedContent {
+  try {
+    return assembleSignalFallbackContent({ ...args, useModelCopy: true });
+  } catch {
+    // Model copy reused in the fallback tripped the Signal safety gate.
+    // Rebuild from deterministic bank copy only, which is audited safe.
+    return assembleSignalFallbackContent({ ...args, useModelCopy: false });
+  }
+}
+
+function assembleSignalFallbackContent({
+  candidate,
+  failures,
+  attempt,
+  fallback,
+  usedHeadlines,
+  useModelCopy,
+}: {
+  candidate: GeneratedContent | null;
+  failures: string[];
+  attempt: number;
+  fallback?: SignalQualityFallbackMetadata;
+  usedHeadlines?: Set<string>;
+  useModelCopy: boolean;
+}): GeneratedContent {
+  const contentType =
+    fallback?.contentType ||
+    candidate?.template_fields.signal_content_type ||
+    "discipline_quote";
+  const templateType =
+    fallback?.templateType ||
+    candidate?.template_fields.signal_template_type ||
+    templateForSignalContentType(contentType);
+  const ctaDoor = normalizeSignalCtaDoor(
+    contentType,
+    fallback?.ctaDoor || candidate?.template_fields.signal_cta_door,
+  );
+  const voice = signalFallbackVoices[contentType];
+  const headline = pickSignalFallbackHeadline({
+    fallback,
+    candidate,
+    contentType,
+    usedHeadlines,
+    useModelCopy,
+  });
+  const variant = signalHashString(`${contentType}:${headline}`);
+  const hook =
+    (useModelCopy ? sanitizeSignalCopy(candidate?.hook) : "") || voice.hook;
+  const tension =
+    (useModelCopy ? sanitizeSignalCopy(candidate?.subhead) : "") || voice.tension;
+  const candidateBullets = useModelCopy
+    ? extractCaptionBullets(candidate?.caption || "").map(sanitizeSignalCopy)
+    : [];
+  const protocolSteps = useModelCopy
+    ? (candidate?.template_fields.signal_protocol_steps || []).map(
+        sanitizeSignalCopy,
+      )
+    : [];
+  const bullets = uniqueSignalStrings([
+    ...candidateBullets,
+    ...protocolSteps,
+    ...voice.bullets,
+  ]).slice(0, 5);
+  const ctaSentence = signalFallbackCtaSentences[ctaDoor];
+  const rotatedHashtags = [
+    ...signalFallbackHashtags.slice(variant % signalFallbackHashtags.length),
+    ...signalFallbackHashtags.slice(0, variant % signalFallbackHashtags.length),
+  ];
+  const hashtags = uniqueSignalStrings([
+    ...(useModelCopy
+      ? (candidate?.hashtags || []).map((tag) =>
+          tag.trim().startsWith("#") ? tag.trim() : `#${tag.trim()}`,
+        )
+      : []),
+    ...rotatedHashtags,
+  ]).slice(0, 4);
+  const caption = [
+    hook,
+    "",
+    tension,
+    "",
+    ...bullets.map((bullet) => `- ${bullet}`),
+    "",
+    `${voice.close} ${ctaSentence}`,
+    "",
+    hashtags.join(" "),
+  ].join("\n");
+  const xVersion = `${hook} ${
+    signalFallbackXBridges[variant % signalFallbackXBridges.length]
+  }`.slice(0, 280);
+  const linkedinVersion = [
+    hook,
+    "",
+    ...signalFallbackLinkedinLines[variant % signalFallbackLinkedinLines.length],
+    "",
+    ...bullets.map((bullet) => `- ${bullet}`),
+    "",
+    voice.close,
+  ].join("\n");
+  const templateFields = normalizeSignalMetadata(
+    {
+      ...(candidate?.template_fields || {}),
+      headline,
+      subhead: tension,
+      review_notes: [
+        candidate?.template_fields.review_notes,
+        "Signal fallback used. Review hook, bullets, and CTA before posting.",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    },
+    fallback,
+  );
+  const coreTemplateType = mapSignalTemplateToCoreType(templateType);
+
+  const repaired = generatedContentSchema.parse({
+    pillar: coreTemplateType,
+    template_type: coreTemplateType,
+    hook,
+    headline,
+    subhead: tension,
+    caption,
+    hashtags,
+    cta: ctaSentence,
+    carousel_slides: [],
+    reel_script: "",
+    x_version: xVersion,
+    linkedin_version: linkedinVersion,
+    image_prompt:
+      (useModelCopy ? sanitizeSignalCopy(candidate?.image_prompt) : "") ||
+      "Dark Signal card with one calm line, off-white type, and a muted green/yellow/red state accent.",
+    template_fields: {
+      ...templateFields,
+      quality_gate: {
+        passed: false,
+        repaired: true,
+        attempt,
+        failures,
+        notes: [
+          "OpenAI did not pass the Signal quality gate. Deterministic Signal fallback was used.",
+          ...(useModelCopy
+            ? []
+            : ["Model copy tripped the safety gate; bank copy only."]),
+        ],
+      },
+    },
+  });
+
+  return enforceSignalCopySafety(repaired);
 }
