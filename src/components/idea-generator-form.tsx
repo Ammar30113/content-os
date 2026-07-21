@@ -13,6 +13,7 @@ import {
   templateHints,
   tones,
 } from "@/lib/content/types";
+import { isOpenAIConfigError } from "@/lib/errors";
 import { getApiErrorMessage, readApiJson } from "@/lib/http/read-api-json";
 import type { RallioLocalSignal } from "@/lib/content/types";
 
@@ -647,11 +648,33 @@ export function IdeaGeneratorForm() {
               activeForm,
             });
           } catch (error) {
+            const failureMessage = getApiErrorMessage(error, "Generation failed.");
+            const isConfigError = isOpenAIConfigError(failureMessage);
             slotFailures.push(
               `${angle.index} (${angle.working_title}): ${truncateFailure(
-                getApiErrorMessage(error, "Generation failed."),
+                failureMessage,
+                // Config errors carry remediation steps — keep them readable.
+                isConfigError ? 400 : 160,
               )}`,
             );
+
+            // A config-level failure (model access, API key) fails every
+            // remaining slot identically — stop the batch instead of burning
+            // one doomed OpenAI call per slot.
+            if (isConfigError) {
+              const remaining = angles.filter(
+                (pending) => pending.index > angle.index,
+              ).length;
+
+              if (remaining) {
+                slotFailures.push(
+                  `${remaining} remaining post${remaining === 1 ? "" : "s"} skipped until the OpenAI model configuration is fixed.`,
+                );
+              }
+
+              break;
+            }
+
             continue;
           }
 

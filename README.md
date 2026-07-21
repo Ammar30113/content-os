@@ -65,6 +65,14 @@ Do not commit `.env.local` or real secrets.
 `OPENAI_MODEL` defaults to `gpt-4o-mini` if omitted. Use a model your OpenAI
 project has access to and that supports structured outputs on the Responses API.
 
+If generation fails with `403 Project proj_… does not have access to model …`,
+the model is not enabled for your OpenAI project. Either switch `OPENAI_MODEL`
+to a model the project can use (for example `gpt-4o-mini` or `gpt-4.1-mini`),
+or enable the model in the OpenAI dashboard: select the project, then
+Settings → Limits → Model usage (some newer model families also require
+organization verification under Settings → Organization). Environment variable
+changes only apply after a redeploy.
+
 Rallio generation defaults to the internal community/taste-map topic bank for
 Instagram feed growth. When an idea includes a `source_url`, generation fetches
 and summarizes that page for topical context (see `src/lib/content/source.ts`).

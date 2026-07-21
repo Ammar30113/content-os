@@ -45,6 +45,22 @@ export class ConflictError extends HttpError {
   }
 }
 
+// OpenAI configuration failures — the project can't use the configured model,
+// or the API key is missing/invalid — fail every generation attempt the same
+// way. Callers should stop retrying/looping on these and surface a
+// fix-the-config message instead of burning doomed API calls. String-based so
+// the client can classify messages that crossed the API boundary.
+export function isOpenAIConfigError(message: string) {
+  return [
+    /does not have access to model/i,
+    /model\s+`?[\w.:-]+`?\s+does not exist/i,
+    /does not exist or you do not have access/i,
+    /incorrect api key/i,
+    /invalid_api_key/i,
+    /openai_api_key/i,
+  ].some((pattern) => pattern.test(message));
+}
+
 export function getUnknownErrorMessage(
   error: unknown,
   fallback = "Unexpected error.",

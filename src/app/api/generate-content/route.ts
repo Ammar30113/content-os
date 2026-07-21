@@ -4,7 +4,11 @@ import { z } from "zod";
 
 import { jsonError, jsonOk } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth";
-import { NotFoundError } from "@/lib/errors";
+import {
+  getUnknownErrorMessage,
+  isOpenAIConfigError,
+  NotFoundError,
+} from "@/lib/errors";
 import { logError } from "@/lib/log";
 import { getPostBrandSlug } from "@/lib/content/post-brand";
 import { summarizeSourceUrl } from "@/lib/content/source";
@@ -153,6 +157,21 @@ export const maxDuration = 300;
 const GENERATION_ATTEMPT_BUDGET_MS = 150_000;
 
 type GeneratedContentPackage = z.infer<typeof generatedContentSchema>;
+
+// OpenAI config errors (model not enabled for the project, bad API key) fail
+// every attempt and every batch slot identically — no retry can succeed.
+// Convert them into an actionable message; rethrow everything else untouched.
+function rethrowWithOpenAIGuidance(error: unknown, model: string): never {
+  const message = getUnknownErrorMessage(error, "OpenAI request failed.");
+
+  if (isOpenAIConfigError(message)) {
+    throw new Error(
+      `${message} — this OpenAI project cannot use OPENAI_MODEL="${model}". Switch OPENAI_MODEL to a model the project can use (for example gpt-4o-mini or gpt-4.1-mini), or enable the model for this project in the OpenAI dashboard (Project → Limits → Model usage), then redeploy.`,
+    );
+  }
+
+  throw error;
+}
 
 const rallioFallbackHashtags = [
   "#toronto",
@@ -1328,7 +1347,8 @@ export async function POST(request: Request) {
           text: {
             format: zodTextFormat(openAIContentSchema, "content_os_signal_package"),
           },
-        });
+        })
+          .catch((error) => rethrowWithOpenAIGuidance(error, model));
 
         if (response.usage) {
           console.log(
@@ -1705,7 +1725,8 @@ export async function POST(request: Request) {
         text: {
           format: zodTextFormat(openAIContentSchema, "content_os_post_package"),
         },
-      });
+      })
+        .catch((error) => rethrowWithOpenAIGuidance(error, model));
 
       if (response.usage) {
         console.log(
