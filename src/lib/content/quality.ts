@@ -31,6 +31,12 @@ export function validateGeneratedContentQuality({
   return { ok: true, notes: [] };
 }
 
+// Protocol and app-step posts legitimately run to six numbered steps, so the
+// ceiling is 6, not 5 — the batch seeds ("5-6 steps", "6 numbered in-app
+// steps") and this gate must agree or generation deadlocks in repair passes.
+export const CAPTION_MIN_BULLETS = 3;
+export const CAPTION_MAX_BULLETS = 6;
+
 function validateCaptionStructure(caption: string) {
   const failures: string[] = [];
   const contentLines = getContentLines(caption);
@@ -40,8 +46,13 @@ function validateCaptionStructure(caption: string) {
     failures.push("Caption is too thin. Use a hook, short tension, bullets, and ending.");
   }
 
-  if (bulletLines.length < 3 || bulletLines.length > 5) {
-    failures.push("Caption must include 3-5 bullets.");
+  if (
+    bulletLines.length < CAPTION_MIN_BULLETS ||
+    bulletLines.length > CAPTION_MAX_BULLETS
+  ) {
+    failures.push(
+      `Caption must include ${CAPTION_MIN_BULLETS}-${CAPTION_MAX_BULLETS} bullet lines, found ${bulletLines.length}. Start each bullet on its own line with "-", "•", or a number like "1.".`,
+    );
   }
 
   return failures;
@@ -76,8 +87,17 @@ function getContentLines(caption: string) {
     .filter((line) => !isMostlyHashtags(line));
 }
 
+// Models write bullets with more markers than "-": em dashes, asterisks,
+// arrows, and check glyphs all appear in otherwise-valid captions. Missing a
+// marker here undercounts bullets and rejects real output, so match every
+// marker the generators actually produce, plus "1." / "1)" / "Step 1" steps.
 function isBulletLine(line: string) {
-  return /^[-–•]\s+\S/.test(line) || /^\d+[.)]\s+\S/.test(line);
+  return (
+    /^[-–—•▸›→✓✔☑✅]\s*\S/.test(line) ||
+    /^\*\s+\S/.test(line) ||
+    /^\d+[.):]\s*\S/.test(line) ||
+    /^step\s+\d+\b/i.test(line)
+  );
 }
 
 function isMostlyHashtags(value: string) {

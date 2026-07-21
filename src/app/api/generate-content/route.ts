@@ -18,6 +18,7 @@ import {
   RALLIO_SYSTEM_PROMPT,
 } from "@/lib/content/rallio";
 import {
+  createSignalQualityFallbackContent,
   enforceSignalCopySafety,
   mapSignalTemplateToCoreType,
   normalizeSignalMetadata,
@@ -1192,6 +1193,11 @@ export async function POST(request: Request) {
       // hook degrades to the best real attempt instead of hard-failing the batch.
       let signalFallbackCandidate: GeneratedContentPackage | null = null;
       let signalFallbackHookOverlap = Number.POSITIVE_INFINITY;
+      // Track the last safety-passing attempt (even one that failed quality or
+      // specificity) so the deterministic fallback can reuse its copy instead
+      // of hard-failing the batch slot.
+      let signalSafeCandidate: GeneratedContentPackage | null = null;
+      let signalSafeAttempt = 0;
       const previousHooksForNovelty = [...generatedSoFar, ...recentHistory]
         .map((post) => normalizeForNovelty(post.hook))
         .filter(Boolean);
@@ -1217,7 +1223,7 @@ export async function POST(request: Request) {
                 "Signal is a separate app from Rallio. Do not mention Rallio, taste maps, restaurants, city launches, owners, or local food discovery.",
                 "Use original discipline language only. Do not quote Atomic Habits, James Clear, or any book verbatim or by name.",
                 "Do not use explicit sexual language, medical claims, cure language, shame streaks, surveillance, blockers, or screenshots.",
-                "Caption shape: 1-line hook that front-loads a searchable keyword, one short tension line, 3-5 short bullets, one grounded closing line, then 3-5 fresh, neutral hashtags.",
+                "Caption shape: 1-line hook that front-loads a searchable keyword, one short tension line, 3-6 short bullets (5-6 numbered steps only for protocol or app-step posts), one grounded closing line, then 3-5 fresh, neutral hashtags.",
                 "Optimize for saves and quiet DM sends, the signals that actually drive Instagram reach: make each post worth saving for the next hard moment and worth sending to one person who would recognize the loop. Never use tag-a-friend or share-this bait.",
                 "Return Instagram-only metadata: selected_platforms must be [\"instagram\"], brand_slug must be signal, and all Rallio-only fields must be null.",
                 "Never use exclamation points, guaranteed outcomes, perfect streak claims, download-now language, coupons, rewards, or tag-a-friend bait.",
@@ -1288,7 +1294,7 @@ export async function POST(request: Request) {
                   recent_posts_to_avoid: recentPostsToAvoid,
                   caption_rules: {
                     instagram:
-                      "Front-load the most searchable term (the concrete cue, trigger, or discipline topic) into the first line so it stops the scroll and gets indexed by Instagram search. Then one tension line, 3-5 action bullets, one grounded final line. Make it worth saving and worth quietly sending to one person who would recognize it. End with exactly 3-5 neutral discipline or habit hashtags (for example #discipline, #habits, #selfcontrol, #focus, #dopamine) picked fresh for THIS post. Never use explicit, addiction, recovery, or clinical hashtags - they restrict the whole post's reach. No explicit terms and no motivational poster tone.",
+                      "Front-load the most searchable term (the concrete cue, trigger, or discipline topic) into the first line so it stops the scroll and gets indexed by Instagram search. Then one tension line, 3-6 action bullets each starting with '-' or a number, one grounded final line. Make it worth saving and worth quietly sending to one person who would recognize it. End with exactly 3-5 neutral discipline or habit hashtags (for example #discipline, #habits, #selfcontrol, #focus, #dopamine) picked fresh for THIS post. Never use explicit, addiction, recovery, or clinical hashtags - they restrict the whole post's reach. No explicit terms and no motivational poster tone.",
                     x: "Under 280 characters, sharper than Instagram, no hashtags unless truly needed.",
                     linkedin:
                       "Slightly expanded, still private and practical, no long paragraphs and no clinical framing.",
@@ -1323,6 +1329,12 @@ export async function POST(request: Request) {
             format: zodTextFormat(openAIContentSchema, "content_os_signal_package"),
           },
         });
+
+        if (response.usage) {
+          console.log(
+            `[generate-content] idea=${idea.id} brand=signal attempt=${attempt} model=${model} input=${response.usage.input_tokens} cached=${response.usage.input_tokens_details?.cached_tokens ?? 0} output=${response.usage.output_tokens}`,
+          );
+        }
 
         const parsed = response.output_parsed;
 
@@ -1368,6 +1380,9 @@ export async function POST(request: Request) {
           ];
           continue;
         }
+
+        signalSafeCandidate = candidate;
+        signalSafeAttempt = attempt;
 
         const specificityFailures = validateSignalSpecificity(candidate);
 
@@ -1433,6 +1448,25 @@ export async function POST(request: Request) {
 
       if (!signalContent && signalFallbackCandidate) {
         signalContent = signalFallbackCandidate;
+      }
+
+      if (!signalContent) {
+        // No attempt survived the gates. Degrade to the deterministic Signal
+        // fallback (reusing safe model copy when any attempt passed the safety
+        // gate) instead of failing the batch slot outright.
+        try {
+          signalContent = createSignalQualityFallbackContent({
+            candidate: signalSafeCandidate,
+            failures: signalQualityFailures,
+            attempt: signalSafeAttempt || 4,
+            fallback: signalFallback,
+            usedHeadlines,
+          });
+        } catch (fallbackError) {
+          logError("generate-content", fallbackError, {
+            phase: "signal-quality-fallback",
+          });
+        }
       }
 
       if (!signalContent) {
